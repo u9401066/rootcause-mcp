@@ -1,86 +1,92 @@
-# RootCause MCP - 臨床根因分析 MCP Server
+# RootCause MCP - Clinical Root Cause Analysis MCP Server
 
-> 🏥 專為醫療品質改善設計的根因分析工具
+> 🏥 AI-guided structured Root Cause Analysis for healthcare quality improvement
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-1.10+-green.svg)](https://modelcontextprotocol.io/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+[![GitHub](https://img.shields.io/github/stars/u9401066/rootcause-mcp?style=social)](https://github.com/u9401066/rootcause-mcp)
 
-## 🎯 專案願景
+**English** | [中文版](README.zh-TW.md)
 
-讓 AI Agent 能夠引導臨床人員進行**結構化、可追溯、可學習**的根因分析。
+## 🎯 Vision
 
-## ✨ 核心功能
+Enable AI Agents to guide clinical staff through **structured, traceable, and learnable** Root Cause Analysis.
+
+## ✨ Core Features
 
 ### Phase 1: Foundation (MVP)
-- 🐟 **Fishbone (6M)** - 醫療特化的魚骨圖分析
-- 🔍 **5-Why** - 深層原因探索
-- 📊 **HFACS** - 人因分類自動建議
-- 📝 **Domain Config** - 可配置的領域知識
+
+- 🐟 **Fishbone (6M)** - Healthcare-specialized Fishbone diagram analysis
+- 🔍 **5-Why** - Deep cause exploration
+- 📊 **HFACS** - Human Factors Analysis auto-suggestion
+- 📝 **Domain Config** - Configurable domain knowledge
 
 ### Phase 2: Ontology (Planned)
-- 🧠 知識圖譜整合
-- 🔗 相似案例比對
+
+- 🧠 Knowledge Graph integration
+- 🔗 Similar case matching
 
 ### Phase 3: Causal (Planned)
-- 📈 因果推論分析
-- 🧪 反事實測試
 
-## 🚀 快速開始
+- 📈 Causal inference analysis
+- 🧪 Counterfactual testing
+
+## 🚀 Quick Start
 
 ```bash
-# 使用 uv 安裝
+# Install with uv
 uv pip install -e .
 
-# 或開發模式
+# Or development mode
 uv pip install -e ".[dev]"
 
-# 執行 MCP Server
+# Run MCP Server
 rootcause-mcp
 ```
 
-## 📁 專案結構
+## 📁 Project Structure
 
-```
+```text
 rootcause-mcp/
 ├── src/rootcause_mcp/
-│   ├── domain/           # 領域模型 (DDD)
-│   │   ├── entities/     # 實體
-│   │   ├── value_objects/# 值物件
-│   │   └── services/     # 領域服務
-│   ├── application/      # 應用層
-│   │   ├── commands/     # 命令處理
-│   │   └── queries/      # 查詢處理
-│   ├── infrastructure/   # 基礎設施
+│   ├── domain/           # Domain models (DDD)
+│   │   ├── entities/     # Entities
+│   │   ├── value_objects/# Value Objects
+│   │   └── services/     # Domain Services
+│   ├── application/      # Application layer
+│   │   ├── commands/     # Command handlers
+│   │   └── queries/      # Query handlers
+│   ├── infrastructure/   # Infrastructure
 │   │   ├── persistence/  # SQLite + SQLModel
-│   │   └── external/     # 外部整合
-│   └── interface/        # 介面層
+│   │   └── external/     # External integrations
+│   └── interface/        # Interface layer
 │       └── mcp/          # MCP Tools
-├── config/domains/       # 領域配置 YAML
-├── tests/               # 測試
-├── docs/                # 文件 (含 spec_v2.md)
-└── memory-bank/         # 專案記憶
+├── config/domains/       # Domain config YAML
+├── tests/               # Tests
+├── docs/                # Documentation
+└── memory-bank/         # Project memory
 ```
 
-## 📚 文件
+## 📚 Documentation
 
-- [完整規格書](docs/spec_v2.md) - v2.5.0
-- [架構說明](docs/ARCHITECTURE.md)
+- [Full Specification](docs/spec_v2.md) - v2.5.0
+- [Architecture](ARCHITECTURE.md)
 
-## 🔧 開發
+## 🔧 Development
 
 ```bash
-# 執行測試
+# Run tests
 pytest
 
-# 程式碼檢查
+# Code linting
 ruff check src tests
 mypy src
 
-# 安全掃描
+# Security scan
 bandit -r src
 ```
 
 ## 📄 License
 
-MIT License - 詳見 [LICENSE](LICENSE)
+Apache 2.0 License - See [LICENSE](LICENSE)
