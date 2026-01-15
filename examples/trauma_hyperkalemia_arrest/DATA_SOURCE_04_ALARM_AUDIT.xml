@@ -1,0 +1,8 @@
+<DeviceLog DeviceID="ICU-MON-101" PatientID="T-24-505">
+  <Event Time="02:10:05" Type="ALARM_TECH" Msg="ECG NOISY" Action="AUDIO_OFF_2MIN" User="RN_User_1"/>
+  <Event Time="02:12:30" Type="ALARM_PHYS" Msg="HI_T_WAVE" Action="IGNORED" User="--"/>
+  <Event Time="02:14:15" Type="ALARM_TECH" Msg="SPO2_POOR_SIGNAL" Action="AUDIO_OFF_PERM" User="RN_User_1"/>
+  <Event Time="02:25:00" Type="ALARM_PHYS" Msg="HR_LO_LIMIT (<60)" Action="ACKNOWLEDGED" User="RN_User_1"/>
+  <Event Time="02:30:45" Type="ALARM_PHYS" Msg="ARRHYTHMIA_V_EVENT" Action="IGNORED" User="--"/>
+  <Event Time="02:44:50" Type="ALARM_PHYS" Msg="ASYSTOLE_CRITICAL" Action="CODE_BUTTON_PRESSED" User="RN_User_1"/>
+</DeviceLog>

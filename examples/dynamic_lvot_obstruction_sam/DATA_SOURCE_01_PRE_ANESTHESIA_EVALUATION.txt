@@ -1,0 +1,18 @@
+DATE: 2024-08-10
+PT: LIN, A.M. (72y Female)
+SURGERY: Right Total Hip Replacement (THR) - Traumatic Fracture.
+ASA CLASS: 3
+HT/WT: 155cm / 48kg (Frailty)
+
+PMH:
+1. Hypertension (controlled on Valsartan).
+2. Mild Aortic Regurgitation (Echo 3 years ago: LVEF 65%, Mild AR, No AS).
+3. Osteoporosis.
+
+AIRWAY: Mallampati II, Neck ROM normal.
+CV: RRR, Grade 2/6 Systolic Murmur at LSB (Left Sternal Border).
+LUNGS: Clear.
+
+PLAN:
+General Anesthesia (GA) + Post-op Nerve Block.
+(Spinal Anesthesia contraindicated due to dual antiplatelet therapy for recent TIA).

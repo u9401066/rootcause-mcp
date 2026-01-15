@@ -1,0 +1,37 @@
+DATE: 2024-07-20 03:00
+PT: CHEN, W.K. (58y Male)
+HISTORY: End-Stage Heart Failure (Dilated Cardiomyopathy).
+DEVICE: HeartMate 3 LVAD implanted 3 months ago.
+CC: "Red Alarm" on controller + Dark Urine.
+
+HPI:
+Patient presents with continuous "Low Flow" alarm on his LVAD controller.
+Wife states he has been feeling dizzy and fatigued for 2 days.
+Decreased appetite.
+Noticed urine turned "Cola-colored" this evening.
+Denied fever, chills, or chest pain.
+
+VITALS:
+HR: (N/A - LVAD continuous flow)
+BP: (N/A via cuff) -> Doppler MAP estimated ~ 65 mmHg.
+SpO2: Unreadable (poor perfusion).
+Temp: 36.8 C
+RR: 22
+
+ER PHYSICIAN ASSESSMENT:
+Pt appears pale, cool extremities.
+LVAD Hum: Audible, continuous.
+Controller Data:
+- Flow: 2.2 L/min (Set minimum: 2.5) -> ALARMING.
+- Speed: 5400 RPM (Fixed).
+- Power: 3.8 Watts (Fluctuating).
+
+IMPRESSION:
+1. LVAD Low Flow Alarm -> Suspect Hypovolemia / Dehydration?
+2. Hematuria? (Cola urine).
+3. R/O Device Thrombosis.
+
+PLAN:
+1. IV Fluid Bolus (NS 1000ml) stat.
+2. Labs: CBC, BMP, Coags, LDH, Free Hemoglobin.
+3. STAT Bedside Echo.

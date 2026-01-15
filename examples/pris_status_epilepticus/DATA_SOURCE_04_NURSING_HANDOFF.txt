@@ -1,0 +1,12 @@
+FROM: RN_JESSICA (NIGHT)
+TO: RN_MARK (DAY)
+DATE: 06/17 07:00
+
+Overview: Bed 5 is crashing.
+We think it's severe Sepsis + Pancreatitis from the alcohol.
+Dr. Lee added Meropenem last night.
+We started Levophed maxed out, adding Vasopressin.
+His blood was weird when I drew the ABG - really thick and milky looking? Maybe just hemolyzed?
+Also, his urine is a weird forest green color. Dr. says probably medication effect (Propofol or Methylene Blue? but he's not on Methylene Blue).
+Family is asking why he is getting worse.
+Watch out for the bradycardia, he dipped to HR 40 briefly before bouncing back.

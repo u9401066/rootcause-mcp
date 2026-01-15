@@ -1,0 +1,22 @@
+DATE: 2024-05-20 23:30
+PT: UNKNOWN_MALE (Trauma_ID: T-24-505)
+MECHANISM: Motorcyclist vs Truck. High speed.
+GCS: 3 (Intubated at scene).
+
+INJURY INVENTORY:
+1. Grade IV Liver Laceration (Active Bleeding).
+2. Bilateral Femur Fractures.
+3. R't Hemothorax (Chest tube inserted, 800ml drained immediately).
+
+RESUSCITATION (23:30 - 01:00):
+- Massive Transfusion Protocol (MTP) ACTIVATED.
+- 6 units PRBC (O-Neg).
+- 4 units FFP.
+- 1 unit Platelets.
+- TXA 1g IV.
+- Level 1 Rapid Infuser used.
+
+HANDOFF TO ICU (01:15):
+BP 90/50 (on Levophed 0.2 mcg/kg/min). HR 110.
+Lactate: 8.5 -> 6.2 (Improving).
+Plan: Stabilize in ICU, Interventional Radiology (Angio) in AM for liver embolization if stable.

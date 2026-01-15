@@ -1,0 +1,17 @@
+DATE: 2024-04-10 14:00
+SURGEON: DR. K. LIN (ORTHO)
+PROCEDURE: Left Total Hip Arthroplasty (THA) due to OA.
+ANESTHESIA: Spinal.
+
+FINDINGS:
+Successful replacement of L't hip joint. EBL (Est. Blood Loss): 450ml.
+Bone quality: Osteoporotic but stable implant fixation.
+Intra-op: BP fluctuated 90-110 systolic. Ephedrine 5mg given x2.
+
+POST-OP ORDERS:
+1. Admit to 7W (Ortho Ward).
+2. Pain: PCA (Morphine) + Panadol.
+3. Antibiotics: Cefazolin 1g q8h x 24hrs.
+4. DVT Prophylaxis: **HOLD Clexane (Enoxaparin)** for 24hrs due to oozing from drain (>100ml in PACU). Re-evaluate tomorrow.
+5. Diet: DAT.
+6. Activity: Bed rest today. OOB (Out of Bed) tomorrow with PT.

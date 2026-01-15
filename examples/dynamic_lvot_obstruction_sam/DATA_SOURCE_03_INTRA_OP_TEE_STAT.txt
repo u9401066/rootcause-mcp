@@ -1,0 +1,33 @@
+TIME: 08:20 (Emergency TEE Probe Insertion)
+OPERATOR: DR. CHEN (ANESTHESIOLOGIST)
+INDICATION: Refractory Shock post-induction. R/O PE vs MI.
+
+FINDINGS (MID-ESOPHAGEAL 4-CHAMBER & LONG AXIS):
+1. **LV Cavity:** Hyperdynamic, small, obliterating at end-systole ("Kissing Walls").
+2. **RV:** Normal size. No D-sign. (Rules out Massive PE).
+3. **Mitral Valve:**
+   - Moderate Mitral Regurgitation (MR).
+   - **Eccentric Jet:** Directed posteriorly towards the LA wall.
+   - **Leaflet Motion:** Anterior leaflet appears to move towards the Septum during systole.
+4. **Aortic Valve:** Normal opening.
+5. **LVOT (Left Ventricular Outflow Tract):**
+   - Color Doppler shows severe turbulence/aliasing at the LVOT level.
+   - Continuous Wave (CW) Doppler: **"Dagger-shaped" (Late-peaking) profile**.
+   - Peak Gradient estimated > 80 mmHg.
+
+IMPRESSION:
+Unknown mechanism of shock. Severe LVOT gradient observed.
+
+====================================================================
+【KEY FINDINGS MISSED BY OPERATOR】
+
+The operator wrote "Unknown mechanism" but the findings ARE the diagnosis:
+1. SAM (Systolic Anterior Motion) = Anterior leaflet moving towards Septum
+2. Dynamic LVOT Obstruction = Dagger-shaped Doppler (NOT fixed AS)
+3. Secondary MR = Eccentric posterior jet (due to SAM pulling leaflet)
+
+This is HOCM-like physiology triggered by:
+- Low preload (Propofol + positioning)
+- Low afterload (Propofol)
+- Hyperdynamic LV (probably underlying septal hypertrophy)
+====================================================================

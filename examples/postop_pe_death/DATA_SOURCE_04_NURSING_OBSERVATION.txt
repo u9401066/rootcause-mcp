@@ -1,0 +1,8 @@
+[10:00] Fluid bolus 500ml completed. BP 90/50. HR 115. Dr. notified. Order: Another 500ml bolus.
+[11:30] Pt complains of severe chest tightness and "cannot breathe". SpO2 dropped to 85% on FM.
+[11:35] Switched to NRM (Non-Rebreather) 15L. SpO2 89%.
+[11:40] Dr. Chen at bedside. EKG ordered. Troponin I ordered.
+[11:45] EKG Interpretation (Dr. Chen): Sinus Tachycardia. Incomplete RBBB pattern? No ST elevation. 
+[11:50] Impression: ?Septic Shock refractory to fluid ?Acute MI. 
+[11:55] ICU Consult called.
+[12:10] CODE BLUE ACTIVATED. Pt unresponsive. PEA (Pulseless Electrical Activity). CPR started.

@@ -1,0 +1,6 @@
+"Time","HR","MAP","Temp","Rhythm","Vent","Sedation_Rate","Urine_Output","Remarks"
+"06/15 08:00","110","85","37.5","Sinus Tach","SIMV","Propofol: 50 ml/hr","50 ml","Pt biting tube. Sedation increased."
+"06/15 20:00","115","82","37.8","Sinus Tach","SIMV","Propofol: 55 ml/hr","45 ml","Still agitated when touched."
+"06/16 08:00","118","78","38.1","Sinus Tach","AC/VC","Propofol: 60 ml/hr","35 ml","Fever spike? Sepsis workup ordered."
+"06/16 20:00","125","70","38.4","ST/PVCs","AC/VC","Propofol: 60 ml/hr","25 ml","Urine looks dark/greenish? Sent UA."
+"06/17 04:00","130","60","37.2","ST -> Brady","AC/VC","Propofol: 60 ml/hr","10 ml","BP dropping. Levophed started."

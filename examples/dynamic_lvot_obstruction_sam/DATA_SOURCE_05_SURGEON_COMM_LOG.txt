@@ -1,0 +1,20 @@
+08:15 Surgeon: "Why is the muscle so tight? I haven't even cut yet. Is the patient light?"
+08:16 Anesthesiologist: "BP is crashing. I'm giving Epi."
+08:17 Surgeon: "The femoral pulse is gone! What did you do?"
+08:18 Anesthesiologist: "I pushed 50 of Epi. It got worse. Is there massive bleeding inside? Did you puncture a vessel?"
+08:19 Surgeon: "I haven't even started the incision! It's not bleeding!"
+
+====================================================================
+【COMMUNICATION BREAKDOWN ANALYSIS】
+
+Key missed opportunities:
+1. "Muscle so tight" - Endogenous catecholamine surge (stress response to shock)
+2. "Is the patient light?" - Classic anchoring bias (light anesthesia as default)
+3. "Epi got worse" - This is THE clue! Inotropes worsen dynamic obstruction
+4. "Did you puncture a vessel?" - Blame-shifting instead of differential diagnosis
+
+Neither provider considered:
+- Why would vasopressors WORSEN the situation?
+- What causes shock that gets WORSE with Epinephrine?
+- What does the A-line waveform show?
+====================================================================

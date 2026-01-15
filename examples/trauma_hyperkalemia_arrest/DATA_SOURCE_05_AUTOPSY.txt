@@ -1,0 +1,17 @@
+CASE REVIEW SUMMARY
+PT: T-24-505
+CAUSE OF DEATH: Refractory Cardiac Arrest.
+
+RESUSCITATION DETAILS (02:45 - 03:30):
+- CPR x 45 mins.
+- Epinephrine x 10mg given.
+- Fluid Bolus x 2L given (Suspected recurrent bleeding).
+- Needle decompression performed (Suspected Tension Pneumothorax) - Negative rush of air.
+- Bedside Echo (ROSC brief): Dilated, sluggish heart. No pericardial effusion.
+- Final Rhythm: Sine Wave -> Asystole.
+
+AUTOPSY FINDINGS:
+1. Liver packing intact. Minimal fresh blood in abdomen (approx 200ml). **NOT exsanguination.**
+2. Lungs: Congested, heavy (Pulmonary Edema).
+3. Kidneys: Acute Tubular Necrosis (ATN) evident.
+4. BIOCHEMISTRY (Vitreous Humor analysis post-mortem): **Potassium > 8.5 mmol/L**.

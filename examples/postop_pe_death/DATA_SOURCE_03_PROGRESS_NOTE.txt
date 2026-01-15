@@ -1,0 +1,31 @@
+DATE: 2024-04-12 08:30 (POD 2)
+PROVIDER: DR. CHEN (R2, ORTHO)
+
+S: Pt confusing, mumbling. Nurse reports fever 38.5 overnight.
+O:
+Vitals: T 38.5, HR 112, BP 92/52, RR 26, SpO2 92% on 6L Face Mask.
+Chest: Coarse breathing sounds bilaterally. Crackles LLL.
+Wound: Clean, no erythema. Drain removed.
+Ext: Mild edema both legs, consistent with post-op status.
+Urine: Foley catheter removed yesterday. Urine output approx 400ml/last 8hrs (Concentrated).
+
+LABS (Stat):
+WBC: 14,500 (Seg 85%) - Elevated.
+Hb: 9.2 (Pre-op 11.5) - Post-op anemia.
+Cr: 1.4 (Baseline 0.9) - AKI?
+Lactate: 2.5
+UA: WBC 10-15/HPF, Nitrite (+).
+
+ASSESSMENT:
+1. Sepsis, suspected source:
+   a. UTI (Foley removed yesterday, UA pos).
+   b. HAP (Hospital Acquired Pneumonia) - coarse breath sounds, desaturation.
+2. Hypovolemia / Dehydration (Low BP, Low U/O).
+3. Post-op Anemia.
+
+PLAN:
+1. Sepsis Bundle: Blood Culture x 2, Urine Culture.
+2. Antibiotics: Upgrade to Levofloxacin 750mg IV QD (Cover UTI/Lung).
+3. Fluid Resuscitation: N/S 500ml full run, then 100ml/hr.
+4. Keep O2 to maintain SpO2 > 92%.
+5. Re-check BP in 1 hr.

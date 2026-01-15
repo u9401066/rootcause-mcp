@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Waveform_Log Time="08:14">
+  <Morphology>
+    ** BISFERIENS PULSE DETECTED **
+    ** SPIKE AND DOME PATTERN **
+  </Morphology>
+  <Analysis>
+    Rapid upstroke.
+    Mid-systolic notch.
+    Second systolic peak lower than first.
+    Stroke Volume Variation (SVV): 25% (High).
+  </Analysis>
+  
+  <!-- 
+  ====================================================================
+  【PATHOGNOMONIC WAVEFORM FOR HOCM/SAM】
+  
+  BISFERIENS PULSE:
+  - Two systolic peaks separated by a mid-systolic dip
+  - First peak: Initial ejection before SAM develops
+  - Dip: SAM causes obstruction mid-systole
+  - Second peak: Ejection after partial relief of obstruction
+  
+  SPIKE AND DOME:
+  - Same phenomenon, different name
+  - "Spike" = rapid initial upstroke
+  - "Dome" = secondary rounded peak
+  
+  This waveform should have triggered immediate consideration of
+  Dynamic LVOT Obstruction, NOT more vasopressors!
+  ====================================================================
+  -->
+</Waveform_Log>

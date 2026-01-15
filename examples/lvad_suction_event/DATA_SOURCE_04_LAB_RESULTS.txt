@@ -1,0 +1,21 @@
+TIME: 04:15
+WBC: 8.5
+Hb: 10.2 (Baseline 11.5)
+Plt: 140
+INR: 2.8 (Therapeutic range for LVAD: 2.0-3.0)
+
+CHEMISTRY:
+Na: 132
+K: 4.5
+Cr: 1.8 (Baseline 1.1) - AKI
+BUN: 45
+
+HEMOLYSIS MARKERS:
+LDH: 3500 (Ref < 250) - **CRITICAL HIGH**
+Plasma Free Hb: 150 (Ref < 5) - **CRITICAL HIGH**
+Haptoglobin: < 10 (Undetectable)
+
+URINALYSIS:
+Color: Dark Brown
+Blood: 3+ (Large)
+RBC: 0-2 / HPF (Mismatch: Dipstick pos, Micro neg) -> Indicates Myoglobin or Hemoglobin.

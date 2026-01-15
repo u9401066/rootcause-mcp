@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ECG_REPORT Time="06/17 05:30">
+  <Rhythm>Sinus Bradycardia</Rhythm>
+  <Rate>48 bpm</Rate>
+  <Intervals>PR: 0.22, QRS: 0.14, QTc: 0.48</Intervals>
+  <Morphology>
+    ** COVED ST ELEVATION V1-V2 **
+    ** BRUGADA-LIKE PATTERN NOTED **
+    ** RBBB MORPHOLOGY **
+  </Morphology>
+  <Interpretation>
+    Consider Ischemia vs Electrolyte Imbalance.
+    System Alert: Critical Bradycardia.
+  </Interpretation>
+</ECG_REPORT>

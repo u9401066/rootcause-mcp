@@ -1,4 +1,4 @@
-# Progress - RootCause MCP (Updated: 2026-01-16T01:40)
+# Progress - RootCause MCP (Updated: 2026-01-16T02:25)
 
 ## Done
 
@@ -99,6 +99,49 @@
     - P1: rc_match_similar_cases, rc_build_bowtie, rc_prioritize_actions
     - P2: rc_analyze_feedback_loops, rc_expert_review
   - **Phase 1-3 實作計畫** (共 6 週)
+- ✅ **God Level RCA 案例完成** (2026-01-16)
+
+### God Level RCA 案例 (⭐ 診斷陷阱教學)
+
+- ✅ **Case 4: PRIS (Propofol Infusion Syndrome)** (`rc_sess_c7d0c7cc`)
+  - 患者：32yo alcoholic, Status Epilepticus
+  - 根本原因：品質框架「頻率導向」非「風險導向」
+  - **Pathognomonic Signs**: 綠尿 + Milky blood (被忽略)
+  - 診斷陷阱：酗酒背景造成診斷錨定效應
+  - 所有症狀都有「合理」的替代解釋
+  - 檔案：`examples/pris_status_epilepticus/` (6 files + ANALYSIS_RESULT.md)
+
+- ✅ **Case 5: LVAD Suction Event** (`rc_sess_b20ab22a`)
+  - 患者：58yo HeartMate 3 LVAD, Low Flow Alarm
+  - 根本原因：專家集中模式，無分散式能力擴散機制
+  - **三層診斷陷阱**：
+    - Level 1: Hypovolemia (ER 誤診)
+    - Level 2: Thrombosis (AI/Fellow 誤診)
+    - Level 3: Suction Event (正確 - 專家級)
+  - **關鍵線索**: PI=1.0 + IVS bowing INTO LV + RV dilated = RV Failure
+  - 檔案：`examples/lvad_suction_event/` (6 files + ANALYSIS_RESULT.md)
+
+- ✅ **Case 6: Dynamic LVOT Obstruction (SAM)** (`rc_sess_5c486e7c`)
+  - 患者：72yo frail female, Hip fracture, GA induction crash
+  - 根本原因：統計導向設計缺乏治療反應異常的重評機制
+  - **三層診斷陷阱**：
+    - Level 1: Hypovolemia / Light Anesthesia
+    - Level 2: Massive PE / MI (給 Epi = 致命)
+    - Level 3: Dynamic LVOT Obstruction (正確)
+  - **Pathognomonic Signs**: Bisferiens pulse, Dagger-shaped Doppler, SAM
+  - **關鍵規則**: "If Epi makes it WORSE, think OBSTRUCTION"
+  - 檔案：`examples/dynamic_lvot_obstruction_sam/` (6 files + ANALYSIS_RESULT.md)
+
+### 已完成 RCA Sessions (6 cases)
+
+| Case | Session ID | Type | Root Cause |
+|------|------------|------|------------|
+| 1. UTI Misdiagnosis | rc_sess_cf93ffa4 | complication | 護理評估流程省略 |
+| 2. Postoperative PE | rc_sess_da3c741c | death | 無 Caprini 評估整合 |
+| 3. Hyperkalemia Missed | rc_sess_415940b8 | near_miss | 警報設計無緊急分級 |
+| 4. PRIS ⭐ | rc_sess_c7d0c7cc | death | 頻率導向 vs 風險導向 |
+| 5. LVAD Suction ⭐ | rc_sess_b20ab22a | complication | 專家集中無能力擴散 |
+| 6. SAM/Dynamic LVOT ⭐ | rc_sess_5c486e7c | near_miss | 統計導向缺乏異常重評 |
 
 ## Doing
 

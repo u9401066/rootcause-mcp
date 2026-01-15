@@ -1,0 +1,6 @@
+"Time_Stamp","POD","Temp","HR","RR","BP","SpO2","O2_Device","Pain","Drain_Output","Notes"
+"2024-04-10 18:00","0","36.8","82","16","115/75","98%","RA","4/10","120ml","Pt drowsy but arousable. PCA in use."
+"2024-04-11 08:00","1","37.2","88","18","110/70","96%","RA","5/10","40ml","Dr. Lin rounded. Drain output decreased. Wound clean."
+"2024-04-11 16:00","1","37.8","95","20","105/65","94%","RA","6/10","10ml","Pt c/o calf pain bilaterally? (Note: Pt has history of chronic back pain/sciatica). Homan's sign equivocal. Leg swelling (+)."
+"2024-04-12 04:00","2","38.2","105","22","98/60","91%","NC 2L","3/10","0ml","Fever noted. Tylenol given. Pt confused."
+"2024-04-12 08:00","2","38.5","110","24","95/55","88%","FM 6L","2/10","--","Alert triggered. Dr. Chen (Resident) notified."

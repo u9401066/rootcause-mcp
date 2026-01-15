@@ -1,0 +1,28 @@
+TIME: 03:45
+OPERATOR: DR. LEE (CARDIOLOGY FELLOW)
+INDICATION: LVAD Low Flow, Hypotension.
+
+FINDINGS:
+IMAGE QUALITY: Poor (Body habitus).
+
+LEFT VENTRICLE (LV):
+- Cavity size appears SMALL and UNDERFILLED.
+- Interventricular Septum (IVS) is shifted towards the LEFT (bowing into LV).
+- Inflow Cannula position: Appears aligned, but difficult to visualize turbulence.
+
+RIGHT VENTRICLE (RV):
+- Severely DILATED.
+- Hypokinetic free wall.
+- TR (Tricuspid Regurgitation): Severe.
+- IVC: Dilated (2.4 cm), non-collapsible.
+
+PERICARDIUM:
+- No significant effusion.
+
+IMPRESSION:
+1. Small, underfilled LV consistent with HYPOVOLEMIA.
+2. RV Dilation/Failure.
+
+RECOMMENDATION:
+Continue volume resuscitation to fill the LV.
+Consider increasing pump speed to maintain output?

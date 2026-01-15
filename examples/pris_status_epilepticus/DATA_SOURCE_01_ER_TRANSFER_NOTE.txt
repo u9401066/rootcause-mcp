@@ -1,0 +1,25 @@
+DATE: 2024-06-15 02:00
+SENDING LOC: ER
+RECEIVING LOC: MICU-B
+PT: WU, T.H. (Male, 32y)
+WEIGHT: 75 kg
+HEIGHT: 172 cm
+
+ADMISSION DX:
+1. Status Epilepticus (Alcohol Withdrawal related).
+2. Aspiration Pneumonia (suspected).
+3. Chronic Alcoholism.
+
+HPI:
+Pt found down at home surrounded by empty liquor bottles.
+Seizing upon arrival. Refractory to Ativan 4mg x 2 and Valium 10mg IV.
+RSI (Rapid Sequence Intubation) performed at 00:30 for airway protection and seizure control.
+Loading dose Keppra 1g IV given.
+
+MEDICATIONS STARTED IN ER:
+1. Sedation: **Propofol (Diprivan 1%) infusion started at 01:00**. Titrated to cessation of motor activity. Current rate: 45 ml/hr.
+2. Antibiotics: Unasyn 3g IV.
+3. Fluids: Normal Saline 125 ml/hr.
+
+PLAN:
+Admit to MICU for vent weaning and alcohol withdrawal management (CIWA protocol once extubated).

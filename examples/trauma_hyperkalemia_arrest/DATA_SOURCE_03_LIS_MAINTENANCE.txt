@@ -1,0 +1,17 @@
+FROM: IT_OPERATIONS
+TO: ALL_CLINICAL_STAFF
+SUBJECT: SCHEDULED DOWNTIME - LIS (Laboratory Information System)
+
+Attention Staff,
+
+The LIS (Lab System) will undergo critical database patching tonight from 02:00 to 04:00.
+During this time:
+1. New lab orders must be handwritten.
+2. Result viewing on EMR will be UNAVAILABLE.
+3. STAT results will be phoned to the unit clerk.
+4. Auto-printing of labels is suspended.
+
+[SYSTEM LOG - 02:10]
+> Middleware Status: PAUSED.
+> Pending Queue: 45 samples.
+> Sample ID [T-24-505-004] (Trauma ICU): Received at Central Lab 02:05. Status: HELD_IN_QUEUE.

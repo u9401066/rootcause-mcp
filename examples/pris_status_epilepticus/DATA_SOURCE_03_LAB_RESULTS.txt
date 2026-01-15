@@ -1,0 +1,28 @@
+PT: WU, T.H. (MRN: 992011)
+
+[06/15 03:00 - ADMISSION]
+WBC: 12.5
+Hb: 13.0
+Plt: 180
+Na: 135 / K: 3.8
+Cr: 0.9
+AST/ALT: 150/80 (Alc Hepatitis pattern)
+Lactate: 2.1
+CK (CPK): 450
+
+[06/16 08:00 - DAY 2 MORNING]
+WBC: 14.2 (Rising) -> Dr. Note: "Probable worsening pneumonia"
+Cr: 1.2
+Lactate: 3.5
+CK (CPK): 1,200
+Triglycerides: -- (Not ordered)
+
+[06/16 22:00 - DAY 2 NIGHT - CRITICAL]
+pH: 7.22 (Metabolic Acidosis)
+BE: -8
+Lactate: 6.8
+K: 5.8
+Cr: 2.1 (AKI)
+CK (CPK): 15,000 (Rhabdomyolysis)
+Troponin-I: 0.5 (Elevated) -> Dr. Note: "Demand Ischemia due to Sepsis?"
+Lipase: 800 (Ref < 60) -> Dr. Note: "Acute Alcoholic Pancreatitis?"

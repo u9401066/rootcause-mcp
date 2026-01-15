@@ -2,15 +2,20 @@
 
 > 📌 此檔案記錄當前工作焦點，每次工作階段開始時檢視，結束時更新。
 > 
-> **Last Updated**: 2026-01-16T01:30
+> **Last Updated**: 2026-01-16T02:30
 
 ## 🎯 當前焦點
 
-- **Export 自動存檔功能** ✅ 新增
-- **19 個 MCP Tools** 上線運行
-- **AHRQ WebM&M 測試案例** ✅ 完成 (Fishbone + 5-Why + Verification)
-- **Bug 修復** ✅ (session_progress.py)
-- 準備 Git commit + push
+- **6 個完整 RCA 案例** ✅ 全部完成
+- **God Level 案例**: PRIS, LVAD Suction, SAM/Dynamic LVOT ⭐
+- **19 個 MCP Tools** 穩定運行
+- 準備 Git commit: `feat(examples): add God Level RCA cases`
+
+### 最新完成 - Case 6: SAM (Dynamic LVOT Obstruction)
+- Session: `rc_sess_5c486e7c`
+- **三層診斷陷阱**：Hypovolemia → PE/MI → **Dynamic LVOT** (正確)
+- **Pathognomonic Signs**: Bisferiens pulse, Dagger-shaped Doppler, SAM on TEE
+- **關鍵規則**: "If Epi makes it WORSE, think OBSTRUCTION"
 
 ## 📝 專案狀態
 
