@@ -1,0 +1,14 @@
+Date,Time,Staff,Event_Type,Description,Status
+2024/01/07,08:30,Nurse Chen,SHIFT,Morning shift start.,Checked
+2024/01/07,09:15,Nurse Chen,ADMIN,Dr. Wang requested coffee. Staff mtg scheduled 17:00.,Done
+2024/01/07,10:00,Nurse Wu,PT_ISSUE,Pt Chen, X-X (Chart 55432) complaining about AC too cold.,Resolved
+2024/01/07,11:30,Nurse Chen,MAINTENANCE,Printer Jam (Fuji Xerox). Error code E4. Called IT helpdesk.,Ticket #9902
+2024/01/07,11:55,Nurse Wu,LUNCH,Bubble tea order for station: 3 milk tea, 1 black tea.,Ordered
+2024/01/07,12:00,--,BREAK,Lunch Break.,Closed
+2024/01/07,13:30,Nurse Chen,SHIFT,Afternoon clinic prep.,Active
+2024/01/07,14:05,Nurse Chen,ADMIN,Fax machine incoming batch. Labs & Rad reports. Paper tray low.,Recv'd
+2024/01/07,14:10,Nurse Chen,DOCUMENT,Sorted incoming faxes. Placed 'Pending' stack on Dr. Wang desk.,Pending
+2024/01/07,14:30,Nurse Chen,PROVIDER,Dr. Wang left early for conference (Pediatric Endo Society).,Departed
+2024/01/07,14:45,Cleaner,ENV,Desk cleaning. Moved loose papers to 'To File' tray as per protocol.,Done
+2024/01/07,16:00,Nurse Wu,ADMIN,Inventory check. Alcohol swabs running low.,Noted
+2024/01/07,17:00,Nurse Chen,SHIFT,End of shift.,Signed Off

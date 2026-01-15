@@ -80,7 +80,26 @@
 
 ## 進行中 🚧
 
-### Phase 3: VS Code 整合
+### Phase 3: Deep RCA Framework v2.0 🧠
+
+**目標：** 從「小學生等級」提升至「專業級」分析深度
+
+- [x] 架構設計完成 (`docs/architecture/deep_rca_framework_v2.md`)
+- [ ] **Phase 3.1 (P0)**: 核心增強工具
+  - [ ] rc_enrich_with_literature - PubMed RAG 文獻支援
+  - [ ] rc_triangulate_evidence - 多源證據交叉驗證
+  - [ ] rc_barrier_analysis - Swiss Cheese 屏障分析
+  - [ ] rc_generate_report - TJC 標準報告生成
+- [ ] **Phase 3.2 (P1)**: 進階分析工具
+  - [ ] rc_match_similar_cases - 相似案例匹配
+  - [ ] rc_build_swiss_cheese - Swiss Cheese 模型建構
+  - [ ] rc_calculate_priority - 風險優先矩陣
+- [ ] **Phase 3.3 (P2)**: 專家級工具
+  - [ ] rc_build_bowtie - Bowtie 模型建構
+  - [ ] rc_counterfactual_test - 反事實測試
+  - [ ] rc_consensus_building - 專家共識建立
+
+### Phase 3.X: VS Code 整合
 
 - [ ] VS Code MCP Server 整合測試
 - [ ] Copilot Chat 呼叫驗證

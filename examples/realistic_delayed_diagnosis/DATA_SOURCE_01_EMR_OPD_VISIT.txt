@@ -1,0 +1,42 @@
+HOSPITAL INFORMATION SYSTEM - V 4.2.1
+PRINT DATE: 2024-01-05 10:45:22
+USER: DR. WANG, CHIA-HAO (METABOLISM)
+LOC: CLINIC_A_RM03
+
+PATIENT: LEE, MEI-LING   ID: A22****889   DOB: 1979/05/20
+VISIT TYPE: REGULAR F/U
+
+[SUBJECTIVE]
+Pt presents for 3-month follow up of thyroid nodule.
+Denies palpitations, heat intolerance, hand tremors.
+States she has been sleeping ok. 
+Weight is stable. 
+Current meds: Methycobal 1# QD.
+** Pt also mentions persistent dry cough x 2wks. Thinks its allergy due to weather change. No sputum. No fever.
+
+[OBJECTIVE]
+BP: 132/80   HR: 76   RR: 18   BT: 36.5
+HEENT: Neck supple, palpable nodule Lt lobe ~1cm. No LAP.
+Chest: Breating sounds clear. No wheeze.
+Abd: Soft, non-tender.
+Ext: No pitting edema.
+
+[LABS - 2024/01/05]
+TSH: 1.45 (0.27-4.2)
+Free T4: 1.1 (0.93-1.7)
+Glu (AC): 98
+HbA1c: 5.8%
+
+[ASSESSMENT]
+1. Nontoxic single thyroid nodule - E04.1
+2. Cough - R05
+
+[PLAN]
+1. Keep current thyroid observation. USG in 6 months.
+2. Arrange CXR and Non-contrast Chest CT to R/O lung lesion given age and symptom.
+3. Rtn 1 wk for report review.
+
+BILLING CODES:
+01234B - GEN MED VISIT
+28001C - THYROID PALPATION
+** END OF RECORD **

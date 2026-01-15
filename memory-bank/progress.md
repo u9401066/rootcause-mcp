@@ -1,4 +1,4 @@
-# Progress - RootCause MCP (Updated: 2026-01-16T01:30)
+# Progress - RootCause MCP (Updated: 2026-01-16T01:40)
 
 ## Done
 
@@ -58,95 +58,73 @@
   - 支援 Mermaid / Markdown / JSON 匯出格式
   - 測試全部通過 (tests/test_mcp_tools.py)
 - ✅ **5-Why Analysis & Causation Verification 完成** (2026-01-15)
-  - **18 個 MCP Tools 總計**：
-    - HFACS (5): suggest, confirm, get_framework, list_rules, reload
-    - Session (4): start, get, list, archive  
-    - Fishbone (4): init, add_cause, get, export
-    - **Why Tree (4)**: ask_why, get_why_tree, mark_root_cause, export_why_tree
-    - **Verification (1)**: verify_causation
+  - **18 個 MCP Tools 總計**
   - **核心哲學轉變**：從「填表式」轉為「推論式」RCA
-  - 實作 Counterfactual Testing Framework (4 準則)：
-    - Temporality: 時間序列 (因先於果)
-    - Necessity: 必要性 (無因則無果)
-    - Mechanism: 機轉 (合理因果路徑)
-    - Sufficiency: 充分性 (因是否足以產生果)
+  - 實作 Counterfactual Testing Framework (4 準則)
   - WhyTreeRepository + InMemoryWhyTreeRepository
   - 支援 Mermaid / Markdown / JSON 匯出
-  - 測試全部通過
 - ✅ **DDD 模組重構** (2026-01-15)
   - 將 2057 行 monolithic `server.py` 拆分為模組化結構
   - **interface/tools/** - 5 個 Tool 定義模組
-    - hfacs_tools.py (5 tools)
-    - session_tools.py (4 tools)
-    - fishbone_tools.py (4 tools)
-    - why_tree_tools.py (4 tools)
-    - verification_tools.py (1 tool)
   - **interface/handlers/** - 5 個 Handler 實作模組
-    - HFACSHandlers
-    - SessionHandlers
-    - FishboneHandlers
-    - WhyTreeHandlers
-    - VerificationHandlers
   - **interface/server.py** - 精簡入口點 (~350 行)
   - **application/** - Session-aware 機制
-    - SessionProgressTracker (進度追蹤)
-    - GuidedResponseBuilder (引導式回應 + 逼問)
-  - 18 個 MCP Tools 全部測試通過
 - ✅ **6M-HFACS 對照工具** (2026-01-16)
   - rc_get_6m_hfacs_mapping (第 19 個 Tool)
   - MAPPING_6M_HFACS 完整對照表
-  - WhyNode.is_proximate 屬性實作
-  - CAUSE_TYPE_BY_LEVEL 深度導引 (Proximate/Intermediate/Ultimate)
 - ✅ **Multi-Model RCA Framework 架構設計** (2026-01-16)
-  - 三大分析模型類別定義：
-    - **Prospective** (前瞻性預防): HFMEA, HVA, Bowtie
-    - **Retrospective** (回溯性調查): HFACS ✅, 5-Whys ✅, Fishbone ✅
-    - **Systemic** (系統複雜性): STAMP/STPA, FRAM, AcciMap
-  - **領域卡匣 (Cartridge)** 概念：不同分析模型 = 不同卡匣
-  - ROADMAP 大幅擴展 (Phase 6-8)
-  - **19 個 MCP Tools 上線運行**
+  - 三大分析模型類別定義
+  - **領域卡匣 (Cartridge)** 概念
 - ✅ **README i18n 更新** (2026-01-16)
-  - README.md 完整重寫 (CIE → RootCause MCP)
-  - README.zh-TW.md 完整重寫
-  - 新增 Tools badge、架構圖、詳細功能表
 - ✅ **Export 自動存檔功能** (2026-01-16)
-  - `data/exports/{session_id}/` 目錄結構
-  - Fishbone/WhyTree Export 自動寫入 MD 檔
-  - 支援 VS Code Mermaid Preview (bierner.markdown-mermaid)
-  - timestamp 命名：`fishbone_20260116_010216.md`
-- ✅ **Bug 修復** (2026-01-16)
-  - `session_progress.py`: FishboneCategory 使用 `.has_causes` 和 `.cause_count`
-  - `session_progress.py`: WhyChain.nodes 是 list 不是 dict
 - ✅ **AHRQ WebM&M 測試案例** (2026-01-16)
-  - `examples/ahrq_webmm_001_pediatric_opioid/case_rawdata.md`
-  - `examples/ahrq_webmm_001_pediatric_opioid/expert_commentary.md`
-  - 完整 RCA 測試通過：Fishbone 9 因素/6 類別、5-Why depth 4、驗證 3/4 通過
-- ✅ **Ruff 程式碼格式化** (2026-01-16)
-  - 所有 Handler 檔案 Import 排序標準化
-  - 使用 `collections.abc.Sequence` 替代 `typing.Sequence`
+- ✅ **擬真化測試案例** (2026-01-16)
+  - `examples/realistic_delayed_diagnosis/` - 5 個擬真 HIS 資料檔
+  - 含噪音資料 (咖啡訂單、停車通知、冷氣抱怨等)
+  - 完整 RCA 測試：9 原因/6 類別、5-Why depth 5、root cause 標記
+- ✅ **Mermaid 語法修正** (2026-01-16)
+  - Fishbone: `HEAD(["🐟 ..."]):::head` + classDef head
+  - Why Tree: 移除雙括號 `[[" "]]`，改用 `[" "]`
+  - 測試通過，VS Code Preview 可正常渲染
+- ✅ **Deep RCA Framework v2.0 架構設計** (2026-01-16)
+  - `docs/architecture/deep_rca_framework_v2.md` - 完整設計文件
+  - **五層分析架構**：
+    - Layer 1: Evidence Gathering (✅ 已完成)
+    - Layer 2: Knowledge Enrichment (PubMed RAG, 案例匹配)
+    - Layer 3: Multi-Model Analysis (Swiss Cheese, Bowtie, Systems Thinking)
+    - Layer 4: Validation (三角驗證, 反事實測試, 專家共識)
+    - Layer 5: Synthesis (屏障分析, 優先矩陣, 報告生成)
+  - **10 個新工具規格**：
+    - P0: rc_enrich_with_literature, rc_build_swiss_cheese, rc_triangulate_evidence, rc_barrier_analysis, rc_generate_report
+    - P1: rc_match_similar_cases, rc_build_bowtie, rc_prioritize_actions
+    - P2: rc_analyze_feedback_loops, rc_expert_review
+  - **Phase 1-3 實作計畫** (共 6 週)
 
 ## Doing
 
-- (無 - Phase 2.5 Complete + Export 功能)
+- 🔄 Review Deep RCA Framework v2.0 設計
 
 ## Next (Phase 3-4)
 
-1. **VS Code 整合測試**
-   - 在 VS Code 中啟動 MCP Server
-   - 測試 Copilot Chat 呼叫 Tools
+1. **Phase 1: 基礎深化** (2 週)
+   - rc_enrich_with_literature (PubMed MCP 整合)
+   - rc_triangulate_evidence (證據三角驗證)
+   - rc_barrier_analysis (屏障建議)
+   - rc_generate_report (MD 報告生成)
 
-2. **進階 Tools (Phase 4)**
+2. **Phase 2: 模型擴展** (2 週)
+   - rc_build_swiss_cheese (Swiss Cheese 視覺化)
+   - rc_build_bowtie (Bowtie 分析)
+   - rc_prioritize_actions (行動優先矩陣)
+
+3. **Phase 3: 智能增強** (2 週)
+   - rc_match_similar_cases (案例匹配引擎)
+   - rc_expert_review (多專家視角)
+
+4. **進階 Tools (Phase 4)**
    - rc_execute_stage (階段流轉)
    - rc_create_action (改善措施)
    - rc_link_why_to_cause (連結 Why Tree 和 Fishbone)
-
-3. **真實案例庫整合 (Phase 5)**
-   - AHRQ WebM&M 對接
-   - ISMP 用藥錯誤資料庫
-
-4. **Prospective Cartridge (Phase 6)**
-   - HFMEA Tools 實作
-   - HVA Tools 實作
 
 ## Blocked
 
@@ -155,8 +133,7 @@
 ## Risk Notes
 
 - 🔴 PHI/PII 資料治理待補充
-- 🟠 Cartridge 統一介面設計需要進一步細化
-- ✅ owlready2 已決定移除，使用 Rule Engine + Agent 替代方案
-- ✅ 「填表式→推論式」哲學轉變已實現
+- 🟠 PubMed MCP 整合複雜度待評估
+- ✅ Mermaid 語法問題已解決
 - ✅ DDD 模組重構完成，程式碼更易維護
-- ✅ CIE 架構設計完成，擴展路徑明確
+- ✅ Deep RCA v2.0 架構設計完成

@@ -8,6 +8,19 @@
 ## [Unreleased]
 
 ### Added
+- **Deep RCA Framework v2.0 架構設計** - 5 層分析架構 + 10 個新工具規劃
+  - 設計文件：`docs/architecture/deep_rca_framework_v2.md` (794 行)
+  - Layer 1: Evidence Gathering (現有 5-Why, Fishbone, HFACS)
+  - Layer 2: Knowledge Enrichment (PubMed RAG, Case Matching)
+  - Layer 3: Multi-Model Analysis (Swiss Cheese, Bowtie, Systems Dynamics)
+  - Layer 4: Validation (Triangulation, Counterfactual, Expert Consensus)
+  - Layer 5: Synthesis (Barrier Analysis, Priority Matrix, Report Generation)
+- **擬真化測試案例** - `examples/realistic_delayed_diagnosis/`
+  - 5 個模擬真實 HIS 資料的測試檔案（含噪音：咖啡訂單、停車通知、錯字）
+  - 測試情境：44 天延遲肺癌診斷案例
+- **Mermaid 圖表增強** - Fishbone 和 Why Tree 圖表優化
+  - Fishbone: 魚頭/魚骨/分類/原因 4 種樣式
+  - Why Tree: 5 層深度漸層色彩 + 根因標記
 - **Export 自動存檔功能** - Fishbone/WhyTree 匯出時自動儲存至 `data/exports/{session_id}/`
   - 支援 Mermaid/Markdown (`.md`) 和 JSON (`.json`) 格式
   - 時間戳命名：`fishbone_20260116_010216.md`

@@ -1,0 +1,35 @@
+ADMISSION NOTE - EMERGENCY DEPT
+DATE: 2024-02-20 19:42
+MD: DR. LEE (ER)
+
+CC: Hemoptysis x 2 hrs.
+
+HPI:
+45y F, prev healthy except thyroid nodule.
+Pt states she started coughing up bright red blood (approx 30-50cc) this evening while watching TV.
+Associated w/ chest tightness. 
+Denies fever, chills.
+Pt asks "What about my CT scan from last month? Dr never called me so I thout it was normal."
+
+ROS:
+Gen: Weakness (+)
+Resp: SOB (+)
+CV: Palpitations (-)
+
+PHYSICAL:
+BP 155/98 (anxious)  HR 110  SpO2 94% RA
+Lungs: Decr breath sounds Rt upper field.
+
+COURSE:
+Review of EMR shows CT Chest dated 2024/01/07.
+Report: RUL Mass 2.5cm susp Malignancy.
+** NO FOLLOW UP NOTE FOUND IN SYSTEM SINCE JAN 07 **
+** NO ONCOLOGY REFERRAL FOUND **
+
+PLAN:
+1. O2 2L nasal cannula.
+2. CXR stat.
+3. Consult Chest Med / Onco urgent.
+4. Admit to ward.
+
+*** CRITICAL EVENT REPORT FILED ***

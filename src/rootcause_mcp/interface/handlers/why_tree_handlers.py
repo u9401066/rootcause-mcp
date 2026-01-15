@@ -427,27 +427,7 @@ class WhyTreeHandlers:
             result = "\n".join(lines)
 
         else:  # mermaid
-            lines = [
-                "```mermaid",
-                "flowchart TD",
-                f'    PROBLEM["{chain.initial_problem}"]',
-            ]
-
-            for node in chain.nodes:
-                node_id = f"N{str(node.id)[-8:]}"
-                parent_id = f"N{str(node.parent_id)[-8:]}" if node.parent_id else "PROBLEM"
-
-                answer = node.answer[:40] + "..." if len(node.answer) > 40 else node.answer
-
-                if node.is_root_cause:
-                    lines.append(f'    {node_id}[["🎯 {answer}"]]')
-                else:
-                    lines.append(f'    {node_id}["{answer}"]')
-
-                lines.append(f'    {parent_id} -->|Why {node.level}| {node_id}')
-
-            lines.append("```")
-            result = "\n".join(lines)
+            result = self._generate_why_tree_mermaid(chain)
 
         # Write to file for easy preview
         file_path = self._write_export_file(session_id_str, "why_tree", export_format, result)
@@ -455,3 +435,98 @@ class WhyTreeHandlers:
             result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
 
         return [TextContent(type="text", text=result)]
+
+    def _generate_why_tree_mermaid(self, chain: WhyChain) -> str:
+        """Generate an enhanced Why Tree diagram in Mermaid format.
+
+        Creates a visually appealing tree structure with:
+        - Problem statement at the top
+        - Progressive deepening with color gradients
+        - Root causes highlighted with special styling
+        - Branch support if multiple analysis paths exist
+        """
+        # Escape quotes and limit text length
+        def escape(text: str, max_len: int = 45) -> str:
+            text = text.replace('"', "'").replace("\n", " ")
+            return text[:max_len] + "..." if len(text) > max_len else text
+
+        problem = escape(chain.initial_problem, 60)
+
+        lines = [
+            "```mermaid",
+            "flowchart TB",
+            "",
+            "    %% === 5-WHY ANALYSIS TREE ===",
+            "    %% Deeper levels show progression toward root cause",
+            "",
+            f'    PROBLEM["❓ {problem}"]:::problem',
+            "",
+        ]
+
+        # Color classes for different depth levels
+        level_classes = {
+            1: "why1",
+            2: "why2",
+            3: "why3",
+            4: "why4",
+            5: "why5",
+        }
+
+        # Track nodes by level for better organization
+        nodes_by_level: dict[int, list[WhyNode]] = {}
+        for node in chain.nodes:
+            nodes_by_level.setdefault(node.level, []).append(node)
+
+        # Generate nodes level by level
+        for level in sorted(nodes_by_level.keys()):
+            lines.append(f"    %% --- Why Level {level} ---")
+            nodes = nodes_by_level[level]
+
+            for node in nodes:
+                node_id = f"N{str(node.id)[-8:]}"
+                parent_id = f"N{str(node.parent_id)[-8:]}" if node.parent_id else "PROBLEM"
+
+                answer = escape(node.answer)
+                level_class = level_classes.get(level, "why5")
+
+                # Different node shapes based on status
+                if node.is_root_cause:
+                    # Root cause: stadium shape (rounded)
+                    lines.append(f'    {node_id}(["🎯 ROOT: {answer}"]):::rootcause')
+                elif node.needs_further_analysis:
+                    # Needs analysis: rounded rectangle with question mark
+                    lines.append(f'    {node_id}("❓ {answer}"):::{level_class}')
+                else:
+                    # Normal node: rectangle
+                    lines.append(f'    {node_id}["{answer}"]:::{level_class}')
+
+                # Connection with labeled arrow
+                arrow_label = f"Why {level}"
+                if node.evidence:
+                    # Show first evidence item on arrow
+                    ev_hint = escape(node.evidence[0], 20)
+                    arrow_label = f"{arrow_label}<br/>📋 {ev_hint}"
+
+                lines.append(f'    {parent_id} -->|"{arrow_label}"| {node_id}')
+                lines.append("")
+
+        # Add depth indicator
+        lines.append(f"    %% Analysis Depth: {chain.depth}")
+        lines.append(f"    %% Root Causes Found: {len(chain.root_causes)}")
+        lines.append("")
+
+        # Enhanced styling with gradient colors showing progression
+        lines.extend([
+            "    %% === STYLING ===",
+            "    %% Colors progress from red (surface) to green (root)",
+            "    classDef problem fill:#2196F3,stroke:#1565C0,stroke-width:3px,color:#fff,font-weight:bold",
+            "    classDef why1 fill:#FF5722,stroke:#E64A19,stroke-width:2px,color:#fff",
+            "    classDef why2 fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff",
+            "    classDef why3 fill:#FFC107,stroke:#FFA000,stroke-width:2px,color:#000",
+            "    classDef why4 fill:#8BC34A,stroke:#689F38,stroke-width:2px,color:#fff",
+            "    classDef why5 fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff",
+            "    classDef rootcause fill:#9C27B0,stroke:#7B1FA2,stroke-width:4px,color:#fff,font-weight:bold",
+            "```",
+        ])
+
+        return "\n".join(lines)
