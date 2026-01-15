@@ -1,4 +1,4 @@
-# Progress - RootCause MCP (Updated: 2026-01-16)
+# Progress - RootCause MCP (Updated: 2026-01-16T01:30)
 
 ## Done
 
@@ -109,10 +109,25 @@
   - README.md 完整重寫 (CIE → RootCause MCP)
   - README.zh-TW.md 完整重寫
   - 新增 Tools badge、架構圖、詳細功能表
+- ✅ **Export 自動存檔功能** (2026-01-16)
+  - `data/exports/{session_id}/` 目錄結構
+  - Fishbone/WhyTree Export 自動寫入 MD 檔
+  - 支援 VS Code Mermaid Preview (bierner.markdown-mermaid)
+  - timestamp 命名：`fishbone_20260116_010216.md`
+- ✅ **Bug 修復** (2026-01-16)
+  - `session_progress.py`: FishboneCategory 使用 `.has_causes` 和 `.cause_count`
+  - `session_progress.py`: WhyChain.nodes 是 list 不是 dict
+- ✅ **AHRQ WebM&M 測試案例** (2026-01-16)
+  - `examples/ahrq_webmm_001_pediatric_opioid/case_rawdata.md`
+  - `examples/ahrq_webmm_001_pediatric_opioid/expert_commentary.md`
+  - 完整 RCA 測試通過：Fishbone 9 因素/6 類別、5-Why depth 4、驗證 3/4 通過
+- ✅ **Ruff 程式碼格式化** (2026-01-16)
+  - 所有 Handler 檔案 Import 排序標準化
+  - 使用 `collections.abc.Sequence` 替代 `typing.Sequence`
 
 ## Doing
 
-- (無 - Phase 2.5 完成)
+- (無 - Phase 2.5 Complete + Export 功能)
 
 ## Next (Phase 3-4)
 

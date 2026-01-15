@@ -11,17 +11,18 @@ Handles 4 Session management tools:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from mcp.types import TextContent
 
+from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.session import RCASession
 from rootcause_mcp.domain.value_objects.enums import CaseType, SessionStatus
-from rootcause_mcp.application.guided_response import format_guided_response
 
 if TYPE_CHECKING:
-    from rootcause_mcp.domain.repositories.session_repository import SessionRepository
     from rootcause_mcp.application.session_progress import SessionProgressTracker
+    from rootcause_mcp.domain.repositories.session_repository import SessionRepository
 
 logger = logging.getLogger(__name__)
 

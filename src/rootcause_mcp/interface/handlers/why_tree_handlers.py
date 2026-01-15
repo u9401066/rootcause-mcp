@@ -12,24 +12,30 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, Sequence
+from collections.abc import Sequence
+from datetime import datetime
+from pathlib import Path
+from typing import TYPE_CHECKING, Any
 
 from mcp.types import TextContent
 
+from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.why_node import WhyChain, WhyNode
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
-from rootcause_mcp.application.guided_response import format_guided_response
 
 if TYPE_CHECKING:
+    from rootcause_mcp.application.session_progress import SessionProgressTracker
     from rootcause_mcp.domain.repositories.session_repository import SessionRepository
     from rootcause_mcp.domain.repositories.why_tree_repository import WhyTreeRepository
-    from rootcause_mcp.application.session_progress import SessionProgressTracker
 
 logger = logging.getLogger(__name__)
 
 
 class WhyTreeHandlers:
     """Handler class for Why Tree tools."""
+
+    # Export directory relative to project root
+    EXPORT_DIR = Path("data/exports")
 
     # Cause type mapping by Why Tree depth
     CAUSE_TYPE_BY_LEVEL = {
@@ -75,6 +81,35 @@ class WhyTreeHandlers:
         self._why_repo = why_tree_repository
         self._session_repo = session_repository
         self._progress = progress_tracker
+
+    def _write_export_file(
+        self, session_id: str, export_type: str, export_format: str, content: str
+    ) -> str | None:
+        """Write export content to file and return path."""
+        try:
+            # Create session-specific export directory
+            export_dir = self.EXPORT_DIR / session_id
+            export_dir.mkdir(parents=True, exist_ok=True)
+
+            # Determine file extension
+            ext = "md" if export_format in ("mermaid", "markdown") else "json"
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            filename = f"{export_type}_{timestamp}.{ext}"
+            file_path = export_dir / filename
+
+            # Add header for markdown files
+            if ext == "md":
+                header = f"# {export_type.replace('_', ' ').title()} Export\n\n"
+                header += f"**Session:** `{session_id}`\n"
+                header += f"**Exported:** {datetime.now().isoformat()}\n\n"
+                content = header + content
+
+            file_path.write_text(content, encoding="utf-8")
+            logger.info(f"Exported {export_type} to {file_path}")
+            return str(file_path)
+        except Exception as e:
+            logger.warning(f"Failed to write export file: {e}")
+            return None
 
     def _get_cause_type_by_level(self, level: int) -> dict[str, str]:
         """Get cause type information based on Why Tree depth."""
@@ -195,7 +230,7 @@ class WhyTreeHandlers:
             result += f"\n**Node ID:** `{node.id}`\n"
             result += f"**Cause Type:** {cause_type_info['emoji']} {cause_type_info['type']} ({cause_type_info['chinese']})\n"
             result += f"**HFACS Guidance:** {cause_type_info['hfacs_hint']}\n"
-            result += f"**Cause Type:** 🔴 Proximate (近端原因)\n"
+            result += "**Cause Type:** 🔴 Proximate (近端原因)\n"
 
             if node.is_final_why:
                 result += (
@@ -249,7 +284,7 @@ class WhyTreeHandlers:
             )]
 
         lines = [
-            f"# 5-Why Analysis Tree\n",
+            "# 5-Why Analysis Tree\n",
             f"**Initial Problem:** {chain.initial_problem}\n",
             f"**Depth:** {chain.depth}/5\n",
             f"**Complete:** {'✅ Yes' if chain.is_complete else '❌ No'}\n",
@@ -325,7 +360,7 @@ class WhyTreeHandlers:
         if node.evidence:
             result += f"**Evidence:** {', '.join(node.evidence)}\n"
 
-        result += f"\n---\n**Chain Status:** "
+        result += "\n---\n**Chain Status:** "
         if chain.is_complete:
             result += "✅ Complete (all branches have root causes)"
         else:
@@ -413,5 +448,10 @@ class WhyTreeHandlers:
 
             lines.append("```")
             result = "\n".join(lines)
+
+        # Write to file for easy preview
+        file_path = self._write_export_file(session_id_str, "why_tree", export_format, result)
+        if file_path:
+            result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
 
         return [TextContent(type="text", text=result)]

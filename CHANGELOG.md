@@ -8,6 +8,13 @@
 ## [Unreleased]
 
 ### Added
+- **Export 自動存檔功能** - Fishbone/WhyTree 匯出時自動儲存至 `data/exports/{session_id}/`
+  - 支援 Mermaid/Markdown (`.md`) 和 JSON (`.json`) 格式
+  - 時間戳命名：`fishbone_20260116_010216.md`
+  - 可在 VS Code 中直接預覽 Mermaid 圖 (需安裝 `bierner.markdown-mermaid`)
+- **AHRQ WebM&M 測試案例**
+  - `examples/ahrq_webmm_001_pediatric_opioid/case_rawdata.md` - 測試輸入
+  - `examples/ahrq_webmm_001_pediatric_opioid/expert_commentary.md` - 專家解答
 - **DDD 架構重構** - 將 2057 行 monolithic server.py 拆分為模組化結構
   - `interface/tools/` - 5 個 Tool 定義模組 (HFACS/Session/Fishbone/WhyTree/Verification)
   - `interface/handlers/` - 5 個 Handler 實作模組
@@ -23,7 +30,15 @@
   - Why Tree: `rc_ask_why`, `rc_get_why_tree`, `rc_mark_root_cause`, `rc_export_why_tree`
   - Verification: `rc_verify_causation`
 
+### Fixed
+- **session_progress.py Bug 修復**
+  - `FishboneCategory` 使用 `.has_causes` 和 `.cause_count` 屬性（非 len()）
+  - `WhyChain.nodes` 是 list 不是 dict（移除 `.values()`）
+
 ### Changed
+- **Ruff 程式碼格式化**
+  - 所有 Handler 檔案 Import 排序標準化
+  - 使用 `collections.abc.Sequence` 替代 `typing.Sequence`
 - 更新 `pyproject.toml` 入口點指向 DDD server
 - 保留 `rootcause-mcp-legacy` 入口點相容舊版
 

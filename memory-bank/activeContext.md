@@ -2,15 +2,15 @@
 
 > 📌 此檔案記錄當前工作焦點，每次工作階段開始時檢視，結束時更新。
 > 
-> **Last Updated**: 2026-01-16
+> **Last Updated**: 2026-01-16T01:30
 
 ## 🎯 當前焦點
 
-- **Multi-Model RCA Framework 架構定案** ✅
+- **Export 自動存檔功能** ✅ 新增
 - **19 個 MCP Tools** 上線運行
-- **README i18n 更新完成** (EN + ZH-TW)
-- **ROADMAP 擴展** Phase 6-8 (Cartridge 系統)
-- 準備 Git commit 今日變更
+- **AHRQ WebM&M 測試案例** ✅ 完成 (Fishbone + 5-Why + Verification)
+- **Bug 修復** ✅ (session_progress.py)
+- 準備 Git commit + push
 
 ## 📝 專案狀態
 
@@ -24,34 +24,22 @@
 | MCP Tools | ✅ **19 Tools 完成** |
 | **DDD 重構** | ✅ **完成 (模組化 interface/)** |
 | **Application Layer** | ✅ **SessionProgressTracker + GuidedResponseBuilder** |
-| **架構設計** | ✅ **Multi-Model RCA Framework + Cartridge 概念** |
-| **README i18n** | ✅ **完成 (EN + ZH-TW)** |
+| **Export 功能** | ✅ **自動存檔至 `data/exports/`** |
+| **測試案例** | ✅ **AHRQ WebM&M 案例測試通過** |
 | 測試 | 🔄 手動測試通過，待正式 pytest |
 
-## 📂 DDD 架構
+## 📂 Export 功能 (新增)
 
 ```
-src/rootcause_mcp/
-├── interface/
-│   ├── server.py          # 精簡入口點 (~350 行)
-│   ├── tools/             # Tool 定義模組 (5 檔案)
-│   │   ├── hfacs_tools.py
-│   │   ├── session_tools.py
-│   │   ├── fishbone_tools.py
-│   │   ├── why_tree_tools.py
-│   │   └── verification_tools.py
-│   └── handlers/          # Handler 實作模組 (5 檔案)
-│       ├── hfacs_handlers.py
-│       ├── session_handlers.py
-│       ├── fishbone_handlers.py
-│       ├── why_tree_handlers.py
-│       └── verification_handlers.py
-├── application/
-│   ├── session_progress.py   # 進度追蹤
-│   └── guided_response.py    # 引導式回應 + 逼問
-├── domain/                   # (已存在)
-└── infrastructure/           # (已存在)
+data/exports/
+└── {session_id}/
+    ├── fishbone_20260116_010216.md   # Mermaid 圖 + 時間戳
+    └── why_tree_20260116_012345.md   # 可在 VS Code 預覽
 ```
+
+- **觸發**: `rc_export_fishbone` 或 `rc_export_why_tree`
+- **格式**: Mermaid/Markdown → `.md`, JSON → `.json`
+- **預覽**: 安裝 `bierner.markdown-mermaid` 擴展
 
 ## 🛠️ 已實作 MCP Tools (19)
 
@@ -111,7 +99,7 @@ src/rootcause_mcp/
 
 ## 🔜 下一步
 
-1. **Git Commit** 今日變更
+1. ✅ **Git Commit** 今日變更 (Export + Bug fixes + 案例)
 2. **Phase 3**: 擴充 Retrospective 工具
    - Stage tools (execute/get/rollback)
    - Action tools (SMART criteria)
@@ -119,4 +107,4 @@ src/rootcause_mcp/
 4. **相關專案**: `asset-aware-mcp` 用於資料拆解前處理
 
 ---
-*Last updated: 2026-01-16*
+*Last updated: 2026-01-16T01:30*

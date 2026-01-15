@@ -13,7 +13,8 @@ Handles 6 HFACS-related tools:
 from __future__ import annotations
 
 import logging
-from typing import TYPE_CHECKING, Any, Sequence
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Any
 
 from mcp.types import TextContent
 
@@ -265,8 +266,8 @@ class HFACSHandlers:
             )
         else:
             result = (
-                f"❌ **Failed to save classification**\n\n"
-                f"Please check the logs for details."
+                "❌ **Failed to save classification**\n\n"
+                "Please check the logs for details."
             )
 
         return [TextContent(type="text", text=result)]
@@ -371,12 +372,12 @@ class HFACSHandlers:
         including Why Tree depth guidance for comprehensive analysis.
         """
         category_filter = arguments.get("category")
-        
+
         if category_filter and category_filter in self.MAPPING_6M_HFACS:
             mapping_data = {category_filter: self.MAPPING_6M_HFACS[category_filter]}
         else:
             mapping_data = self.MAPPING_6M_HFACS
-        
+
         lines = [
             "# 6M-HFACS 對照表 (表圖樹 Cross-Reference)\n",
             "此對照表幫助 Agent 理解：",
@@ -392,47 +393,47 @@ class HFACSHandlers:
             "| **Ultimate (遠端)** | 3-5 | Level 3-4 | 組織/系統層面的根本原因 |",
             "",
         ]
-        
+
         cause_type_emoji_map = {
             "proximate": "🔴",
-            "intermediate": "🟡", 
+            "intermediate": "🟡",
             "ultimate": "🟢",
             "mixed": "🔵",
         }
-        
+
         for category, data in mapping_data.items():
             # Cast to dict for type safety
             data_dict = dict(data) if not isinstance(data, dict) else data
-            
+
             cause_type = str(data_dict.get("cause_type", "unknown"))
             cause_type_emoji = cause_type_emoji_map.get(cause_type, "⚪")
-            
+
             hfacs_levels = data_dict.get("hfacs_levels", [])
             hfacs_codes = data_dict.get("hfacs_codes", [])
             description = str(data_dict.get("description", ""))
-            
+
             lines.append(f"\n## {cause_type_emoji} {category}\n")
             lines.append(f"**{description}**\n")
             lines.append(f"- **HFACS Levels:** {', '.join(str(x) for x in hfacs_levels)}")
             lines.append(f"- **HFACS Codes:** {', '.join(str(x) for x in hfacs_codes)}")
             lines.append(f"- **Cause Type:** {cause_type.title()}")
-            
+
             depth_info = data_dict.get("why_tree_depth", {})
             if isinstance(depth_info, dict):
                 lines.append(f"- **Why Tree Depth:** 通常 {depth_info.get('typical', 'N/A')}, 最深 {depth_info.get('max', 'N/A')}")
-            
+
             example_mappings = data_dict.get("example_mappings", [])
             if example_mappings:
                 lines.append("\n**範例對照：**")
                 for ex in example_mappings:
                     if isinstance(ex, dict):
                         lines.append(f"- 「{ex.get('cause', '')}」 → **{ex.get('hfacs', '')}**")
-        
+
         lines.append("\n---\n")
         lines.append("## 使用建議\n")
         lines.append("1. **起點 (Proximate):** 從 Personnel 類別開始，通常是 Why 1-2")
         lines.append("2. **深入 (Intermediate):** Equipment/Material/Environment 是 Why 2-4")
         lines.append("3. **終點 (Ultimate):** Process/Monitoring 是真正的根本原因，通常是 Why 3-5")
         lines.append("\n> 💡 **RCA 原則：** 不要停在近端原因 (Level 1)，要追溯到組織/系統層面 (Level 3-4)")
-        
+
         return [TextContent(type="text", text="\n".join(lines))]
