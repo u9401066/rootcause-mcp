@@ -1,0 +1,343 @@
+# WHO ICPS (International Classification for Patient Safety)
+# 世界衛生組織國際病人安全分類
+# 用於標準化報告和跨機構比較
+
+metadata:
+  id: who-icps
+  name: "WHO ICPS"
+  name_zh: "WHO 國際病人安全分類"
+  version: "1.0"
+  source:
+    organization: "World Health Organization"
+    year: 2009
+    document: "Conceptual Framework for the International Classification for Patient Safety"
+    url: "https://www.who.int/teams/integrated-health-services/patient-safety"
+  categories: 10
+  complexity: medium
+  use_cases:
+    - "標準化事件報告"
+    - "跨機構資料比較"
+    - "國際研究"
+    - "監管通報"
+
+# 參考文獻
+references:
+  - pmid: "31437756"
+    title: "Using the WHO ICPS framework to identify incident characteristics"
+    year: 2020
+  - pmid: "35796187"
+    title: "Challenges to ICPS implementation in Slovenia"
+    year: 2023
+
+taxonomy:
+  # ═══════════════════════════════════════════════════════════════
+  # 10 個主要概念類別
+  # ═══════════════════════════════════════════════════════════════
+  
+  INCIDENT_TYPE:
+    name: "Incident Type"
+    name_zh: "事件類型"
+    description: "描述發生了什麼事件"
+    icon: "⚠️"
+    
+    categories:
+      - id: IT-CLINICAL
+        name: "Clinical Administration"
+        name_zh: "臨床行政"
+        
+      - id: IT-CLINICAL-PROC
+        name: "Clinical Process/Procedure"
+        name_zh: "臨床流程/程序"
+        
+      - id: IT-DOCUMENTATION
+        name: "Documentation"
+        name_zh: "文件紀錄"
+        
+      - id: IT-HEALTHCARE-INFECTION
+        name: "Healthcare Associated Infection"
+        name_zh: "醫療照護相關感染"
+        
+      - id: IT-MEDICATION
+        name: "Medication/IV Fluids"
+        name_zh: "藥物/輸液"
+        
+      - id: IT-BLOOD
+        name: "Blood/Blood Products"
+        name_zh: "血液/血品"
+        
+      - id: IT-NUTRITION
+        name: "Nutrition"
+        name_zh: "營養"
+        
+      - id: IT-OXYGEN
+        name: "Oxygen/Gas/Vapour"
+        name_zh: "氧氣/氣體"
+        
+      - id: IT-MEDICAL-DEVICE
+        name: "Medical Device/Equipment"
+        name_zh: "醫療器材/設備"
+        
+      - id: IT-BEHAVIOUR
+        name: "Behaviour"
+        name_zh: "行為"
+        
+      - id: IT-PATIENT-ACCIDENT
+        name: "Patient Accidents"
+        name_zh: "病人意外"
+        
+      - id: IT-INFRASTRUCTURE
+        name: "Infrastructure/Building/Fixtures"
+        name_zh: "基礎設施/建築"
+        
+      - id: IT-RESOURCES
+        name: "Resources/Organizational Management"
+        name_zh: "資源/組織管理"
+
+  PATIENT_OUTCOMES:
+    name: "Patient Outcomes"
+    name_zh: "病人結果"
+    description: "事件對病人的影響程度"
+    icon: "🏥"
+    
+    categories:
+      - id: PO-NONE
+        name: "None"
+        name_zh: "無傷害"
+        
+      - id: PO-MILD
+        name: "Mild"
+        name_zh: "輕微"
+        description: "症狀輕微、時間短、不需介入或僅需簡單處理"
+        
+      - id: PO-MODERATE
+        name: "Moderate"
+        name_zh: "中度"
+        description: "需要額外治療或住院延長"
+        
+      - id: PO-SEVERE
+        name: "Severe"
+        name_zh: "嚴重"
+        description: "永久性傷害或需要維生介入"
+        
+      - id: PO-DEATH
+        name: "Death"
+        name_zh: "死亡"
+
+  PATIENT_CHARACTERISTICS:
+    name: "Patient Characteristics"
+    name_zh: "病人特性"
+    description: "與病人相關的特性"
+    icon: "👤"
+    
+    attributes:
+      - id: PC-DEMO
+        name: "Demographics"
+        name_zh: "人口學特性"
+        examples: ["年齡", "性別"]
+        
+      - id: PC-REASON
+        name: "Reason for Healthcare"
+        name_zh: "就醫原因"
+        
+      - id: PC-DIAGNOSIS
+        name: "Primary Diagnosis"
+        name_zh: "主要診斷"
+
+  INCIDENT_CHARACTERISTICS:
+    name: "Incident Characteristics"
+    name_zh: "事件特性"
+    description: "事件發生的情境脈絡"
+    icon: "📋"
+    
+    attributes:
+      - id: IC-SETTING
+        name: "Care Setting"
+        name_zh: "照護場所"
+        examples: ["急診", "病房", "手術室", "ICU", "門診"]
+        
+      - id: IC-PHASE
+        name: "Phase of Care"
+        name_zh: "照護階段"
+        examples: ["入院", "診斷", "治療", "出院"]
+        
+      - id: IC-SPECIALTY
+        name: "Specialty"
+        name_zh: "專科"
+        
+      - id: IC-DATE-TIME
+        name: "Date and Time"
+        name_zh: "日期時間"
+
+  CONTRIBUTING_FACTORS:
+    name: "Contributing Factors/Hazards"
+    name_zh: "促成因素/危害"
+    description: "導致或增加事件可能性的因素"
+    icon: "🔍"
+    
+    categories:
+      - id: CF-STAFF
+        name: "Staff Factors"
+        name_zh: "人員因素"
+        subcategories:
+          - "Cognitive factors"
+          - "Performance factors"
+          - "Behaviour factors"
+          
+      - id: CF-PATIENT
+        name: "Patient Factors"
+        name_zh: "病人因素"
+        
+      - id: CF-SYSTEM
+        name: "System Factors"
+        name_zh: "系統因素"
+        subcategories:
+          - "Work environment factors"
+          - "Organizational/service factors"
+          
+      - id: CF-EXTERNAL
+        name: "External Factors"
+        name_zh: "外部因素"
+        
+      - id: CF-OTHER
+        name: "Other"
+        name_zh: "其他"
+
+  DETECTION:
+    name: "Detection"
+    name_zh: "偵測"
+    description: "事件如何被發現"
+    icon: "🔔"
+    
+    categories:
+      - id: DT-PATIENT
+        name: "Patient/Family"
+        name_zh: "病人/家屬"
+        
+      - id: DT-STAFF
+        name: "Healthcare Staff"
+        name_zh: "醫療人員"
+        
+      - id: DT-SYSTEM
+        name: "System/Technology"
+        name_zh: "系統/科技"
+        
+      - id: DT-REVIEW
+        name: "Review/Audit"
+        name_zh: "審查/稽核"
+
+  MITIGATING_FACTORS:
+    name: "Mitigating Factors"
+    name_zh: "緩解因素"
+    description: "減輕傷害程度的因素"
+    icon: "🛡️"
+    
+    categories:
+      - id: MF-INDIVIDUAL
+        name: "Individual Actions"
+        name_zh: "個人行動"
+        
+      - id: MF-TEAM
+        name: "Team Actions"
+        name_zh: "團隊行動"
+        
+      - id: MF-SYSTEM
+        name: "System Factors"
+        name_zh: "系統因素"
+
+  AMELIORATING_ACTIONS:
+    name: "Ameliorating Actions"
+    name_zh: "改善行動"
+    description: "事後為減少傷害所採取的行動"
+    icon: "🩹"
+    
+    categories:
+      - id: AA-CLINICAL
+        name: "Clinical Actions"
+        name_zh: "臨床處置"
+        
+      - id: AA-SUPPORT
+        name: "Patient/Family Support"
+        name_zh: "病人/家屬支持"
+        
+      - id: AA-DISCLOSURE
+        name: "Disclosure"
+        name_zh: "告知說明"
+
+  ACTIONS_TO_REDUCE_RISK:
+    name: "Actions to Reduce Risk"
+    name_zh: "降低風險行動"
+    description: "預防類似事件再次發生的措施"
+    icon: "📈"
+    
+    categories:
+      - id: AR-INDIVIDUAL
+        name: "Individual Level"
+        name_zh: "個人層級"
+        
+      - id: AR-TEAM
+        name: "Team Level"
+        name_zh: "團隊層級"
+        
+      - id: AR-ORGANIZATION
+        name: "Organization Level"
+        name_zh: "組織層級"
+        
+      - id: AR-SYSTEM
+        name: "System Level"
+        name_zh: "系統層級"
+
+  ORGANIZATIONAL_OUTCOMES:
+    name: "Organizational Outcomes"
+    name_zh: "組織結果"
+    description: "事件對組織的影響"
+    icon: "🏢"
+    
+    categories:
+      - id: OO-REPUTATION
+        name: "Reputation/Public Relations"
+        name_zh: "聲譽/公關"
+        
+      - id: OO-LEGAL
+        name: "Legal/Regulatory"
+        name_zh: "法律/監管"
+        
+      - id: OO-FINANCIAL
+        name: "Financial"
+        name_zh: "財務"
+        
+      - id: OO-OPERATIONAL
+        name: "Operational"
+        name_zh: "營運"
+
+# ═══════════════════════════════════════════════════════════════
+# 對應到其他框架
+# ═══════════════════════════════════════════════════════════════
+mapping:
+  to_hfacs_mes:
+    CONTRIBUTING_FACTORS:
+      CF-STAFF:
+        - PP-AMS
+        - PP-APS
+        - PP-CPL
+        - UA-DE
+        - UA-SBE
+        - UA-PE
+      CF-PATIENT:
+        - EF-PRF
+      CF-SYSTEM:
+        - OF-RM
+        - OF-OP
+        - OF-PSC
+        - EF-PE
+        - EF-PMI
+      CF-EXTERNAL:
+        - EO-L
+        - EO-N
+        
+  to_fishbone_6m:
+    CF-STAFF: MAN
+    CF-PATIENT: MILIEU
+    CF-SYSTEM:
+      - METHOD
+      - MACHINE
+      - MILIEU

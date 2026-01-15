@@ -1,0 +1,331 @@
+# Fishbone 6M - Healthcare Adaptation
+# 醫療版魚骨圖分類 (石川圖)
+# 最簡單易用的快速分類框架
+
+metadata:
+  id: fishbone-6m
+  name: "Fishbone 6M"
+  name_zh: "魚骨圖 6M 分類"
+  version: "1.0"
+  source:
+    original: "Ishikawa Diagram (石川馨)"
+    adaptation: "Healthcare 6M Model"
+  categories: 6
+  complexity: low
+  use_cases:
+    - "快速分類"
+    - "團隊腦力激盪"
+    - "初步問題分析"
+    - "品質改善活動"
+
+taxonomy:
+  # ═══════════════════════════════════════════════════════════════
+  # 6M 分類
+  # ═══════════════════════════════════════════════════════════════
+  
+  MAN:
+    name: "Man/Manpower"
+    name_zh: "人員"
+    description: "與醫療人員相關的因素"
+    icon: "👤"
+    
+    subcategories:
+      - id: MAN-SKILL
+        name: "Skills & Competency"
+        name_zh: "技能與能力"
+        examples:
+          - "訓練不足"
+          - "經驗不夠"
+          - "能力不符"
+          
+      - id: MAN-PHYSICAL
+        name: "Physical Condition"
+        name_zh: "生理狀態"
+        examples:
+          - "疲勞"
+          - "身體不適"
+          - "視力/聽力問題"
+          
+      - id: MAN-MENTAL
+        name: "Mental Condition"
+        name_zh: "心理狀態"
+        examples:
+          - "壓力過大"
+          - "注意力不集中"
+          - "情緒影響"
+          
+      - id: MAN-COMM
+        name: "Communication"
+        name_zh: "溝通"
+        examples:
+          - "交班不清楚"
+          - "口頭醫囑誤解"
+          - "團隊溝通失敗"
+          
+    keywords:
+      - "人員"
+      - "護理師"
+      - "醫師"
+      - "技術員"
+      - "訓練"
+      - "疲勞"
+      - "溝通"
+      - "交班"
+
+  METHOD:
+    name: "Method"
+    name_zh: "方法"
+    description: "與作業流程、程序相關的因素"
+    icon: "📋"
+    
+    subcategories:
+      - id: MTD-SOP
+        name: "SOP/Procedures"
+        name_zh: "標準作業程序"
+        examples:
+          - "SOP 不清楚"
+          - "流程設計缺陷"
+          - "程序過於複雜"
+          
+      - id: MTD-POLICY
+        name: "Policy/Guidelines"
+        name_zh: "政策/指引"
+        examples:
+          - "政策不明確"
+          - "指引未更新"
+          - "規定互相矛盾"
+          
+      - id: MTD-TRAINING
+        name: "Training Programs"
+        name_zh: "教育訓練"
+        examples:
+          - "訓練課程不足"
+          - "在職教育缺乏"
+          - "新進訓練不完整"
+          
+    keywords:
+      - "流程"
+      - "程序"
+      - "SOP"
+      - "政策"
+      - "規定"
+      - "訓練"
+      - "步驟"
+
+  MACHINE:
+    name: "Machine"
+    name_zh: "機器/設備"
+    description: "與設備、系統、儀器相關的因素"
+    icon: "🔧"
+    
+    subcategories:
+      - id: MCH-FUNCTION
+        name: "Equipment Function"
+        name_zh: "設備功能"
+        examples:
+          - "設備故障"
+          - "功能異常"
+          - "精準度不足"
+          
+      - id: MCH-DESIGN
+        name: "Design/Interface"
+        name_zh: "設計/介面"
+        examples:
+          - "介面不直覺"
+          - "警報設計不良"
+          - "操作複雜"
+          
+      - id: MCH-MAINTAIN
+        name: "Maintenance"
+        name_zh: "維護保養"
+        examples:
+          - "維護不當"
+          - "校正未執行"
+          - "老舊未更換"
+          
+      - id: MCH-IT
+        name: "IT Systems"
+        name_zh: "資訊系統"
+        examples:
+          - "系統當機"
+          - "資料錯誤"
+          - "整合性問題"
+          
+    keywords:
+      - "設備"
+      - "機器"
+      - "儀器"
+      - "系統"
+      - "故障"
+      - "維護"
+      - "警報"
+
+  MATERIAL:
+    name: "Material"
+    name_zh: "材料"
+    description: "與藥品、耗材、物資相關的因素"
+    icon: "💊"
+    
+    subcategories:
+      - id: MAT-DRUG
+        name: "Medications"
+        name_zh: "藥品"
+        examples:
+          - "藥品過期"
+          - "藥品標示不清"
+          - "look-alike/sound-alike"
+          
+      - id: MAT-SUPPLY
+        name: "Medical Supplies"
+        name_zh: "醫療耗材"
+        examples:
+          - "耗材品質問題"
+          - "規格不符"
+          - "供應短缺"
+          
+      - id: MAT-BLOOD
+        name: "Blood Products"
+        name_zh: "血品"
+        examples:
+          - "血型錯誤"
+          - "儲存不當"
+          - "標示錯誤"
+          
+      - id: MAT-STORAGE
+        name: "Storage"
+        name_zh: "儲存"
+        examples:
+          - "儲存條件不當"
+          - "擺放位置混亂"
+          - "效期管理不良"
+          
+    keywords:
+      - "藥品"
+      - "藥物"
+      - "耗材"
+      - "血品"
+      - "過期"
+      - "標示"
+      - "儲存"
+
+  MEASUREMENT:
+    name: "Measurement"
+    name_zh: "測量/監測"
+    description: "與監測、評估、資料相關的因素"
+    icon: "📊"
+    
+    subcategories:
+      - id: MSR-MONITOR
+        name: "Patient Monitoring"
+        name_zh: "病人監測"
+        examples:
+          - "監測頻率不足"
+          - "生命徵象未追蹤"
+          - "異常未發現"
+          
+      - id: MSR-DATA
+        name: "Data/Documentation"
+        name_zh: "資料/紀錄"
+        examples:
+          - "紀錄不完整"
+          - "資料輸入錯誤"
+          - "資訊未更新"
+          
+      - id: MSR-INDICATORS
+        name: "Quality Indicators"
+        name_zh: "品質指標"
+        examples:
+          - "指標監測不足"
+          - "未達標未處理"
+          - "追蹤機制缺乏"
+          
+    keywords:
+      - "監測"
+      - "追蹤"
+      - "紀錄"
+      - "資料"
+      - "指標"
+      - "評估"
+
+  MILIEU:
+    name: "Milieu/Environment"
+    name_zh: "環境"
+    description: "與工作環境相關的因素"
+    icon: "🏥"
+    
+    subcategories:
+      - id: ENV-PHYSICAL
+        name: "Physical Environment"
+        name_zh: "物理環境"
+        examples:
+          - "照明不足"
+          - "噪音干擾"
+          - "空間狹小"
+          
+      - id: ENV-WORKLOAD
+        name: "Workload"
+        name_zh: "工作負荷"
+        examples:
+          - "病人數過多"
+          - "人力不足"
+          - "時間壓力大"
+          
+      - id: ENV-CULTURE
+        name: "Work Culture"
+        name_zh: "工作文化"
+        examples:
+          - "blame culture"
+          - "階層權威"
+          - "不鼓勵發言"
+          
+      - id: ENV-SCHEDULE
+        name: "Scheduling"
+        name_zh: "排班"
+        examples:
+          - "連續值班"
+          - "班表安排不當"
+          - "休息時間不足"
+          
+    keywords:
+      - "環境"
+      - "空間"
+      - "照明"
+      - "噪音"
+      - "人力"
+      - "排班"
+      - "文化"
+
+# ═══════════════════════════════════════════════════════════════
+# 對應到其他框架
+# ═══════════════════════════════════════════════════════════════
+mapping:
+  to_hfacs_mes:
+    MAN:
+      - PP-AMS
+      - PP-APS
+      - PP-CPL
+      - PP-PR
+      - TC-COM
+      - UA-DE
+      - UA-SBE
+    METHOD:
+      - OF-OP
+      - US-IP
+    MACHINE:
+      - EF-PMI
+    MATERIAL:
+      - EF-TE
+    MEASUREMENT:
+      - EF-PMI
+    MILIEU:
+      - EF-PE
+      - OF-PSC
+      - OF-RM
+      
+  to_who_icps:
+    MAN: "Contributing Factors - Staff"
+    METHOD: "Contributing Factors - Organizational"
+    MACHINE: "Contributing Factors - Equipment"
+    MATERIAL: "Contributing Factors - Medication/Infusion"
+    MEASUREMENT: "Detection"
+    MILIEU: "Contributing Factors - Work Environment"

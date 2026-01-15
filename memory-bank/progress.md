@@ -9,10 +9,14 @@
 - ✅ 專案風險 RCA (dogfooding)
 - ✅ 專案結構建立 (from template)
 - ✅ pyproject.toml 配置
+- ✅ Git 初始化 + GitHub Repo 建立
+  - Repo: https://github.com/u9401066/rootcause-mcp
+  - Topics: mcp, root-cause-analysis, healthcare, hfacs, fishbone-diagram
+  - Labels: phase1-mvp, phase2-fishbone, phase3-collab, domain-entities, mcp-tools, etc.
 
 ## Doing
 
-- 🔄 Memory Bank 初始化
+- 🔄 準備開始 MVP 實作 (Phase 1)
 
 ## Next (MVP Phase)
 

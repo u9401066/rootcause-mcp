@@ -1,0 +1,570 @@
+# HFACS-MES (Human Factors Analysis and Classification System for Medical Errors)
+# 來源: Jalali et al. 2024 (PMID:38394116)
+# 5 層 25 個因素類別
+
+metadata:
+  id: hfacs-mes
+  name: "HFACS-MES"
+  name_zh: "醫療錯誤人因分析分類系統"
+  version: "1.0"
+  source:
+    authors: "Jalali M, Habibi E, Khakzad N, et al."
+    title: "A novel framework for human factors analysis and classification system for medical errors (HFACS-MES)"
+    journal: "PLoS One"
+    year: 2024
+    pmid: "38394116"
+    pmc: "PMC10889608"
+    doi: "10.1371/journal.pone.0298606"
+  levels: 5
+  total_categories: 25
+  immutable: true  # 這是標準框架，不應修改
+
+taxonomy:
+  # ═══════════════════════════════════════════════════════════════
+  # Level 5: Extra-Organizational Issues (組織外部因素) [HFACS-MES 新增]
+  # ═══════════════════════════════════════════════════════════════
+  EO:
+    level: 5
+    name: "Extra-Organizational Issues"
+    name_zh: "組織外部因素"
+    description: "超出單一組織控制範圍的外部系統性因素"
+    is_new: true  # HFACS-MES 新增的層級
+    
+    codes:
+      EO-L:
+        name: "Legislation & Regulation"
+        name_zh: "法規制度"
+        description: "國家法規、國際標準、監管政策的缺陷或不足"
+        examples:
+          - "病人安全相關法規不完善"
+          - "醫療人員保護法規不足"
+          - "國際安全標準未落實"
+        keywords:
+          - "法規"
+          - "法律"
+          - "規範"
+          - "政策"
+          - "標準"
+          - "認證"
+          
+      EO-N:
+        name: "National Deficiencies"
+        name_zh: "國家層級缺陷"
+        description: "國家層級的醫療資源、人力、技術限制"
+        examples:
+          - "特定專科全國性短缺"
+          - "醫療設備取得困難"
+          - "國家醫療技術水準限制"
+        keywords:
+          - "短缺"
+          - "不足"
+          - "國家"
+          - "全國"
+          - "資源"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Level 4: Organizational Factors (組織因素)
+  # ═══════════════════════════════════════════════════════════════
+  OF:
+    level: 4
+    name: "Organizational Factors"
+    name_zh: "組織因素"
+    description: "組織層級的管理、文化和流程因素"
+    
+    codes:
+      OF-RM:
+        name: "Resource Management"
+        name_zh: "資源管理"
+        description: "人力、設備、財務等資源的配置和管理"
+        examples:
+          - "人力配置不足"
+          - "設備老舊未更新"
+          - "預算分配不當"
+        keywords:
+          - "人力"
+          - "預算"
+          - "資源"
+          - "設備"
+          - "編制"
+          
+      OF-OP:
+        name: "Organizational Processes"
+        name_zh: "組織流程"
+        description: "組織的政策、程序、標準作業流程"
+        examples:
+          - "SOP 不清楚或過時"
+          - "跨部門協調機制不足"
+          - "作業流程設計缺陷"
+        keywords:
+          - "流程"
+          - "SOP"
+          - "程序"
+          - "政策"
+          - "規定"
+          
+      OF-PSC:
+        name: "Patient Safety Culture"
+        name_zh: "病人安全文化"
+        description: "組織對病人安全的態度、價值觀和行為模式"
+        is_modified: true  # 取代原本的 Organizational Culture
+        examples:
+          - "不鼓勵通報錯誤"
+          - "blame culture"
+          - "安全議題不受重視"
+        keywords:
+          - "安全文化"
+          - "通報"
+          - "blame"
+          - "究責"
+          - "文化"
+          
+      OF-MOC:
+        name: "Management of Change"
+        name_zh: "變革管理"
+        description: "組織變革、系統更新、流程改變的管理"
+        is_new: true  # HFACS-MES 新增
+        examples:
+          - "新系統上線未充分訓練"
+          - "流程改變未通知相關人員"
+          - "變革後未評估影響"
+        keywords:
+          - "變革"
+          - "改變"
+          - "更新"
+          - "新系統"
+          - "上線"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Level 3: Unsafe Supervision (不安全督導)
+  # ═══════════════════════════════════════════════════════════════
+  US:
+    level: 3
+    name: "Unsafe Supervision"
+    name_zh: "不安全督導"
+    description: "直接管理者/督導者層級的問題"
+    
+    codes:
+      US-IS:
+        name: "Inadequate Supervision"
+        name_zh: "監督不足"
+        description: "對下屬工作的監督、指導、支援不足"
+        examples:
+          - "新進人員未獲適當指導"
+          - "高風險操作未督導"
+          - "異常情況未及時介入"
+        keywords:
+          - "督導"
+          - "監督"
+          - "指導"
+          - "帶領"
+          - "新人"
+          
+      US-IP:
+        name: "Inadequate Planning"
+        name_zh: "計畫不當"
+        description: "工作計畫、排班、任務分配的問題"
+        examples:
+          - "排班過於緊湊"
+          - "任務分配不合理"
+          - "緊急狀況應變計畫不足"
+        keywords:
+          - "排班"
+          - "計畫"
+          - "安排"
+          - "分配"
+          - "班表"
+          
+      US-FK:
+        name: "Failure to Address Known Problem"
+        name_zh: "未處理已知問題"
+        description: "已知的安全問題或風險未被處理"
+        examples:
+          - "重複發生的錯誤未改善"
+          - "已通報的危險未處理"
+          - "設備故障未修復"
+        keywords:
+          - "已知"
+          - "重複"
+          - "未處理"
+          - "未改善"
+          - "通報"
+          
+      US-SV:
+        name: "Supervisory Violations"
+        name_zh: "督導違規"
+        description: "督導者本身違反規定或授權不當行為"
+        examples:
+          - "允許未經訓練者執行操作"
+          - "督導者帶頭違反規定"
+          - "不當授權"
+        keywords:
+          - "違規"
+          - "授權"
+          - "允許"
+          - "帶頭"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Level 2: Preconditions for Unsafe Acts (不安全行為前提)
+  # ═══════════════════════════════════════════════════════════════
+  PC:
+    level: 2
+    name: "Preconditions for Unsafe Acts"
+    name_zh: "不安全行為前提"
+    description: "導致不安全行為的前置條件"
+    
+    subcategories:
+      # --- Healthcare Providers (醫療提供者) ---
+      PP:
+        name: "Healthcare Providers"
+        name_zh: "醫療提供者狀態"
+        
+        codes:
+          PP-AMS:
+            name: "Adverse Mental State"
+            name_zh: "不良心理狀態"
+            description: "心理壓力、注意力不集中、情緒問題"
+            examples:
+              - "工作壓力過大"
+              - "注意力分散"
+              - "情緒不穩定"
+            keywords:
+              - "壓力"
+              - "焦慮"
+              - "注意力"
+              - "分心"
+              - "情緒"
+              
+          PP-APS:
+            name: "Adverse Physiological State"
+            name_zh: "不良生理狀態"
+            description: "疲勞、疾病、藥物影響等生理因素"
+            examples:
+              - "連續值班導致疲勞"
+              - "身體不適仍上班"
+              - "藥物副作用影響"
+            keywords:
+              - "疲勞"
+              - "疲累"
+              - "值班"
+              - "過勞"
+              - "生病"
+              - "不舒服"
+              
+          PP-CPL:
+            name: "Chronic Performance Limitation"
+            name_zh: "慢性能力限制"
+            description: "長期的能力或表現限制"
+            examples:
+              - "視力/聽力問題"
+              - "慢性疾病影響"
+              - "年齡相關的能力下降"
+            keywords:
+              - "視力"
+              - "聽力"
+              - "慢性"
+              - "長期"
+              
+          PP-PR:
+            name: "Personal Readiness"
+            name_zh: "個人準備度"
+            description: "工作前的準備狀態"
+            examples:
+              - "休息不足"
+              - "未做好工作準備"
+              - "個人問題干擾"
+            keywords:
+              - "準備"
+              - "休息"
+              - "睡眠"
+              
+      # --- Team & Coordination (團隊協調) ---
+      TC:
+        name: "Team & Coordination"
+        name_zh: "團隊協調"
+        
+        codes:
+          TC-COM:
+            name: "Communication"
+            name_zh: "溝通"
+            description: "團隊間的溝通問題"
+            is_new: true  # 從 Personal Factors 獨立出來
+            examples:
+              - "交班資訊不完整"
+              - "口頭醫囑不清楚"
+              - "跨團隊溝通失敗"
+            keywords:
+              - "溝通"
+              - "交班"
+              - "傳達"
+              - "通知"
+              - "告知"
+              
+          TC-TD:
+            name: "Team Dynamics"
+            name_zh: "團隊動力"
+            description: "團隊合作、協調、領導問題"
+            is_new: true  # 從 Personal Factors 獨立出來
+            examples:
+              - "團隊合作不佳"
+              - "角色責任不清"
+              - "領導力不足"
+            keywords:
+              - "團隊"
+              - "合作"
+              - "協調"
+              - "配合"
+              
+      # --- Environmental Factors (環境因素) ---
+      EF:
+        name: "Environmental Factors"
+        name_zh: "環境因素"
+        
+        codes:
+          EF-PE:
+            name: "Physical Environment"
+            name_zh: "物理環境"
+            description: "工作環境的物理條件"
+            examples:
+              - "照明不足"
+              - "噪音干擾"
+              - "空間狹小"
+            keywords:
+              - "照明"
+              - "燈光"
+              - "噪音"
+              - "空間"
+              - "環境"
+              
+          EF-PMI:
+            name: "Person-Machine Interface"
+            name_zh: "人機介面"
+            description: "設備、系統的介面設計問題"
+            is_modified: true  # 取代原本的 Technological Environment
+            examples:
+              - "系統介面不直覺"
+              - "警報設計不良"
+              - "設備操作複雜"
+            keywords:
+              - "介面"
+              - "系統"
+              - "操作"
+              - "警報"
+              - "設計"
+              
+          EF-TE:
+            name: "Task Elements"
+            name_zh: "任務要素"
+            description: "任務本身的特性和要求"
+            is_new: true  # HFACS-MES 新增
+            examples:
+              - "任務複雜度過高"
+              - "時間壓力大"
+              - "多重任務同時進行"
+            keywords:
+              - "任務"
+              - "複雜"
+              - "時間壓力"
+              - "同時"
+              - "多工"
+              
+          EF-PRF:
+            name: "Patient Related Factors"
+            name_zh: "病人相關因素"
+            description: "病人本身的特性或狀況"
+            is_new: true  # HFACS-MES 新增
+            examples:
+              - "病人意識不清無法確認身份"
+              - "病人配合度低"
+              - "病人病況複雜"
+            keywords:
+              - "病人"
+              - "患者"
+              - "配合"
+              - "意識"
+              - "病況"
+
+  # ═══════════════════════════════════════════════════════════════
+  # Level 1: Unsafe Acts (不安全行為)
+  # ═══════════════════════════════════════════════════════════════
+  UA:
+    level: 1
+    name: "Unsafe Acts"
+    name_zh: "不安全行為"
+    description: "直接導致事件的行為"
+    
+    subcategories:
+      # --- Errors (錯誤) ---
+      ERR:
+        name: "Errors"
+        name_zh: "錯誤"
+        
+        codes:
+          UA-DE:
+            name: "Decision Errors"
+            name_zh: "決策錯誤"
+            description: "判斷、決定、選擇上的錯誤"
+            examples:
+              - "診斷錯誤"
+              - "選擇不當的治療方式"
+              - "錯誤判斷病人狀況"
+            keywords:
+              - "判斷"
+              - "決定"
+              - "選擇"
+              - "診斷"
+              
+          UA-SBE:
+            name: "Skill-Based Errors"
+            name_zh: "技能錯誤"
+            description: "執行技術性操作時的失誤"
+            examples:
+              - "手術技術失誤"
+              - "藥物劑量計算錯誤"
+              - "操作程序遺漏"
+            keywords:
+              - "操作"
+              - "執行"
+              - "技術"
+              - "計算"
+              - "遺漏"
+              
+          UA-PE:
+            name: "Perceptual Errors"
+            name_zh: "感知錯誤"
+            description: "感官知覺上的錯誤"
+            examples:
+              - "看錯藥物標籤"
+              - "聽錯口頭醫囑"
+              - "未注意到警報"
+            keywords:
+              - "看錯"
+              - "聽錯"
+              - "誤認"
+              - "未注意"
+              - "混淆"
+              
+      # --- Violations (違規) ---
+      VIO:
+        name: "Violations"
+        name_zh: "違規"
+        
+        codes:
+          UA-RV:
+            name: "Routine Violations"
+            name_zh: "常規違規"
+            description: "習慣性、經常性的違規行為"
+            examples:
+              - "經常省略確認步驟"
+              - "習慣性不遵守SOP"
+              - "長期忽視安全規定"
+            keywords:
+              - "習慣"
+              - "經常"
+              - "省略"
+              - "總是"
+              
+          UA-EV:
+            name: "Exceptional Violations"
+            name_zh: "例外違規"
+            description: "特殊情況下的極端違規行為"
+            examples:
+              - "故意繞過安全機制"
+              - "明知危險仍執行"
+              - "蓄意違反規定"
+            keywords:
+              - "故意"
+              - "明知"
+              - "繞過"
+              - "蓄意"
+              
+          UA-SV:
+            name: "Situational Violations"
+            name_zh: "情境違規"
+            description: "因情境壓力導致的違規"
+            is_new: true  # HFACS-MES 新增
+            examples:
+              - "緊急情況下省略步驟"
+              - "人力不足時的變通"
+              - "時間壓力下的簡化"
+            keywords:
+              - "緊急"
+              - "不得已"
+              - "變通"
+              - "來不及"
+
+# ═══════════════════════════════════════════════════════════════
+# 因果路徑 (來自論文驗證)
+# ═══════════════════════════════════════════════════════════════
+causal_paths:
+  validated:
+    description: "經由 180 個醫療不良事件統計驗證的顯著因果路徑"
+    
+    level_5_to_4:
+      - from: EO-N
+        to: OF-MOC
+        odds_ratio: 7.33
+        confidence_interval: [2.09, 25.61]
+        strength: "strong"
+        
+      - from: EO-L
+        to: OF-PSC
+        odds_ratio: 6.94
+        confidence_interval: [2.49, 19.3]
+        strength: "strong"
+        
+      - from: EO-L
+        to: OF-OP
+        odds_ratio: 2.53
+        confidence_interval: [1.54, 8.21]
+        strength: "moderate"
+        
+    level_4_to_3:
+      - from: OF-MOC
+        to: US-IP
+        odds_ratio: 4.52
+        confidence_interval: [1.38, 14.72]
+        strength: "strong"
+        
+      - from: OF-RM
+        to: US-SV
+        odds_ratio: 2.90
+        confidence_interval: [1.09, 8.78]
+        strength: "moderate"
+        
+      - from: OF-PSC
+        to: US-FK
+        odds_ratio: 2.62
+        confidence_interval: null
+        strength: "moderate"
+        
+    level_3_to_2:
+      - from: US-IS
+        to: TC-COM
+        phi_coefficient: 0.32
+        strength: "moderate"
+        
+      - from: US-IP
+        to: EF-PRF
+        phi_coefficient: 0.32
+        strength: "moderate"
+        
+    level_2_to_1:
+      - from: EF-PRF
+        to: UA-DE
+        significant: true
+        
+      - from: EF-PMI
+        to: UA-SBE
+        significant: true
+        
+      - from: EF-PE
+        to: UA-PE
+        significant: true
+        
+      - from: TC-COM
+        to: UA-SBE
+        significant: true
+        
+      - from: EF-PRF
+        to: UA-SV
+        significant: true

@@ -4,7 +4,8 @@
 
 ## 🎯 當前焦點
 
-- 專案初始化完成，準備開始 MVP 實作
+- Git 設定完成，準備開始 Phase 1 MVP 實作
+- GitHub Repo: [u9401066/rootcause-mcp](https://github.com/u9401066/rootcause-mcp)
 
 ## 📝 專案狀態
 
@@ -12,6 +13,7 @@
 |------|------|
 | 規格設計 | ✅ 完成 (spec_v2.md v2.5.0) |
 | 專案結構 | ✅ 完成 (DDD 架構) |
+| Git/GitHub | ✅ 完成 |
 | 領域模型 | ⏳ 待開始 |
 | MCP Tools | ⏳ 待開始 |
 | 測試 | ⏳ 待開始 |

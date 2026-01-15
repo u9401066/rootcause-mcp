@@ -1,0 +1,75 @@
+# HFACS 分類框架配置
+# 多框架支援，讓 Agent 可以根據場景選擇適合的框架
+
+frameworks:
+  available:
+    - id: hfacs-mes
+      name: "HFACS-MES"
+      version: "1.0"
+      source: "Jalali et al. 2024 (PMID:38394116)"
+      levels: 5
+      categories: 25
+      complexity: high
+      use_cases:
+        - "深度系統分析"
+        - "醫療不良事件"
+        - "跨層級因果關係"
+      file: "hfacs_mes.yaml"
+      
+    - id: hfacs-healthcare
+      name: "HFACS-Healthcare"
+      version: "1.0"
+      source: "Cohen et al. 2018 (PMID:29562768)"
+      levels: 4
+      categories: 20
+      complexity: medium
+      use_cases:
+        - "手術室事件"
+        - "程序相關事件"
+        - "快速分類"
+      file: "hfacs_healthcare.yaml"
+      
+    - id: fishbone-6m
+      name: "Fishbone 6M (Healthcare)"
+      version: "1.0"
+      source: "Ishikawa Diagram - Healthcare Adaptation"
+      levels: 1
+      categories: 6
+      complexity: low
+      use_cases:
+        - "快速分類"
+        - "初步分析"
+        - "團隊腦力激盪"
+      file: "fishbone_6m.yaml"
+      
+    - id: who-icps
+      name: "WHO ICPS"
+      version: "1.0"
+      source: "WHO 2009"
+      levels: 1
+      categories: 10
+      complexity: medium
+      use_cases:
+        - "標準化報告"
+        - "跨機構比較"
+        - "國際研究"
+      file: "who_icps.yaml"
+
+  default: fishbone-6m
+  
+  selection_rules:
+    - condition: "event_severity == 'sentinel'"
+      recommended: hfacs-mes
+      reason: "警訊事件需要深度系統分析"
+      
+    - condition: "event_type == 'surgical'"
+      recommended: hfacs-healthcare
+      reason: "手術相關事件有專用框架"
+      
+    - condition: "analysis_depth == 'quick'"
+      recommended: fishbone-6m
+      reason: "快速分類適合團隊討論"
+      
+    - condition: "reporting_standard == 'international'"
+      recommended: who-icps
+      reason: "國際標準化報告需求"
