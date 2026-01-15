@@ -13,6 +13,7 @@
 4. [重要機構與資源](#4-重要機構與資源)
 5. [關鍵文獻清單](#5-關鍵文獻清單)
 6. [框架選擇建議](#6-框架選擇建議)
+7. [麻醉事件專題資源](#7-麻醉事件專題資源)
 
 ---
 
@@ -395,6 +396,164 @@ HFACS-MES 是針對醫療錯誤改良的 HFACS 框架，包含 **5 層 25 個因
 | 日期 | 更新內容 |
 |------|----------|
 | 2026-01-15 | 初版：整理 HFACS-MES, WHO ICPS, 機構資源 |
+| 2026-01-15 | 新增：麻醉事件專題 (Section 7) - Closed Claims, NAP, NACOR, 藥物錯誤, 危機手冊 |
+
+---
+
+## 7. 麻醉事件專題資源
+
+### 7.1 麻醉安全資料庫與通報系統
+
+#### 7.1.1 美國 - ASA 相關資源
+
+| 資源 | 說明 | 重要文獻 |
+|------|------|----------|
+| **Anesthesia Closed Claims Project** | ASA 主導的麻醉醫療糾紛索賠分析資料庫，自 1985 年開始收集 | PMID: [34019629](https://pubmed.ncbi.nlm.nih.gov/34019629/) |
+| **National Anesthesia Clinical Outcomes Registry (NACOR)** | 由 Anesthesia Quality Institute (AQI) 管理的全國性臨床結果登錄系統 | PMID: [26579661](https://pubmed.ncbi.nlm.nih.gov/26579661/) |
+| **Anesthesia Patient Safety Foundation (APSF)** | 麻醉病人安全基金會，提供安全指引與教育資源 | https://www.apsf.org/ |
+| **AANA Foundation Closed Claims Database** | 護理麻醉師相關的醫療糾紛資料庫 | PMID: [31920200](https://pubmed.ncbi.nlm.nih.gov/31920200/), [31573491](https://pubmed.ncbi.nlm.nih.gov/31573491/) |
+
+#### 7.1.2 英國 - National Audit Projects (NAPs)
+
+英國皇家麻醉醫師學院 (Royal College of Anaesthetists) 主導的系列全國性審計專案：
+
+| 專案 | 主題 | 重要文獻 |
+|------|------|----------|
+| **NAP4** | Major complications of airway management (呼吸道管理重大併發症) | 2011 報告 |
+| **NAP5** | Accidental Awareness during General Anaesthesia (全麻術中清醒) | 2014 報告 |
+| **NAP6** | Perioperative Anaphylaxis (圍術期過敏反應) | PMID: [29935567](https://pubmed.ncbi.nlm.nih.gov/29935567/) ⭐ |
+| **NAP7** | Perioperative Cardiac Arrest (圍術期心跳停止) | 進行中 |
+
+**NAP6 重點發現** (PMID: 29935567):
+- 圍術期過敏發生率約 **1:10,000 次麻醉**
+- 主要致敏原：Teicoplanin, Chlorhexidine, Antibiotics, NMBAs
+- 收集 266 例 Grade 3-5 過敏反應
+
+#### 7.1.3 其他國際資源
+
+| 資源 | 國家 | 說明 |
+|------|------|------|
+| **WebAIRS** | 澳洲 | Australian Incident Monitoring System 網路版 |
+| **SENSAR** | 西班牙 | Spanish Anaesthesia and Resuscitation Incident Reporting System |
+| **SBAR** | 國際 | Situation-Background-Assessment-Recommendation 溝通工具 |
+
+---
+
+### 7.2 麻醉事件關鍵文獻
+
+#### 7.2.1 Closed Claims 分析
+
+| PMID | 作者/年份 | 主題 | 重要發現 |
+|------|-----------|------|----------|
+| [34019629](https://pubmed.ncbi.nlm.nih.gov/34019629/) | Warner et al. 2021 | 肺吸入分析 | 吸入性肺炎相關的索賠分析，識別高風險因素 |
+| [31920200](https://pubmed.ncbi.nlm.nih.gov/31920200/) | Kremer et al. 2019 | 可預防索賠 | AANA 資料庫可預防事件分析 |
+| [31573491](https://pubmed.ncbi.nlm.nih.gov/31573491/) | Golinski 2018 | AANA 索賠主題分析 | 識別反覆出現的模式 |
+| [28098575](https://pubmed.ncbi.nlm.nih.gov/28098575/) | Davies & Stephens 2017 | 產科麻醉責任 | 產科麻醉相關索賠趨勢 |
+
+#### 7.2.2 圍術期不良事件
+
+| PMID | 作者/年份 | 主題 | 重要發現 |
+|------|-----------|------|----------|
+| [25390278](https://pubmed.ncbi.nlm.nih.gov/25390278/) | Nunnally et al. 2015 | 圍術期心跳停止 | NACOR 資料庫分析，發生率與風險因素 |
+| [26492481](https://pubmed.ncbi.nlm.nih.gov/26492481/) | Whitlock et al. 2015 | 圍術期死亡率 | 2010-2014 NACOR 死亡率趨勢 |
+| [32324655](https://pubmed.ncbi.nlm.nih.gov/32324655/) | Yeh et al. 2020 | 非手術室麻醉 | NORA 安全議題與索賠分析 |
+| [30550426](https://pubmed.ncbi.nlm.nih.gov/30550426/) | Larach et al. 2019 | 惡性高熱 | Succinylcholine 使用與 Dantrolene 可及性 |
+
+#### 7.2.3 藥物錯誤
+
+| PMID | 作者/年份 | 主題 | 重要發現 |
+|------|-----------|------|----------|
+| [39352269](https://pubmed.ncbi.nlm.nih.gov/39352269/) | Sharpe et al. 2024 | 產科麻醉藥物錯誤 | 緩解策略與最佳實務 ⭐ |
+| [31303712](https://pubmed.ncbi.nlm.nih.gov/31303712/) | Annie et al. 2019 | 印度麻醉藥物錯誤 | 問卷調查分析 |
+| [36877159](https://pubmed.ncbi.nlm.nih.gov/36877159/) | Patel 2023 | Tranexamic Acid 誤注 | 22 例鞘內注射毒性回顧 |
+
+#### 7.2.4 危機處理與認知輔助工具
+
+| PMID | 作者/年份 | 主題 | 重要發現 |
+|------|-----------|------|----------|
+| [28079584](https://pubmed.ncbi.nlm.nih.gov/28079584/) | Clebone et al. 2017 | SPA 危機檢核表 | 小兒麻醉危機認知輔助工具開發 ⭐ |
+| [27541721](https://pubmed.ncbi.nlm.nih.gov/27541721/) | Goldhaber-Fiebert et al. 2016 | Emergency Manual | Stanford 實施經驗與安全文化改變 ⭐ |
+| [37003046](https://pubmed.ncbi.nlm.nih.gov/37003046/) | Goldhaber-Fiebert et al. 2023 | EM 6 年後追蹤 | 危機手冊長期使用與永續性 |
+| [34939840](https://pubmed.ncbi.nlm.nih.gov/34939840/) | Hardie et al. 2022 | PPP 框架 | Patient-Procedure-People 術中危機識別 |
+| [31403011](https://pubmed.ncbi.nlm.nih.gov/31403011/) | Huang et al. 2019 | 中國 EM 推廣 | 免費手冊分發對臨床使用的影響 |
+
+#### 7.2.5 系統分析與事件通報
+
+| PMID | 作者/年份 | 主題 | 重要發現 |
+|------|-----------|------|----------|
+| [34472039](https://pubmed.ncbi.nlm.nih.gov/34472039/) | Mullins et al. 2022 | 桌面系統分析 | 大學醫院麻醉科事件分析方法 ⭐ |
+| [32568118](https://pubmed.ncbi.nlm.nih.gov/32568118/) | Röhsig et al. 2020 | Near-miss 分析 | 巴西大型醫院 5 年回顧性研究 |
+
+---
+
+### 7.3 麻醉事件常見類別
+
+基於 Closed Claims 和通報系統資料，常見麻醉相關事件可分為：
+
+#### 7.3.1 呼吸道相關 (Airway-related)
+- 困難插管 / 插管失敗
+- 意外拔管
+- 吸入性肺炎
+- 氣道阻塞
+- 食道誤插
+
+#### 7.3.2 藥物相關 (Medication-related)
+- **LASA 錯誤**: Look-Alike Sound-Alike 藥物混淆
+- **針筒交換 (Syringe Swap)**: 錯誤藥物注射
+- **劑量錯誤**: 給藥過量或不足
+- **過敏反應**: 未確認過敏史
+
+#### 7.3.3 設備相關 (Equipment-related)
+- 監測設備故障
+- 麻醉機故障
+- IV/Central line 相關併發症
+- 電氣安全問題
+
+#### 7.3.4 定位/神經相關 (Positioning/Neurological)
+- 體位傷害
+- 神經壓迫損傷
+- 區域麻醉併發症 (如硬脊膜外血腫)
+
+#### 7.3.5 心血管相關 (Cardiovascular)
+- 術中心跳停止
+- 嚴重低血壓
+- 心律不整
+- 空氣栓塞
+
+#### 7.3.6 術後併發症 (Postoperative)
+- 術後噁心嘔吐 (PONV)
+- 殘餘神經肌肉阻斷
+- 認知功能障礙 / 譫妄
+- 非預期再插管
+
+---
+
+### 7.4 麻醉安全機構資源
+
+| 機構 | 網址 | 主要資源 |
+|------|------|----------|
+| **APSF** (Anesthesia Patient Safety Foundation) | https://www.apsf.org/ | APSF Newsletter, 安全指引, 教育資源 |
+| **AQI** (Anesthesia Quality Institute) | https://www.aqihq.org/ | NACOR, Morbidity & Mortality 報告 |
+| **MHAUS** (Malignant Hyperthermia Association) | https://www.mhaus.org/ | MH 熱線, 治療指引 |
+| **Stanford Emergency Manual Project** | https://emergencymanual.stanford.edu/ | 免費危機手冊下載 |
+| **Society for Pediatric Anesthesia** | https://www.pedsanesthesia.org/ | 小兒危機檢核表 |
+| **SOAP** (Society for Obstetric Anesthesia) | https://soap.org/ | 產科麻醉安全資源 |
+| **Royal College of Anaesthetists** | https://rcoa.ac.uk/ | NAP 系列報告, 指引 |
+| **Association of Anaesthetists** | https://anaesthetists.org/ | 安全警示, Quick Reference Handbook |
+
+---
+
+### 7.5 麻醉事件分類對應 HFACS-MES
+
+將常見麻醉事件對應到 HFACS-MES 框架：
+
+| 事件類型 | Level 1 不安全行為 | Level 2 前提條件 | Level 3 督導 | Level 4 組織 |
+|----------|-------------------|-----------------|-------------|-------------|
+| 藥物錯誤 (Syringe Swap) | UA-SBE 技能錯誤 | EF-PMI 人機介面, PP-AMS 不良心理狀態 | US-IP 計畫不當 | OF-OP 組織流程 |
+| 困難插管失敗 | UA-DE 決策錯誤 | TC-COM 溝通, EF-TE 任務要素 | US-IS 監督不足 | OF-RM 資源管理 |
+| 過敏反應未識別 | UA-PE 感知錯誤 | TC-TD 團隊動力, EF-PRF 病人因素 | US-FK 未處理已知問題 | OF-PSC 安全文化 |
+| 設備故障 | - | EF-PE 物理環境, EF-PMI 人機介面 | US-IP 計畫不當 | OF-RM 資源管理 |
+| 體位傷害 | UA-RV 常規違規 | PP-PR 個人準備度 | US-IS 監督不足 | OF-OP 組織流程 |
 
 ---
 
@@ -405,3 +564,6 @@ HFACS-MES 是針對醫療錯誤改良的 HFACS 框架，包含 **5 層 25 個因
 - [ ] JCAHO Sentinel Event 類別
 - [ ] NHS PSIRF 框架詳細說明
 - [ ] 更多亞太地區資源
+- [ ] 台灣麻醉醫學會安全資源
+- [ ] ERAS 流程與麻醉安全的交集
+- [ ] AI 在麻醉安全的應用 (PMID: 40067037)
