@@ -13,12 +13,13 @@ from typing import Self
 
 
 class HFACSLevel(str, Enum):
-    """HFACS Four-Level Hierarchy."""
+    """HFACS-MES Five-Level Hierarchy (based on Jalali et al. 2024)."""
 
     LEVEL_1 = "Level 1"  # Unsafe Acts (不安全行為)
     LEVEL_2 = "Level 2"  # Preconditions for Unsafe Acts (不安全行為前提)
     LEVEL_3 = "Level 3"  # Unsafe Supervision (不安全監督)
     LEVEL_4 = "Level 4"  # Organizational Influences (組織影響)
+    LEVEL_5 = "Level 5"  # Extra-Organizational Issues (組織外部因素) - HFACS-MES 新增
 
     def __str__(self) -> str:
         return self.value
@@ -29,10 +30,10 @@ class HFACSCode:
     """
     HFACS-MES Code.
 
-    Format: XX-YY# where:
-    - XX: Level prefix (OI, US, PC, UA)
-    - YY: Category code (RM, OC, OP, IS, PI, FC, SV, EF, CO, PF, ER, VL)
-    - #: Sequence number (1-3)
+    Supports multiple formats:
+    - XX-YY# (legacy): OI-RM1, UA-ER2
+    - XX-YY (new): OF-RM, US-IS, EO-N
+    - XX-YY-ZZZ (extended): PC-E-PE, PC-C-AMS
     """
 
     code: str
@@ -44,8 +45,8 @@ class HFACSCode:
     def __post_init__(self) -> None:
         if not self.code:
             raise ValueError("HFACS code cannot be empty")
-        # Validate format: XX-YY# (e.g., OI-RM1, UA-ER2)
-        if len(self.code) < 5 or "-" not in self.code:
+        # Validate format: requires hyphen, minimum 3 chars (e.g., EO-N)
+        if len(self.code) < 3 or "-" not in self.code:
             raise ValueError(f"Invalid HFACS code format: {self.code}")
 
     @classmethod

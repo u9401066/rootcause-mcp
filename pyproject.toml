@@ -24,28 +24,24 @@ classifiers = [
 dependencies = [
     # MCP Framework
     "mcp[cli]>=1.10.1",
-    
     # Data & Validation
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
-    
     # Persistence
     "sqlmodel>=0.0.22",
     "aiosqlite>=0.20.0",
-    
     # Graph Analysis
     "networkx>=3.0",
-    
     # Utilities
     "structlog>=24.0",
     "python-dotenv>=1.0",
+    "pyyaml>=6.0.3",
 ]
 
 [project.optional-dependencies]
-# Phase 2: Ontology Support
-ontology = [
-    "owlready2>=0.46",
-]
+# Phase 2: Advanced Analysis (Rule Engine based, no owlready2)
+# Note: owlready2 was removed - using YAML rules + Agent classification instead
+# See: memory-bank/decisionLog.md [2026-01-15] 移除 owlready2
 
 # Phase 3: Causal Inference
 causal = [
@@ -57,7 +53,7 @@ causal = [
 
 # Full installation
 full = [
-    "rootcause-mcp[ontology,causal]",
+    "rootcause-mcp[causal]",
 ]
 
 # Development dependencies

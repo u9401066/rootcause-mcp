@@ -29,32 +29,69 @@
   - UK NAP 系列 (NAP4-NAP7)
   - Emergency Manual / 危機檢核表
   - 藥物錯誤與緩解策略
+- ✅ Domain Layer 實作完成
+  - Entities: Session, Cause, Fishbone, WhyNode
+  - Value Objects: HFACSCode, ConfidenceScore, Identifiers
+  - Repositories: SessionRepository, CauseRepository, FishboneRepository
+  - Services: HFACSSuggester, CausationValidator, LearnedRulesService
+- ✅ Infrastructure Layer 實作完成
+  - SQLite + SQLModel 持久化
+  - Repository 實作
+- ✅ **YAML-based Keyword Rules System** (2026-01-15)
+  - config/hfacs/keyword_rules.yaml (領域規則 + 麻醉專用)
+  - config/hfacs/learned_rules.yaml (學習規則結構)
+  - HFACSSuggester 重構：從 YAML 動態載入規則
+  - 麻醉領域 keywords 補充 (基於 Section 7)
+  - HFACSLevel 新增 LEVEL_5 (HFACS-MES 新增層)
+- ✅ **MCP Server 基礎架構** (2026-01-15)
+  - server.py 建立
+  - 5 核心 HFACS Tools 實作
+- ✅ **VS Code MCP 配置** (2026-01-15)
+  - .vscode/mcp.json 建立
+  - ARCHITECTURE.md 更新 (含完整資料流)
+- ✅ **Session & Fishbone Tools 完成** (2026-01-15)
+  - **13 個 MCP Tools 總計**：
+    - HFACS (5): suggest, confirm, get_framework, list_rules, reload
+    - Session (4): start, get, list, archive  
+    - Fishbone (4): init, add_cause, get, export
+  - 整合 SQLite 持久化 (SessionRepository, FishboneRepository)
+  - 支援 Mermaid / Markdown / JSON 匯出格式
+  - 測試全部通過 (tests/test_mcp_tools.py)
+- ✅ **5-Why Analysis & Causation Verification 完成** (2026-01-15)
+  - **18 個 MCP Tools 總計**：
+    - HFACS (5): suggest, confirm, get_framework, list_rules, reload
+    - Session (4): start, get, list, archive  
+    - Fishbone (4): init, add_cause, get, export
+    - **Why Tree (4)**: ask_why, get_why_tree, mark_root_cause, export_why_tree
+    - **Verification (1)**: verify_causation
+  - **核心哲學轉變**：從「填表式」轉為「推論式」RCA
+  - 實作 Counterfactual Testing Framework (4 準則)：
+    - Temporality: 時間序列 (因先於果)
+    - Necessity: 必要性 (無因則無果)
+    - Mechanism: 機轉 (合理因果路徑)
+    - Sufficiency: 充分性 (因是否足以產生果)
+  - WhyTreeRepository + InMemoryWhyTreeRepository
+  - 支援 Mermaid / Markdown / JSON 匯出
+  - 測試全部通過
 
 ## Doing
 
-- 🔄 準備開始 MVP 實作 (Phase 1)
+- (無 - Phase 3 完成)
 
-## Next (MVP Phase)
+## Next (Phase 3)
 
-1. 建立 Domain Entities
-   - `Session`, `Cause`, `FishboneCategory`
-   - `HFACSCode`, `WhyNode`
+1. **VS Code 整合測試**
+   - 在 VS Code 中啟動 MCP Server
+   - 測試 Copilot Chat 呼叫 Tools
 
-2. 實作 10 核心 MCP Tools
-   - `rc_create_session`
-   - `rc_set_problem`
-   - `rc_add_cause`
-   - `rc_ask_why`
-   - `rc_get_fishbone`
-   - `rc_get_analysis_tree`
-   - `rc_suggest_next`
-   - `rc_validate_chain`
-   - `rc_export_report`
-   - `rc_list_sessions`
+2. **進階 Tools**
+   - rc_execute_stage (階段流轉)
+   - rc_create_action (改善措施)
+   - rc_link_why_to_cause (連結 Why Tree 和 Fishbone)
 
-3. 設計 SQLite Schema
-
-4. 撰寫單元測試
+3. **撰寫正式單元測試**
+   - pytest 測試框架
+   - 覆蓋率報告
 
 ## Blocked
 
@@ -63,5 +100,6 @@
 ## Risk Notes
 
 - 🔴 PHI/PII 資料治理待補充
-- 🟠 35 工具可能過多，先聚焦 MVP 10 工具
+- 🟠 35 工具可能過多，先聚焦 MVP 18 工具 ✅
 - ✅ owlready2 已決定移除，使用 Rule Engine + Agent 替代方案
+- ✅ 「填表式→推論式」哲學轉變已實現

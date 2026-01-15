@@ -1,0 +1,20 @@
+{
+  "servers": {
+    "rootcauseMcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": ["run", "rootcause-mcp"],
+      "env": {
+        "ROOTCAUSE_CONFIG_DIR": "${workspaceFolder}/config",
+        "ROOTCAUSE_DATA_DIR": "${workspaceFolder}/data"
+      },
+      "dev": {
+        "watch": "src/**/*.py",
+        "debug": {
+          "type": "python"
+        }
+      }
+    }
+  },
+  "inputs": []
+}

@@ -1,0 +1,76 @@
+# Learned Rules - Agent 確認後學習的分類規則
+# 
+# 此檔案由系統自動維護，記錄經過確認的分類規則。
+# 可被 Agent 透過 MCP Tool 寫入，也可以人工編輯。
+#
+# ═══════════════════════════════════════════════════════════════
+# 學習方式說明：
+# ═══════════════════════════════════════════════════════════════
+#
+# 方式 1: Agent 主動學習 (透過 MCP Tool)
+#   - Agent 建議 HFACS 分類後，用戶確認
+#   - Agent 呼叫 rc_confirm_classification 工具
+#   - 系統自動寫入此檔案
+#
+# 方式 2: Session 分析學習 (批次)
+#   - 從已完成的 RCA Session 中提取
+#   - 篩選 verified=true 的 Cause
+#   - 批次匯入 learned_rules
+#
+# 方式 3: 人工策展 (版本控制)
+#   - 專家審核後手動新增
+#   - 適合機構特定的專業術語
+#   - 建議透過 PR 審核
+#
+# ═══════════════════════════════════════════════════════════════
+
+metadata:
+  version: "1.0.0"
+  updated: "2026-01-15"
+  description: "經確認的 HFACS 分類規則"
+  
+  # 學習統計
+  stats:
+    total_rules: 0
+    from_agent: 0
+    from_session: 0
+    from_manual: 0
+
+# ═══════════════════════════════════════════════════════════════
+# 學習規則
+# ═══════════════════════════════════════════════════════════════
+learned_rules: []
+  # 範例格式：
+  # - keyword: "針筒交換"
+  #   code: "UA-SBE"
+  #   confidence: 0.92
+  #   reason: "藥物準備技能錯誤"
+  #   source_type: "agent"  # agent | session | manual
+  #   source_session: "session_abc123"  # 來源 Session ID
+  #   confirmed_by: "user"  # 確認者
+  #   confirmed_at: "2026-01-15T10:30:00Z"
+  #   hit_count: 5  # 後續匹配次數（用於評估規則品質）
+
+# ═══════════════════════════════════════════════════════════════
+# 待審核規則 (Agent 建議但尚未確認)
+# ═══════════════════════════════════════════════════════════════
+pending_rules: []
+  # 範例格式：
+  # - keyword: "麻醉機警報"
+  #   code: "EF-PMI"
+  #   confidence: 0.75
+  #   reason: "Agent 從描述推斷"
+  #   suggested_at: "2026-01-15T10:30:00Z"
+  #   source_session: "session_xyz789"
+  #   status: "pending"  # pending | approved | rejected
+
+# ═══════════════════════════════════════════════════════════════
+# 被拒絕的規則 (用於避免重複建議)
+# ═══════════════════════════════════════════════════════════════
+rejected_rules: []
+  # 範例格式：
+  # - keyword: "開刀房"
+  #   code: "EF-PE"
+  #   rejected_reason: "太過籠統，無法準確分類"
+  #   rejected_at: "2026-01-15T10:30:00Z"
+  #   rejected_by: "user"

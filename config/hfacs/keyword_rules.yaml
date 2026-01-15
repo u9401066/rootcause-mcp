@@ -1,0 +1,393 @@
+# Keyword Rules for HFACS Classification
+# 關鍵字規則：用於自動建議 HFACS 分類
+#
+# 結構說明：
+# - base_rules: 從 HFACS-MES YAML 自動載入的基礎規則
+# - domain_rules: 特定領域的擴展規則（如麻醉）
+# - learned_rules: Agent 確認後學習的規則（見 learned_rules.yaml）
+
+metadata:
+  version: "1.0.0"
+  updated: "2026-01-15"
+  description: "關鍵字到 HFACS 代碼的映射規則"
+
+# ═══════════════════════════════════════════════════════════════
+# 基礎規則載入設定
+# ═══════════════════════════════════════════════════════════════
+base_rules:
+  # 從這些 YAML 檔案的 keywords 欄位自動載入
+  sources:
+    - file: "hfacs_mes.yaml"
+      framework: "hfacs-mes"
+      priority: 1  # 優先級（1=最高）
+    - file: "fishbone_6m.yaml"
+      framework: "fishbone-6m"
+      priority: 2
+    - file: "who_icps.yaml"
+      framework: "who-icps"
+      priority: 3
+
+# ═══════════════════════════════════════════════════════════════
+# 麻醉領域專用規則 (基於 Section 7: 麻醉事件專題)
+# ═══════════════════════════════════════════════════════════════
+domain_rules:
+  anesthesia:
+    description: "麻醉相關事件的關鍵字規則"
+    source: "docs/literature_review_clinical_rca.md Section 7"
+    
+    # --- 呼吸道相關 (Airway-related) ---
+    airway:
+      keywords:
+        - "困難插管"
+        - "插管失敗"
+        - "意外拔管"
+        - "吸入性肺炎"
+        - "aspiration"
+        - "氣道阻塞"
+        - "食道誤插"
+        - "esophageal intubation"
+        - "difficult airway"
+        - "failed intubation"
+        - "accidental extubation"
+        - "cannot intubate"
+        - "cannot ventilate"
+        - "CICV"
+        - "airway obstruction"
+      mappings:
+        - code: "UA-DE"
+          confidence: 0.85
+          reason: "呼吸道管理決策錯誤"
+        - code: "UA-SBE"
+          confidence: 0.80
+          reason: "插管技術執行錯誤"
+        - code: "EF-TE"
+          confidence: 0.75
+          reason: "困難呼吸道任務要素"
+        - code: "EF-PRF"
+          confidence: 0.70
+          reason: "病人解剖因素"
+          
+    # --- 藥物相關 (Medication-related) ---
+    medication:
+      keywords:
+        # LASA (Look-Alike Sound-Alike)
+        - "LASA"
+        - "藥物混淆"
+        - "look-alike"
+        - "sound-alike"
+        - "相似藥名"
+        - "相似外觀"
+        # Syringe Swap
+        - "syringe swap"
+        - "針筒交換"
+        - "拿錯針筒"
+        - "給錯藥"
+        - "wrong drug"
+        - "wrong syringe"
+        # 劑量錯誤
+        - "劑量錯誤"
+        - "dose error"
+        - "給藥過量"
+        - "overdose"
+        - "underdose"
+        - "十倍劑量"
+        - "tenfold error"
+        - "decimal error"
+        # 過敏
+        - "過敏反應"
+        - "anaphylaxis"
+        - "allergic reaction"
+        - "未確認過敏史"
+        - "allergy not checked"
+        # 特定藥物
+        - "tranexamic acid"
+        - "TXA 誤注"
+        - "intrathecal injection"
+        - "鞘內注射"
+      mappings:
+        - code: "UA-SBE"
+          confidence: 0.90
+          reason: "藥物準備/給藥技能錯誤"
+        - code: "UA-PE"
+          confidence: 0.85
+          reason: "藥物辨識感知錯誤"
+        - code: "EF-PMI"
+          confidence: 0.80
+          reason: "藥物標籤/包裝設計問題"
+        - code: "OF-OP"
+          confidence: 0.75
+          reason: "藥物管理流程缺陷"
+          
+    # --- 設備相關 (Equipment-related) ---
+    equipment:
+      keywords:
+        - "監測器故障"
+        - "monitor failure"
+        - "麻醉機故障"
+        - "anesthesia machine failure"
+        - "ventilator malfunction"
+        - "呼吸器故障"
+        - "IV line"
+        - "central line"
+        - "設備維護"
+        - "equipment maintenance"
+        - "電氣安全"
+        - "electrical safety"
+        - "alarm fatigue"
+        - "警報疲勞"
+      mappings:
+        - code: "EF-PMI"
+          confidence: 0.85
+          reason: "設備人機介面問題"
+        - code: "OF-RM"
+          confidence: 0.80
+          reason: "設備資源管理問題"
+        - code: "US-FK"
+          confidence: 0.75
+          reason: "已知設備問題未處理"
+          
+    # --- 定位/神經相關 (Positioning/Neurological) ---
+    positioning:
+      keywords:
+        - "體位傷害"
+        - "positioning injury"
+        - "神經壓迫"
+        - "nerve compression"
+        - "ulnar neuropathy"
+        - "brachial plexus"
+        - "硬脊膜外血腫"
+        - "epidural hematoma"
+        - "spinal hematoma"
+        - "區域麻醉併發症"
+        - "regional anesthesia complication"
+      mappings:
+        - code: "UA-SBE"
+          confidence: 0.80
+          reason: "體位擺放技術錯誤"
+        - code: "US-IS"
+          confidence: 0.75
+          reason: "體位擺放監督不足"
+        - code: "EF-TE"
+          confidence: 0.70
+          reason: "長時間手術任務要素"
+          
+    # --- 心血管相關 (Cardiovascular) ---
+    cardiovascular:
+      keywords:
+        - "術中心跳停止"
+        - "intraoperative cardiac arrest"
+        - "perioperative cardiac arrest"
+        - "嚴重低血壓"
+        - "severe hypotension"
+        - "心律不整"
+        - "arrhythmia"
+        - "空氣栓塞"
+        - "air embolism"
+        - "venous air embolism"
+        - "VAE"
+        - "malignant hyperthermia"
+        - "惡性高熱"
+        - "MH"
+      mappings:
+        - code: "UA-DE"
+          confidence: 0.85
+          reason: "心血管管理決策錯誤"
+        - code: "EF-PRF"
+          confidence: 0.80
+          reason: "病人心血管風險因素"
+        - code: "TC-COM"
+          confidence: 0.75
+          reason: "緊急情況溝通問題"
+          
+    # --- 術後併發症 (Postoperative) ---
+    postoperative:
+      keywords:
+        - "PONV"
+        - "術後噁心嘔吐"
+        - "postoperative nausea"
+        - "殘餘肌鬆"
+        - "residual paralysis"
+        - "residual neuromuscular blockade"
+        - "POCD"
+        - "術後認知功能障礙"
+        - "postoperative cognitive dysfunction"
+        - "delirium"
+        - "譫妄"
+        - "非預期再插管"
+        - "reintubation"
+        - "unplanned reintubation"
+        - "PACU"
+        - "恢復室"
+      mappings:
+        - code: "UA-DE"
+          confidence: 0.80
+          reason: "術後照護決策錯誤"
+        - code: "TC-COM"
+          confidence: 0.85
+          reason: "術後交班溝通問題"
+        - code: "US-IP"
+          confidence: 0.75
+          reason: "術後照護計畫不當"
+          
+    # --- 危機處理 (Crisis Management) ---
+    crisis:
+      keywords:
+        - "emergency manual"
+        - "危機手冊"
+        - "crisis checklist"
+        - "危機檢核表"
+        - "cognitive aid"
+        - "認知輔助"
+        - "ACLS"
+        - "CPR"
+        - "code blue"
+        - "緊急應變"
+        - "rapid response"
+      mappings:
+        - code: "OF-OP"
+          confidence: 0.80
+          reason: "危機應變流程問題"
+        - code: "US-IP"
+          confidence: 0.85
+          reason: "緊急應變計畫不足"
+        - code: "TC-TD"
+          confidence: 0.80
+          reason: "危機團隊動力問題"
+          
+    # --- 術中清醒 (Awareness) ---
+    awareness:
+      keywords:
+        - "術中清醒"
+        - "intraoperative awareness"
+        - "accidental awareness"
+        - "AAGA"
+        - "麻醉深度不足"
+        - "inadequate anesthesia"
+        - "BIS"
+        - "腦功能監測"
+      mappings:
+        - code: "UA-DE"
+          confidence: 0.85
+          reason: "麻醉深度判斷錯誤"
+        - code: "EF-PMI"
+          confidence: 0.80
+          reason: "麻醉深度監測介面問題"
+        - code: "PP-AMS"
+          confidence: 0.70
+          reason: "麻醉醫師注意力問題"
+
+    # ═══════════════════════════════════════════════════════════════
+    # 通用醫療規則 (跨領域適用，放在 domain_rules.anesthesia 同層)
+    # ═══════════════════════════════════════════════════════════════
+  general_healthcare:
+    description: "通用醫療事件關鍵字規則"
+    
+    # --- 身份辨識 ---
+    identification:
+      keywords:
+        - "身份辨識錯誤"
+        - "wrong patient"
+        - "patient identification"
+        - "手環"
+        - "wristband"
+        - "辨識錯誤"
+      mappings:
+        - code: "UA-PE"
+          confidence: 0.90
+          reason: "病人身份感知錯誤"
+        - code: "OF-OP"
+          confidence: 0.80
+          reason: "身份確認流程缺陷"
+          
+    # --- 手術相關 ---
+    surgery:
+      keywords:
+        - "wrong site"
+        - "wrong side"
+        - "手術部位錯誤"
+        - "左右錯誤"
+        - "time out"
+        - "surgical checklist"
+        - "手術安全查核"
+        - "retained foreign body"
+        - "遺留異物"
+        - "紗布遺留"
+      mappings:
+        - code: "UA-SBE"
+          confidence: 0.85
+          reason: "手術執行技能錯誤"
+        - code: "OF-OP"
+          confidence: 0.85
+          reason: "手術安全流程缺陷"
+        - code: "TC-COM"
+          confidence: 0.80
+          reason: "手術團隊溝通問題"
+          
+    # --- 跌倒 ---
+    fall:
+      keywords:
+        - "跌倒"
+        - "fall"
+        - "patient fall"
+        - "滑倒"
+        - "床旁跌落"
+        - "fall from bed"
+      mappings:
+        - code: "EF-PE"
+          confidence: 0.80
+          reason: "環境因素導致跌倒"
+        - code: "US-IP"
+          confidence: 0.75
+          reason: "跌倒預防計畫不當"
+        - code: "EF-PRF"
+          confidence: 0.85
+          reason: "病人跌倒風險因素"
+          
+    # --- 感染控制 ---
+    infection:
+      keywords:
+        - "院內感染"
+        - "HAI"
+        - "healthcare-associated infection"
+        - "手部衛生"
+        - "hand hygiene"
+        - "無菌技術"
+        - "aseptic technique"
+        - "catheter-related"
+        - "導管相關感染"
+        - "CLABSI"
+        - "CAUTI"
+        - "SSI"
+        - "手術部位感染"
+      mappings:
+        - code: "UA-RV"
+          confidence: 0.80
+          reason: "感染控制常規違規"
+        - code: "OF-OP"
+          confidence: 0.85
+          reason: "感染控制流程問題"
+        - code: "EF-PE"
+          confidence: 0.70
+          reason: "環境清潔消毒問題"
+
+# ═══════════════════════════════════════════════════════════════
+# 規則匹配設定
+# ═══════════════════════════════════════════════════════════════
+matching_config:
+  # 最小信心度閾值（低於此值不返回）
+  min_confidence: 0.5
+  
+  # 最大建議數量
+  max_suggestions: 5
+  
+  # 關鍵字匹配模式
+  matching_mode: "substring"  # substring | exact | regex
+  
+  # 是否區分大小寫
+  case_sensitive: false
+  
+  # 多關鍵字命中時的信心度加成
+  multi_hit_boost: 0.05
+  
+  # 領域規則優先於基礎規則
+  domain_priority: true
