@@ -4,10 +4,10 @@
 
 ## 🎯 當前焦點
 
-- **Phase 3 完成！** 5-Why Analysis & Causation Verification 已實作
-- **18 個 MCP Tools** 可用
-- **核心哲學轉變**：從「填表式」轉為「推論式」RCA
-- 準備進入 Phase 4: VS Code 整合測試 + 進階 Tools
+- **DDD 模組重構完成！** 2057 行 monolithic server.py → 模組化架構
+- **Session-aware 進度追蹤機制** 設計完成
+- **18 個 MCP Tools** 全部測試通過
+- 準備進入 Phase 4: GuidedResponse 整合 + VS Code 測試
 
 ## 📝 專案狀態
 
@@ -19,7 +19,34 @@
 | 領域模型 | ✅ 完成 (Entities, Value Objects, Services) |
 | Infrastructure | ✅ 完成 (SQLite + SQLModel + InMemory) |
 | MCP Tools | ✅ **18 Tools 完成** |
+| **DDD 重構** | ✅ **完成 (模組化 interface/)** |
+| **Application Layer** | ✅ **SessionProgressTracker + GuidedResponseBuilder** |
 | 測試 | 🔄 手動測試通過，待正式 pytest |
+
+## 📂 新架構 (DDD 重構後)
+
+```
+src/rootcause_mcp/
+├── interface/
+│   ├── server.py          # 精簡入口點 (~350 行)
+│   ├── tools/             # Tool 定義模組 (5 檔案)
+│   │   ├── hfacs_tools.py
+│   │   ├── session_tools.py
+│   │   ├── fishbone_tools.py
+│   │   ├── why_tree_tools.py
+│   │   └── verification_tools.py
+│   └── handlers/          # Handler 實作模組 (5 檔案)
+│       ├── hfacs_handlers.py
+│       ├── session_handlers.py
+│       ├── fishbone_handlers.py
+│       ├── why_tree_handlers.py
+│       └── verification_handlers.py
+├── application/
+│   ├── session_progress.py   # 進度追蹤
+│   └── guided_response.py    # 引導式回應 + 逼問
+├── domain/                   # (已存在)
+└── infrastructure/           # (已存在)
+```
 
 ## 🛠️ 已實作 MCP Tools (18)
 
@@ -42,45 +69,30 @@
 - `rc_get_fishbone` - 取得魚骨圖
 - `rc_export_fishbone` - 匯出 (Mermaid/Markdown/JSON)
 
-### Why Tree Tools (4) 🆕
+### Why Tree Tools (4)
 - `rc_ask_why` - 5-Why 迭代提問 (核心推論工具)
 - `rc_get_why_tree` - 取得完整分析樹
 - `rc_mark_root_cause` - 標記根本原因
 - `rc_export_why_tree` - 匯出 (Mermaid/Markdown/JSON)
 
-### Verification Tools (1) 🆕
+### Verification Tools (1)
 - `rc_verify_causation` - Counterfactual Testing Framework
-  - Temporality: 時間序列 (因先於果)
-  - Necessity: 必要性 (無因則無果)
-  - Mechanism: 機轉 (合理因果路徑)
-  - Sufficiency: 充分性 (因是否足以產生果)
 
 ## 💡 重要技術細節
 
 - **Database**: `data/rca_sessions.db` (SQLite)
-- **Why Tree Storage**: InMemory (InMemoryWhyTreeRepository)
-- **入口**: `uv run rootcause-mcp` 或 `uv run python -m rootcause_mcp.server`
+- **入口點**: `rootcause_mcp.interface.server:main` (新 DDD 入口)
+- **Legacy 入口**: `rootcause_mcp.server:main` (向後相容)
 - **配置**: `.vscode/mcp.json`
-- **Bug Fix**: HFACSCode 驗證改為 `len >= 3` (支援 HFACS-MES 代碼如 `EO-N`)
-
-## 📁 核心檔案
-
-```
-src/rootcause_mcp/server.py                              # MCP Server (18 Tools)
-src/rootcause_mcp/domain/repositories/why_tree_repository.py  # 抽象介面
-src/rootcause_mcp/infrastructure/persistence/why_tree_repository.py  # InMemory 實作
-tests/test_mcp_tools.py                                  # 手動測試腳本
-config/hfacs/                                            # YAML 配置 (框架/關鍵字/規則)
-data/rca_sessions.db                                     # SQLite 資料庫
-.vscode/mcp.json                                         # VS Code MCP 配置
-```
 
 ## 🔜 下一步 (Phase 4)
 
-1. 在 VS Code 中啟動 MCP Server 測試整合
-2. 實作進階 Tools (execute_stage, create_action, link_why_to_cause)
-3. 撰寫正式 pytest 測試
-4. 連結 Why Tree 和 Fishbone (將分析結果整合)
+1. **整合 GuidedResponse 到 Handlers**
+   - 每個 Tool 回傳標準化進度資訊
+   - 實作「逼問」(push questions) 機制
+2. 在 VS Code 中測試 MCP Server
+3. 實作進階 Tools
+4. 撰寫正式 pytest 測試
 
 ---
 *Last updated: 2026-01-15*

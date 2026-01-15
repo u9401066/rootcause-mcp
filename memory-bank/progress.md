@@ -73,23 +73,46 @@
   - WhyTreeRepository + InMemoryWhyTreeRepository
   - 支援 Mermaid / Markdown / JSON 匯出
   - 測試全部通過
+- ✅ **DDD 模組重構** (2026-01-15)
+  - 將 2057 行 monolithic `server.py` 拆分為模組化結構
+  - **interface/tools/** - 5 個 Tool 定義模組
+    - hfacs_tools.py (5 tools)
+    - session_tools.py (4 tools)
+    - fishbone_tools.py (4 tools)
+    - why_tree_tools.py (4 tools)
+    - verification_tools.py (1 tool)
+  - **interface/handlers/** - 5 個 Handler 實作模組
+    - HFACSHandlers
+    - SessionHandlers
+    - FishboneHandlers
+    - WhyTreeHandlers
+    - VerificationHandlers
+  - **interface/server.py** - 精簡入口點 (~350 行)
+  - **application/** - Session-aware 機制
+    - SessionProgressTracker (進度追蹤)
+    - GuidedResponseBuilder (引導式回應 + 逼問)
+  - 18 個 MCP Tools 全部測試通過
 
 ## Doing
 
-- (無 - Phase 3 完成)
+- (無 - DDD 重構完成)
 
-## Next (Phase 3)
+## Next (Phase 4)
 
-1. **VS Code 整合測試**
+1. **整合 GuidedResponse 到 Handlers**
+   - 每個 Handler 回傳標準化 session_progress
+   - 實作「逼問」機制 (push questions)
+
+2. **VS Code 整合測試**
    - 在 VS Code 中啟動 MCP Server
    - 測試 Copilot Chat 呼叫 Tools
 
-2. **進階 Tools**
+3. **進階 Tools**
    - rc_execute_stage (階段流轉)
    - rc_create_action (改善措施)
    - rc_link_why_to_cause (連結 Why Tree 和 Fishbone)
 
-3. **撰寫正式單元測試**
+4. **撰寫正式單元測試**
    - pytest 測試框架
    - 覆蓋率報告
 
@@ -103,3 +126,4 @@
 - 🟠 35 工具可能過多，先聚焦 MVP 18 工具 ✅
 - ✅ owlready2 已決定移除，使用 Rule Engine + Agent 替代方案
 - ✅ 「填表式→推論式」哲學轉變已實現
+- ✅ DDD 模組重構完成，程式碼更易維護
