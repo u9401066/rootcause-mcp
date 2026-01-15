@@ -1,4 +1,4 @@
-# Progress - RootCause MCP (Updated: 2026-01-15)
+# Progress - RootCause MCP (Updated: 2026-01-16)
 
 ## Done
 
@@ -92,29 +92,46 @@
     - SessionProgressTracker (進度追蹤)
     - GuidedResponseBuilder (引導式回應 + 逼問)
   - 18 個 MCP Tools 全部測試通過
+- ✅ **6M-HFACS 對照工具** (2026-01-16)
+  - rc_get_6m_hfacs_mapping (第 19 個 Tool)
+  - MAPPING_6M_HFACS 完整對照表
+  - WhyNode.is_proximate 屬性實作
+  - CAUSE_TYPE_BY_LEVEL 深度導引 (Proximate/Intermediate/Ultimate)
+- ✅ **Multi-Model RCA Framework 架構設計** (2026-01-16)
+  - 三大分析模型類別定義：
+    - **Prospective** (前瞻性預防): HFMEA, HVA, Bowtie
+    - **Retrospective** (回溯性調查): HFACS ✅, 5-Whys ✅, Fishbone ✅
+    - **Systemic** (系統複雜性): STAMP/STPA, FRAM, AcciMap
+  - **領域卡匣 (Cartridge)** 概念：不同分析模型 = 不同卡匣
+  - ROADMAP 大幅擴展 (Phase 6-8)
+  - **19 個 MCP Tools 上線運行**
+- ✅ **README i18n 更新** (2026-01-16)
+  - README.md 完整重寫 (CIE → RootCause MCP)
+  - README.zh-TW.md 完整重寫
+  - 新增 Tools badge、架構圖、詳細功能表
 
 ## Doing
 
-- (無 - DDD 重構完成)
+- (無 - Phase 2.5 完成)
 
-## Next (Phase 4)
+## Next (Phase 3-4)
 
-1. **整合 GuidedResponse 到 Handlers**
-   - 每個 Handler 回傳標準化 session_progress
-   - 實作「逼問」機制 (push questions)
-
-2. **VS Code 整合測試**
+1. **VS Code 整合測試**
    - 在 VS Code 中啟動 MCP Server
    - 測試 Copilot Chat 呼叫 Tools
 
-3. **進階 Tools**
+2. **進階 Tools (Phase 4)**
    - rc_execute_stage (階段流轉)
    - rc_create_action (改善措施)
    - rc_link_why_to_cause (連結 Why Tree 和 Fishbone)
 
-4. **撰寫正式單元測試**
-   - pytest 測試框架
-   - 覆蓋率報告
+3. **真實案例庫整合 (Phase 5)**
+   - AHRQ WebM&M 對接
+   - ISMP 用藥錯誤資料庫
+
+4. **Prospective Cartridge (Phase 6)**
+   - HFMEA Tools 實作
+   - HVA Tools 實作
 
 ## Blocked
 
@@ -123,7 +140,8 @@
 ## Risk Notes
 
 - 🔴 PHI/PII 資料治理待補充
-- 🟠 35 工具可能過多，先聚焦 MVP 18 工具 ✅
+- 🟠 Cartridge 統一介面設計需要進一步細化
 - ✅ owlready2 已決定移除，使用 Rule Engine + Agent 替代方案
 - ✅ 「填表式→推論式」哲學轉變已實現
 - ✅ DDD 模組重構完成，程式碼更易維護
+- ✅ CIE 架構設計完成，擴展路徑明確

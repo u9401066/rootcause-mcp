@@ -77,23 +77,23 @@ class GuidedResponseBuilder:
     - Push questions (逼問 - questions that deepen analysis)
     """
     
-    # Tool categories for next action suggestions
+    # Tool categories for next action suggestions (rc_* naming)
     FISHBONE_TOOLS = {
-        "add_fishbone_cause",
-        "get_fishbone_causes",
-        "remove_fishbone_cause",
-        "get_fishbone_summary",
+        "rc_init_fishbone",
+        "rc_add_cause",
+        "rc_get_fishbone",
+        "rc_export_fishbone",
     }
     
     WHY_TREE_TOOLS = {
-        "add_why_node",
-        "get_why_chain",
-        "mark_root_cause",
-        "get_why_summary",
+        "rc_ask_why",
+        "rc_get_why_tree",
+        "rc_mark_root_cause",
+        "rc_export_why_tree",
     }
     
     VERIFICATION_TOOLS = {
-        "verify_causation",
+        "rc_verify_causation",
     }
     
     # Push questions for each stage (逼問)
@@ -255,9 +255,9 @@ class GuidedResponseBuilder:
         if not progress.fishbone_initialized:
             return NextAction(
                 required=True,
-                tool="create_session",
+                tool="rc_start_session",
                 question="請先建立分析 Session，並描述要分析的問題是什麼？",
-                hint="使用 create_session 工具開始新的 RCA 分析",
+                hint="使用 rc_start_session 工具開始新的 RCA 分析",
             )
         
         # Stage 2: Fishbone incomplete
@@ -269,7 +269,7 @@ class GuidedResponseBuilder:
             )
             return NextAction(
                 required=True,
-                tool="add_fishbone_cause",
+                tool="rc_add_cause",
                 question=push_q,
                 hint=f"還有 {unfilled} 個類別未填寫，建議至少完成 4 個類別",
             )
@@ -278,7 +278,7 @@ class GuidedResponseBuilder:
         if not progress.why_tree_started:
             return NextAction(
                 required=True,
-                tool="add_why_node",
+                tool="rc_ask_why",
                 question="從魚骨圖中最可疑的原因開始，問「為什麼會發生？」",
                 hint="選擇一個原因作為起點，開始 5-Why 分析",
             )
@@ -288,7 +288,7 @@ class GuidedResponseBuilder:
             push_q = self._get_push_question("why_shallow")
             return NextAction(
                 required=True,
-                tool="add_why_node",
+                tool="rc_ask_why",
                 question=push_q,
                 hint=f"目前 Why 深度為 {progress.why_tree_depth}，建議追問到至少 3 層",
             )
@@ -298,7 +298,7 @@ class GuidedResponseBuilder:
             push_q = self._get_push_question("why_deep")
             return NextAction(
                 required=True,
-                tool="mark_root_cause",
+                tool="rc_mark_root_cause",
                 question=push_q,
                 hint="如果已找到根本原因，請標記它",
             )
@@ -308,7 +308,7 @@ class GuidedResponseBuilder:
             push_q = self._get_push_question("verification_needed")
             return NextAction(
                 required=False,  # Optional but recommended
-                tool="verify_causation",
+                tool="rc_verify_causation",
                 question=push_q,
                 hint="建議驗證因果關係的強度",
             )
@@ -316,7 +316,7 @@ class GuidedResponseBuilder:
         # Stage 7: Analysis complete
         return NextAction(
             required=False,
-            tool="get_why_summary",
+            tool="rc_get_why_tree",
             question="分析已達到基本完成標準，是否需要檢視完整摘要？",
             hint="可以匯出報告或繼續深入分析其他分支",
         )
@@ -326,3 +326,69 @@ class GuidedResponseBuilder:
         import random
         questions = self.PUSH_QUESTIONS.get(category, ["請繼續分析"])
         return random.choice(questions)
+
+
+def format_guided_response(
+    original_text: str,
+    progress: SessionProgress,
+    tool_name: str,
+) -> str:
+    """
+    Format a tool response with progress tracking and next action guidance.
+    
+    This is the main integration function that wraps tool results with:
+    - Session progress status
+    - Completion criteria checklist
+    - Next action suggestions (逼問)
+    
+    Args:
+        original_text: The original tool response text
+        progress: Current session progress
+        tool_name: The tool that was just called
+        
+    Returns:
+        Enhanced text with progress and guidance
+    """
+    builder = GuidedResponseBuilder()
+    next_action = builder._suggest_next_action(progress, tool_name)
+    
+    # Build progress bar
+    completion_pct = int(progress.completion_rate * 100)
+    filled = completion_pct // 10
+    bar = "█" * filled + "░" * (10 - filled)
+    
+    # Build the enhanced response
+    sections = [
+        original_text,
+        "",
+        "---",
+        "",
+        f"## 📊 分析進度 [{bar}] {completion_pct}%",
+        "",
+    ]
+    
+    # Add completion criteria
+    for criterion in progress.completion_criteria:
+        sections.append(f"- {criterion}")
+    
+    sections.append("")
+    
+    # Add next action suggestion (逼問)
+    if not progress.is_complete:
+        required_mark = "⚠️ **必要**" if next_action.required else "💡 建議"
+        sections.extend([
+            f"## 🎯 下一步 {required_mark}",
+            "",
+            f"**工具:** `{next_action.tool}`",
+            f"**逼問:** {next_action.question}",
+            f"**提示:** {next_action.hint}",
+        ])
+    else:
+        sections.extend([
+            "## ✅ 分析已完成基本標準",
+            "",
+            "可以使用 `rc_export_fishbone` 或 `rc_export_why_tree` 匯出報告",
+            "或繼續深入分析其他分支",
+        ])
+    
+    return "\n".join(sections)

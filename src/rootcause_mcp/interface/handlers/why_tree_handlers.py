@@ -18,6 +18,7 @@ from mcp.types import TextContent
 
 from rootcause_mcp.domain.entities.why_node import WhyChain, WhyNode
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
+from rootcause_mcp.application.guided_response import format_guided_response
 
 if TYPE_CHECKING:
     from rootcause_mcp.domain.repositories.session_repository import SessionRepository
@@ -30,6 +31,40 @@ logger = logging.getLogger(__name__)
 class WhyTreeHandlers:
     """Handler class for Why Tree tools."""
 
+    # Cause type mapping by Why Tree depth
+    CAUSE_TYPE_BY_LEVEL = {
+        1: {
+            "type": "Proximate",
+            "chinese": "近端原因",
+            "emoji": "🔴",
+            "hfacs_hint": "通常對應 HFACS Level 1 (Unsafe Acts) 或 Level 2 (Preconditions)",
+        },
+        2: {
+            "type": "Proximate/Intermediate",
+            "chinese": "近端/中間原因",
+            "emoji": "🟠",
+            "hfacs_hint": "通常對應 HFACS Level 2 (Preconditions) 或 Level 3 (Supervision)",
+        },
+        3: {
+            "type": "Intermediate",
+            "chinese": "中間原因",
+            "emoji": "🟡",
+            "hfacs_hint": "通常對應 HFACS Level 3 (Unsafe Supervision)",
+        },
+        4: {
+            "type": "Intermediate/Ultimate",
+            "chinese": "中間/遠端原因",
+            "emoji": "🟢",
+            "hfacs_hint": "通常對應 HFACS Level 3-4 (Supervision/Organizational)",
+        },
+        5: {
+            "type": "Ultimate",
+            "chinese": "遠端/根本原因",
+            "emoji": "💚",
+            "hfacs_hint": "通常對應 HFACS Level 4 (Organizational Influences)",
+        },
+    }
+
     def __init__(
         self,
         why_tree_repository: WhyTreeRepository | None = None,
@@ -40,6 +75,15 @@ class WhyTreeHandlers:
         self._why_repo = why_tree_repository
         self._session_repo = session_repository
         self._progress = progress_tracker
+
+    def _get_cause_type_by_level(self, level: int) -> dict[str, str]:
+        """Get cause type information based on Why Tree depth."""
+        return self.CAUSE_TYPE_BY_LEVEL.get(level, {
+            "type": "Unknown",
+            "chinese": "未知",
+            "emoji": "⚪",
+            "hfacs_hint": "無對應資訊",
+        })
 
     async def handle_ask_why(
         self, arguments: dict[str, Any]
@@ -137,6 +181,9 @@ class WhyTreeHandlers:
 
             self._why_repo.add_node(session_id, node)
 
+            # Determine cause type based on level
+            cause_type_info = self._get_cause_type_by_level(node.level)
+
             result = (
                 f"✅ **Why {node.level} Added**\n\n"
                 f"**Question:** {node.question}\n"
@@ -146,6 +193,9 @@ class WhyTreeHandlers:
                 result += f"**Evidence:** {', '.join(evidence)}\n"
 
             result += f"\n**Node ID:** `{node.id}`\n"
+            result += f"**Cause Type:** {cause_type_info['emoji']} {cause_type_info['type']} ({cause_type_info['chinese']})\n"
+            result += f"**HFACS Guidance:** {cause_type_info['hfacs_hint']}\n"
+            result += f"**Cause Type:** 🔴 Proximate (近端原因)\n"
 
             if node.is_final_why:
                 result += (
@@ -169,6 +219,11 @@ class WhyTreeHandlers:
                 f"- Root causes identified: {len(chain.root_causes)}\n"
                 f"- Complete: {'✅ Yes' if chain.is_complete else '❌ No'}"
             )
+
+            # Update progress and add guided response
+            if self._progress is not None:
+                progress = self._progress.update_from_why_tree(session_id_str, chain)
+                result = format_guided_response(result, progress, "rc_ask_why")
 
         return [TextContent(type="text", text=result)]
 
@@ -283,6 +338,13 @@ class WhyTreeHandlers:
             "2. Add to Fishbone with `rc_add_cause`\n"
             "3. Use `rc_verify_causation` to validate causal relationship"
         )
+
+        # Update progress and add guided response
+        if self._progress is not None:
+            # Refresh chain to get updated root cause count
+            chain = self._why_repo.get_chain(session_id)
+            progress = self._progress.update_from_why_tree(session_id_str, chain)
+            result = format_guided_response(result, progress, "rc_mark_root_cause")
 
         return [TextContent(type="text", text=result)]
 

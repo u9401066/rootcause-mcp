@@ -19,6 +19,7 @@ from mcp.types import TextContent
 from rootcause_mcp.domain.entities.fishbone import Fishbone, FishboneCause
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
+from rootcause_mcp.application.guided_response import format_guided_response
 
 if TYPE_CHECKING:
     from rootcause_mcp.domain.repositories.fishbone_repository import FishboneRepository
@@ -92,6 +93,11 @@ class FishboneHandlers:
             "Use `rc_add_cause` to add causes to each category."
         )
 
+        # Update progress and add guided response
+        if self._progress is not None:
+            progress = self._progress.update_from_fishbone(session_id, fishbone)
+            result = format_guided_response(result, progress, "rc_init_fishbone")
+
         return [TextContent(type="text", text=result)]
 
     async def handle_add_cause(
@@ -161,6 +167,13 @@ class FishboneHandlers:
             f"- Categories covered: {len(fishbone.populated_categories)}/6 "
             f"({fishbone.coverage_ratio:.0%})"
         )
+
+        # Update progress and add guided response
+        if self._progress is not None:
+            progress = self._progress.update_from_fishbone(session_id, fishbone)
+            if hfacs_code:
+                self._progress.update_hfacs_added(session_id)
+            result = format_guided_response(result, progress, "rc_add_cause")
 
         return [TextContent(type="text", text=result)]
 

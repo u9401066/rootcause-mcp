@@ -9,9 +9,14 @@ from __future__ import annotations
 
 import logging
 from datetime import datetime
-from typing import Any, Sequence
+from typing import TYPE_CHECKING, Any, Sequence
 
 from mcp.types import TextContent
+
+from rootcause_mcp.application.guided_response import format_guided_response
+
+if TYPE_CHECKING:
+    from rootcause_mcp.application.session_progress import SessionProgressTracker
 
 logger = logging.getLogger(__name__)
 
@@ -19,9 +24,12 @@ logger = logging.getLogger(__name__)
 class VerificationHandlers:
     """Handler class for Verification tools."""
 
-    def __init__(self) -> None:
-        """Initialize handlers."""
-        pass
+    def __init__(
+        self,
+        progress_tracker: SessionProgressTracker | None = None,
+    ) -> None:
+        """Initialize handlers with dependencies."""
+        self._progress = progress_tracker
 
     async def handle_verify_causation(
         self, arguments: dict[str, Any]
@@ -137,7 +145,14 @@ class VerificationHandlers:
         else:
             lines.append("❌ Causal relationship is not well-supported. Consider revising the hypothesis or gathering more evidence.")
 
-        return [TextContent(type="text", text="\n".join(lines))]
+        result = "\n".join(lines)
+
+        # Update progress and add guided response
+        if self._progress is not None and results["overall_result"] in ("VERIFIED", "VERIFIED_WITH_CAVEATS"):
+            progress = self._progress.update_root_cause_verified(session_id)
+            result = format_guided_response(result, progress, "rc_verify_causation")
+
+        return [TextContent(type="text", text=result)]
 
     def _test_temporality(
         self,

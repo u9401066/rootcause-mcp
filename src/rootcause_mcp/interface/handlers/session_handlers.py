@@ -17,6 +17,7 @@ from mcp.types import TextContent
 
 from rootcause_mcp.domain.entities.session import RCASession
 from rootcause_mcp.domain.value_objects.enums import CaseType, SessionStatus
+from rootcause_mcp.application.guided_response import format_guided_response
 
 if TYPE_CHECKING:
     from rootcause_mcp.domain.repositories.session_repository import SessionRepository
@@ -76,6 +77,11 @@ class SessionHandlers:
             "2. Use `rc_suggest_hfacs` to get classification suggestions\n"
             "3. Use `rc_add_cause` to document causes"
         )
+
+        # Add guided response with progress tracking
+        if self._progress is not None:
+            progress = self._progress.get_progress(str(session.id))
+            result = format_guided_response(result, progress, "rc_start_session")
 
         return [TextContent(type="text", text=result)]
 

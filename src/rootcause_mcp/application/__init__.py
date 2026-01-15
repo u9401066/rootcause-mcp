@@ -7,12 +7,11 @@ This layer contains:
 - RCA workflow orchestration
 """
 
-"""Application layer - use cases and orchestration."""
-
 from rootcause_mcp.application.guided_response import (
     GuidedResponse,
     GuidedResponseBuilder,
     NextAction,
+    format_guided_response,
 )
 from rootcause_mcp.application.session_progress import (
     SessionProgress,
@@ -20,6 +19,10 @@ from rootcause_mcp.application.session_progress import (
 )
 
 __all__ = [
+    "GuidedResponse",
     "GuidedResponseBuilder",
+    "NextAction",
+    "SessionProgress",
     "SessionProgressTracker",
+    "format_guided_response",
 ]

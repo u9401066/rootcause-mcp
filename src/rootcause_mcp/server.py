@@ -149,7 +149,9 @@ def _initialize_services() -> None:
         progress_tracker=progress_tracker,
     )
     
-    _verification_handlers = VerificationHandlers()
+    _verification_handlers = VerificationHandlers(
+        progress_tracker=progress_tracker,
+    )
     
     logger.info("Services initialized with config path: %s", hfacs_config_path)
     logger.info("Database initialized at: %s", db_path)
@@ -195,6 +197,9 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
         elif name == "rc_reload_rules":
             assert _hfacs_handlers is not None
             return await _hfacs_handlers.handle_reload_rules()
+        elif name == "rc_get_6m_hfacs_mapping":
+            assert _hfacs_handlers is not None
+            return await _hfacs_handlers.handle_get_6m_hfacs_mapping(arguments)
         
         # Session Tools
         elif name == "rc_start_session":

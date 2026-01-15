@@ -149,4 +149,32 @@ def get_hfacs_tools() -> list[Tool]:
                 "required": [],
             },
         ),
+        Tool(
+            name="rc_get_6m_hfacs_mapping",
+            description=(
+                "Get mapping between 6M Fishbone categories and HFACS codes. "
+                "Shows how Fishbone categories (Personnel, Equipment, Material, Process, "
+                "Environment, Monitoring) correspond to HFACS levels. "
+                "Useful for cross-framework analysis and ensuring comprehensive coverage. "
+                "Also provides Why Tree depth guidance for each category."
+            ),
+            inputSchema={
+                "type": "object",
+                "properties": {
+                    "category": {
+                        "type": "string",
+                        "description": (
+                            "Optional: specific 6M category to retrieve mapping for. "
+                            "If not specified, returns all mappings."
+                        ),
+                        "enum": [
+                            "Personnel", "Equipment", "Material",
+                            "Process", "Environment", "Monitoring"
+                        ],
+                        "default": None,
+                    },
+                },
+                "required": [],
+            },
+        ),
     ]

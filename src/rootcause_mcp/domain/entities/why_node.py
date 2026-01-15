@@ -42,6 +42,7 @@ class WhyNode:
     # Status
     is_root_cause: bool = False  # True if this is identified as a root cause
     needs_further_analysis: bool = True  # True if more "why" questions needed
+    is_proximate: bool = False  # True if this is a proximate (direct) cause (Level 1-2)
 
     # Metadata
     created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
@@ -114,7 +115,11 @@ class WhyNode:
         initial_problem: str,
         answer: str,
     ) -> Self:
-        """Create the first "Why?" node."""
+        """Create the first "Why?" node.
+        
+        The first Why is typically a proximate (direct) cause - the immediate
+        action/error that directly led to the incident (HFACS Level 1-2).
+        """
         return cls(
             id=CauseId.generate(),
             session_id=session_id,
@@ -122,6 +127,7 @@ class WhyNode:
             answer=answer,
             level=1,
             parent_id=None,
+            is_proximate=True,  # First why is typically a proximate cause
         )
 
     @classmethod
@@ -223,6 +229,7 @@ class WhyChain:
                     "question": node.question,
                     "answer": node.answer,
                     "is_root_cause": node.is_root_cause,
+                    "is_proximate": node.is_proximate,
                     "evidence": node.evidence,
                     "parent_id": str(node.parent_id) if node.parent_id else None,
                 }

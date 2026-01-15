@@ -1,12 +1,13 @@
 """
 HFACS Handler implementations.
 
-Handles 5 HFACS-related tools:
+Handles 6 HFACS-related tools:
 - rc_suggest_hfacs
 - rc_confirm_classification
 - rc_get_hfacs_framework
 - rc_list_learned_rules
 - rc_reload_rules
+- rc_get_6m_hfacs_mapping (NEW)
 """
 
 from __future__ import annotations
@@ -103,6 +104,80 @@ class HFACSHandlers:
                     },
                 },
             },
+        },
+    }
+
+    # 6M to HFACS Mapping (表圖樹 cross-reference)
+    MAPPING_6M_HFACS = {
+        "Personnel": {
+            "hfacs_levels": ["Level 1 (Unsafe Acts)", "Level 2 (Preconditions)"],
+            "hfacs_codes": ["UA-*", "PC-C-*", "PC-P-*"],
+            "description": "人員因素對應 HFACS 不安全行為 (Level 1) 和前置條件 (Level 2)",
+            "cause_type": "proximate",  # 近端原因
+            "why_tree_depth": {"typical": "1-2", "max": 3},
+            "example_mappings": [
+                {"cause": "護理師因疲勞未及時發現異常", "6m": "Personnel", "hfacs": "PC-C-APS"},
+                {"cause": "醫師計算藥物劑量錯誤", "6m": "Personnel", "hfacs": "UA-E-SB"},
+                {"cause": "交班時漏傳重要資訊", "6m": "Personnel", "hfacs": "PC-P-CRM"},
+            ],
+        },
+        "Equipment": {
+            "hfacs_levels": ["Level 4 (Organizational)", "Level 2 (Preconditions)"],
+            "hfacs_codes": ["OI-RM", "PC-E-TE"],
+            "description": "設備因素對應組織資源管理 (Level 4) 或技術環境 (Level 2)",
+            "cause_type": "intermediate",  # 中間原因
+            "why_tree_depth": {"typical": "2-3", "max": 4},
+            "example_mappings": [
+                {"cause": "監測儀器故障未及時維修", "6m": "Equipment", "hfacs": "OI-RM"},
+                {"cause": "軟體介面設計不良導致誤操作", "6m": "Equipment", "hfacs": "PC-E-TE"},
+            ],
+        },
+        "Material": {
+            "hfacs_levels": ["Level 4 (Organizational)"],
+            "hfacs_codes": ["OI-RM", "OI-OP"],
+            "description": "物料因素對應組織資源管理和流程規劃 (Level 4)",
+            "cause_type": "intermediate",
+            "why_tree_depth": {"typical": "2-4", "max": 4},
+            "example_mappings": [
+                {"cause": "藥品標籤相似易混淆", "6m": "Material", "hfacs": "OI-OP"},
+                {"cause": "關鍵耗材庫存不足", "6m": "Material", "hfacs": "OI-RM"},
+            ],
+        },
+        "Process": {
+            "hfacs_levels": ["Level 3 (Supervision)", "Level 4 (Organizational)"],
+            "hfacs_codes": ["US-*", "OI-OP"],
+            "description": "流程因素對應督導失效 (Level 3) 和組織流程 (Level 4)",
+            "cause_type": "ultimate",  # 遠端/根本原因
+            "why_tree_depth": {"typical": "3-5", "max": 5},
+            "example_mappings": [
+                {"cause": "查核流程有漏洞", "6m": "Process", "hfacs": "OI-OP"},
+                {"cause": "主管未落實督導", "6m": "Process", "hfacs": "US-IS"},
+                {"cause": "SOP 過時未更新", "6m": "Process", "hfacs": "OI-OP"},
+            ],
+        },
+        "Environment": {
+            "hfacs_levels": ["Level 2 (Preconditions)", "Level 4 (Organizational)"],
+            "hfacs_codes": ["PC-E-PE", "OI-OC"],
+            "description": "環境因素涵蓋物理環境 (Level 2) 和組織文化 (Level 4)",
+            "cause_type": "mixed",
+            "why_tree_depth": {"typical": "2-4", "max": 5},
+            "example_mappings": [
+                {"cause": "照明不足影響判讀", "6m": "Environment", "hfacs": "PC-E-PE"},
+                {"cause": "噪音干擾溝通", "6m": "Environment", "hfacs": "PC-E-PE"},
+                {"cause": "安全文化薄弱不敢提出疑慮", "6m": "Environment", "hfacs": "OI-OC"},
+            ],
+        },
+        "Monitoring": {
+            "hfacs_levels": ["Level 3 (Supervision)", "Level 4 (Organizational)"],
+            "hfacs_codes": ["US-IS", "US-FCP", "OI-OP"],
+            "description": "監控因素對應督導不足 (Level 3) 和組織流程 (Level 4)",
+            "cause_type": "ultimate",
+            "why_tree_depth": {"typical": "3-5", "max": 5},
+            "example_mappings": [
+                {"cause": "缺乏異常警示機制", "6m": "Monitoring", "hfacs": "OI-OP"},
+                {"cause": "主管未追蹤改善進度", "6m": "Monitoring", "hfacs": "US-FCP"},
+                {"cause": "稽核機制形同虛設", "6m": "Monitoring", "hfacs": "US-IS"},
+            ],
         },
     }
 
@@ -286,3 +361,78 @@ class HFACSHandlers:
         )
 
         return [TextContent(type="text", text=result)]
+
+    async def handle_get_6m_hfacs_mapping(
+        self, arguments: dict[str, Any]
+    ) -> Sequence[TextContent]:
+        """Handle rc_get_6m_hfacs_mapping tool call.
+        
+        Returns the mapping between 6M Fishbone categories and HFACS codes,
+        including Why Tree depth guidance for comprehensive analysis.
+        """
+        category_filter = arguments.get("category")
+        
+        if category_filter and category_filter in self.MAPPING_6M_HFACS:
+            mapping_data = {category_filter: self.MAPPING_6M_HFACS[category_filter]}
+        else:
+            mapping_data = self.MAPPING_6M_HFACS
+        
+        lines = [
+            "# 6M-HFACS 對照表 (表圖樹 Cross-Reference)\n",
+            "此對照表幫助 Agent 理解：",
+            "1. **魚骨圖 (6M)** → **HFACS 表** 的對應關係",
+            "2. **Why Tree 深度** 建議：近端原因 vs 遠端原因",
+            "3. **Proximate vs Ultimate Cause** 概念\n",
+            "---\n",
+            "## 因果層級概念\n",
+            "| 類型 | Why Tree 深度 | HFACS Level | 說明 |",
+            "|------|--------------|-------------|------|",
+            "| **Proximate (近端)** | 1-2 | Level 1-2 | 直接導致事件的行為/條件 |",
+            "| **Intermediate (中間)** | 2-4 | Level 2-3 | 促成近端原因的因素 |",
+            "| **Ultimate (遠端)** | 3-5 | Level 3-4 | 組織/系統層面的根本原因 |",
+            "",
+        ]
+        
+        cause_type_emoji_map = {
+            "proximate": "🔴",
+            "intermediate": "🟡", 
+            "ultimate": "🟢",
+            "mixed": "🔵",
+        }
+        
+        for category, data in mapping_data.items():
+            # Cast to dict for type safety
+            data_dict = dict(data) if not isinstance(data, dict) else data
+            
+            cause_type = str(data_dict.get("cause_type", "unknown"))
+            cause_type_emoji = cause_type_emoji_map.get(cause_type, "⚪")
+            
+            hfacs_levels = data_dict.get("hfacs_levels", [])
+            hfacs_codes = data_dict.get("hfacs_codes", [])
+            description = str(data_dict.get("description", ""))
+            
+            lines.append(f"\n## {cause_type_emoji} {category}\n")
+            lines.append(f"**{description}**\n")
+            lines.append(f"- **HFACS Levels:** {', '.join(str(x) for x in hfacs_levels)}")
+            lines.append(f"- **HFACS Codes:** {', '.join(str(x) for x in hfacs_codes)}")
+            lines.append(f"- **Cause Type:** {cause_type.title()}")
+            
+            depth_info = data_dict.get("why_tree_depth", {})
+            if isinstance(depth_info, dict):
+                lines.append(f"- **Why Tree Depth:** 通常 {depth_info.get('typical', 'N/A')}, 最深 {depth_info.get('max', 'N/A')}")
+            
+            example_mappings = data_dict.get("example_mappings", [])
+            if example_mappings:
+                lines.append("\n**範例對照：**")
+                for ex in example_mappings:
+                    if isinstance(ex, dict):
+                        lines.append(f"- 「{ex.get('cause', '')}」 → **{ex.get('hfacs', '')}**")
+        
+        lines.append("\n---\n")
+        lines.append("## 使用建議\n")
+        lines.append("1. **起點 (Proximate):** 從 Personnel 類別開始，通常是 Why 1-2")
+        lines.append("2. **深入 (Intermediate):** Equipment/Material/Environment 是 Why 2-4")
+        lines.append("3. **終點 (Ultimate):** Process/Monitoring 是真正的根本原因，通常是 Why 3-5")
+        lines.append("\n> 💡 **RCA 原則：** 不要停在近端原因 (Level 1)，要追溯到組織/系統層面 (Level 3-4)")
+        
+        return [TextContent(type="text", text="\n".join(lines))]
