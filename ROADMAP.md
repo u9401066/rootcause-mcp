@@ -80,24 +80,214 @@
 
 ## 進行中 🚧
 
-### Phase 3: Deep RCA Framework v2.0 🧠
+### Phase 3: Academic RCA Framework 📚
 
-**目標：** 從「小學生等級」提升至「專業級」分析深度
+**目標：** 從「LLM 秒解」提升至「學術 Case Report」深度討論
+
+#### 3.1 強制鑑別診斷展開 (Differential Diagnosis)
+
+| Tool | 說明 |
+|------|------|
+| `rc_generate_differentials` | 強制產生 ≥5 個鑑別診斷假設 |
+| `rc_evaluate_hypothesis` | 逐一評估：支持/反對證據、排除理由 |
+| `rc_rank_hypotheses` | 依 Pre-test probability 排序 |
+
+**設計原則：** 不能直接跳到答案，必須展示完整推理過程
+
+#### 3.2 證據評分系統 (Evidence Grading)
+
+| Tool | 說明 |
+|------|------|
+| `rc_add_evidence` | 新增證據 (附類型與品質評分) |
+| `rc_grade_evidence` | GRADE-like 證據等級評估 |
+| `rc_identify_gaps` | 自動識別證據缺口 |
+
+**證據類型權重：**
+- `pathognomonic` (1.0) - 100% 確診
+- `direct_observation` (0.9) - 直接觀察
+- `objective_data` (0.8) - Lab/Monitor 數據
+- `documentation` (0.6) - 文件記錄
+- `testimony` (0.4) - 證詞
+- `inference` (0.2) - 推論
+
+#### 3.3 反事實分析 (Counterfactual Analysis)
+
+| Tool | 說明 |
+|------|------|
+| `rc_counterfactual_analysis` | "如果當時..."分析 (強制 ≥3 個) |
+| `rc_calculate_impact` | 計算介入對結果的影響機率 |
+| `rc_timeline_intervention` | 時間軸上標註可介入點 |
+
+**範例輸出：**
+```
+如果在 08:05 做 TEE → 85% 機率提早 10 分鐘診斷
+如果沒給 Epinephrine → 75% 機率避免惡化
+```
+
+#### 3.4 機轉深度解析 (Pathophysiology Deep Dive)
+
+| Tool | 說明 |
+|------|------|
+| `rc_deep_dive_mechanism` | 強制深度解釋 (不能只說 "因為 SAM") |
+| `rc_add_equation` | 相關公式 (e.g., Gradient = 4V²) |
+| `rc_visualize_mechanism` | 機轉圖解 (Mermaid 流程圖) |
+
+**深度等級：** `student` → `resident` → `fellow` → `attending` → `expert`
+
+#### 3.5 多層次系統分析 (Multi-Level System Analysis)
+
+| Tool | 說明 |
+|------|------|
+| `rc_analyze_individual` | 個人層次分析 |
+| `rc_analyze_team` | 團隊層次分析 |
+| `rc_analyze_organization` | 組織層次分析 |
+| `rc_analyze_regulatory` | 法規/制度層次分析 |
+| `rc_cross_level_links` | 跨層次因果連結 |
+
+#### 3.6 文獻整合 (Literature Integration) 🔗
+
+| Tool | 說明 |
+|------|------|
+| `rc_search_literature` | 整合 PubMed MCP 搜尋相關文獻 |
+| `rc_link_evidence_to_pmid` | 將證據連結到 PMID |
+| `rc_fetch_case_reports` | 自動搜尋相似 Case Reports |
+| `rc_extract_incidence` | 從文獻提取發生率數據 |
+
+**與 pubmed-search MCP 整合：**
+- 自動搜尋診斷相關 Case Reports
+- 提取 Guidelines 建議
+- 連結 Mechanism 文獻
+
+#### 3.7 教學萃取 (Teaching Point Extraction)
+
+| Tool | 說明 |
+|------|------|
+| `rc_extract_pearls` | 萃取 Clinical Pearls (一句話重點) |
+| `rc_identify_pitfalls` | 識別常見錯誤 |
+| `rc_generate_questions` | 生成 Board-style 考題 |
+| `rc_create_teaching_case` | 轉換為教學案例格式 |
+
+#### 3.8 學術報告生成 (Academic Report Generation)
+
+| Tool | 說明 |
+|------|------|
+| `rc_generate_case_report` | 生成學術 Case Report 格式 |
+| `rc_export_for_journal` | 匯出期刊投稿格式 |
+| `rc_generate_m_and_m` | 生成 M&M Conference 簡報 |
+
+**輸出結構：**
+1. Case Presentation (純客觀)
+2. Differential Diagnosis (≥5 假設)
+3. Diagnostic Reasoning (排除過程)
+4. Pathophysiology (機轉深究)
+5. Counterfactual Analysis (反事實)
+6. System Analysis (多層次)
+7. Literature Review (文獻連結)
+8. Teaching Points (教學萃取)
+
+---
+
+### Phase 3.X: 動態圖表系統 📊
+
+#### 3.X.1 因果 DAG (Directed Acyclic Graph)
+
+**目標：** 從線性 5-Why 升級為多分支因果圖
+
+| Tool | 說明 |
+|------|------|
+| `rc_add_causal_link` | 新增因果連結 (多對多) |
+| `rc_set_link_strength` | 設定因果強度 (0-1) |
+| `rc_find_all_root_causes` | 找出所有根因 (非單一) |
+| `rc_calculate_contribution` | 計算各因素貢獻度 |
+
+**因果關係類型：**
+- `necessary` - 必要條件
+- `sufficient` - 充分條件
+- `contributing` - 促成因素
+- `correlated` - 相關但非因果
+
+#### 3.X.2 時序整合 (Timeline Integration)
+
+| Tool | 說明 |
+|------|------|
+| `rc_add_timestamp` | 為節點添加時間戳 |
+| `rc_build_timeline` | 自動生成時序圖 |
+| `rc_validate_temporality` | 驗證時序因果 (因必須先於果) |
+| `rc_identify_critical_window` | 識別關鍵時間窗口 |
+
+#### 3.X.3 互動式輸出 (Interactive Export)
+
+| Tool | 說明 |
+|------|------|
+| `rc_export_cytoscape` | 匯出 Cytoscape.js JSON |
+| `rc_export_d3` | 匯出 D3.js 格式 |
+| `rc_export_html_viewer` | 生成獨立 HTML 檢視器 |
+| `rc_export_vscode_webview` | VS Code Webview 整合 |
+
+**互動功能：**
+- 節點可拖曳
+- 點擊展開詳情
+- 動態高亮因果路徑
+- 時間軸播放
+
+#### 3.X.4 動態分類系統 (Domain Cartridge)
+
+**目標：** 不同領域使用不同分類框架
+
+```yaml
+# config/domains/anesthesia.yaml
+domain: anesthesia
+categories:
+  - id: patient_factors
+    subcategories: [anatomy, physiology, comorbidities]
+  - id: airway
+    subcategories: [assessment, equipment, technique]
+  - id: hemodynamics
+    subcategories: [monitoring, drugs, volume]
+  - id: system
+    subcategories: [communication, handoff, workload]
+```
+
+| Tool | 說明 |
+|------|------|
+| `rc_load_domain` | 載入領域卡匣 |
+| `rc_list_domains` | 列出可用領域 |
+| `rc_create_domain` | 創建自訂領域 |
+
+---
+
+### Phase 3.Y: 討論引導系統 (Guided Discussion)
+
+**目標：** 強制 LLM 按框架展開，不能「秒解」
+
+#### Completion Gates (完成門檻)
+
+| Stage | Completion Criteria |
+|-------|---------------------|
+| DIFFERENTIAL | hypotheses ≥ 5 |
+| EVALUATION | 每個假設都已評估 |
+| MECHANISM | depth ≥ "fellow" level |
+| COUNTERFACTUAL | scenarios ≥ 3 |
+| LITERATURE | references ≥ 3 |
+| SYSTEM | levels ≥ 3 (Individual/Team/Org) |
+
+| Tool | 說明 |
+|------|------|
+| `rc_check_stage_complete` | 檢查階段是否完成 |
+| `rc_get_missing_elements` | 取得缺少的元素 |
+| `rc_force_expand` | 強制展開不足的部分 |
+
+---
+
+### Phase 3 Legacy: Deep RCA Framework v2.0 🧠
+
+**已整合至上述 Academic RCA Framework**
 
 - [x] 架構設計完成 (`docs/architecture/deep_rca_framework_v2.md`)
-- [ ] **Phase 3.1 (P0)**: 核心增強工具
-  - [ ] rc_enrich_with_literature - PubMed RAG 文獻支援
-  - [ ] rc_triangulate_evidence - 多源證據交叉驗證
-  - [ ] rc_barrier_analysis - Swiss Cheese 屏障分析
-  - [ ] rc_generate_report - TJC 標準報告生成
-- [ ] **Phase 3.2 (P1)**: 進階分析工具
-  - [ ] rc_match_similar_cases - 相似案例匹配
-  - [ ] rc_build_swiss_cheese - Swiss Cheese 模型建構
-  - [ ] rc_calculate_priority - 風險優先矩陣
-- [ ] **Phase 3.3 (P2)**: 專家級工具
-  - [ ] rc_build_bowtie - Bowtie 模型建構
-  - [ ] rc_counterfactual_test - 反事實測試
-  - [ ] rc_consensus_building - 專家共識建立
+- [ ] ~~rc_enrich_with_literature~~ → `rc_search_literature`
+- [ ] ~~rc_triangulate_evidence~~ → `rc_grade_evidence`
+- [ ] ~~rc_barrier_analysis~~ → Phase 6 Swiss Cheese
+- [ ] ~~rc_generate_report~~ → `rc_generate_case_report`
 
 ### Phase 3.X: VS Code 整合
 
