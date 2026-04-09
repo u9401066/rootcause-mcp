@@ -1,11 +1,13 @@
 """
 Why Tree Handler implementations.
 
-Handles 4 Why Tree (5-Why Analysis) tools:
+Handles Why Tree (5-Why Analysis) tools:
 - rc_ask_why
 - rc_get_why_tree
 - rc_mark_root_cause
 - rc_export_why_tree
+- rc_add_causal_link
+- rc_build_teaching_case
 """
 
 from __future__ import annotations
@@ -20,7 +22,13 @@ from typing import TYPE_CHECKING, Any
 from mcp.types import TextContent
 
 from rootcause_mcp.application.guided_response import format_guided_response
-from rootcause_mcp.domain.entities.why_node import WhyChain, WhyNode
+from rootcause_mcp.domain.entities.why_node import (
+    CausalLink,
+    TeachingCase,
+    WhyChain,
+    WhyNode,
+)
+from rootcause_mcp.domain.value_objects.enums import CausalLinkType, TeachingLevel
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 
 if TYPE_CHECKING:
@@ -293,6 +301,13 @@ class WhyTreeHandlers:
         if chain.root_causes:
             lines.append(f"**Root Causes Identified:** {len(chain.root_causes)}\n")
 
+        if chain.causal_links:
+            lines.append(f"**Cross Links:** {len(chain.causal_links)}\n")
+
+        feedback_loops = chain.detect_feedback_loops()
+        if feedback_loops:
+            lines.append(f"**Feedback Loops:** {len(feedback_loops)}\n")
+
         lines.append("\n## Analysis Chain\n")
 
         by_level: dict[int, list[WhyNode]] = {}
@@ -314,6 +329,23 @@ class WhyTreeHandlers:
                     lines.append(f"{prefix}   🎯 **ROOT CAUSE** (confidence: {node.confidence_level})")
 
                 lines.append(f"{prefix}   (ID: `{node.id}`)\n")
+
+        if chain.causal_links:
+            lines.append("## Bidirectional / Cross Causality\n")
+            for link in chain.causal_links:
+                direction = "↔" if link.bidirectional else "→"
+                source = chain.get_node(link.source_id)
+                target = chain.get_node(link.target_id)
+                if source and target:
+                    lines.append(
+                        f"- {source.answer} {direction} {target.answer} "
+                        f"({link.relationship.value}, strength={link.strength:.0%})"
+                    )
+
+        if feedback_loops:
+            lines.append("\n## Feedback Loops\n")
+            for loop in feedback_loops:
+                lines.append(f"- {loop.summary}")
 
         return [TextContent(type="text", text="\n".join(lines))]
 
@@ -383,6 +415,78 @@ class WhyTreeHandlers:
 
         return [TextContent(type="text", text=result)]
 
+    async def handle_add_causal_link(
+        self, arguments: dict[str, Any]
+    ) -> Sequence[TextContent]:
+        """Handle rc_add_causal_link tool call."""
+        if self._why_repo is None:
+            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+
+        session_id_str = arguments["session_id"]
+        session_id = SessionId.from_string(session_id_str)
+        chain = self._why_repo.get_chain(session_id)
+
+        if chain is None:
+            return [TextContent(
+                type="text",
+                text=f"❌ **No Why Tree Found** for session `{session_id_str}`"
+            )]
+
+        source_node_id = CauseId.from_string(arguments["source_node_id"])
+        target_node_id = CauseId.from_string(arguments["target_node_id"])
+        relationship = CausalLinkType(arguments.get("relationship", "feedback"))
+        strength = float(arguments.get("strength", 0.5))
+        bidirectional = bool(arguments.get("bidirectional", False))
+        note = arguments.get("note", "")
+        evidence = tuple(arguments.get("evidence", []))
+
+        try:
+            link = CausalLink(
+                source_id=source_node_id,
+                target_id=target_node_id,
+                relationship=relationship,
+                strength=strength,
+                evidence=evidence,
+                note=note,
+                bidirectional=bidirectional,
+            )
+            chain.add_causal_link(link)
+            self._why_repo.save_chain(chain)
+        except ValueError as exc:
+            return [TextContent(type="text", text=f"❌ **Invalid Causal Link**\n\n{exc}")]
+
+        source_node = chain.get_node(source_node_id)
+        target_node = chain.get_node(target_node_id)
+        feedback_loops = chain.detect_feedback_loops()
+
+        result = (
+            "🔁 **Causal Link Added**\n\n"
+            f"**Source:** {source_node.answer if source_node else source_node_id}\n"
+            f"**Target:** {target_node.answer if target_node else target_node_id}\n"
+            f"**Relationship:** {relationship.value}\n"
+            f"**Strength:** {strength:.0%}\n"
+            f"**Direction:** {'bidirectional' if bidirectional else 'directed'}\n"
+        )
+        if note:
+            result += f"**Note:** {note}\n"
+        if evidence:
+            result += f"**Evidence:** {', '.join(evidence)}\n"
+
+        result += (
+            "\n---\n"
+            f"**Cross Links in Chain:** {len(chain.causal_links)}\n"
+            f"**Feedback Loops Detected:** {len(feedback_loops)}"
+        )
+
+        if feedback_loops:
+            result += f"\n**Latest Loop:** {feedback_loops[-1].summary}"
+
+        if self._progress is not None:
+            progress = self._progress.update_from_why_tree(session_id_str, chain)
+            result = format_guided_response(result, progress, "rc_add_causal_link")
+
+        return [TextContent(type="text", text=result)]
+
     async def handle_export_why_tree(
         self, arguments: dict[str, Any]
     ) -> Sequence[TextContent]:
@@ -435,6 +539,98 @@ class WhyTreeHandlers:
             result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
 
         return [TextContent(type="text", text=result)]
+
+    async def handle_build_teaching_case(
+        self, arguments: dict[str, Any]
+    ) -> Sequence[TextContent]:
+        """Handle rc_build_teaching_case tool call."""
+        if self._why_repo is None:
+            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+
+        session_id_str = arguments["session_id"]
+        export_format = arguments.get("format", "markdown")
+        learner_level = TeachingLevel(arguments.get("learner_level", "medical_student"))
+
+        session_id = SessionId.from_string(session_id_str)
+        chain = self._why_repo.get_chain(session_id)
+        if chain is None:
+            return [TextContent(
+                type="text",
+                text=f"❌ **No Why Tree Found** for session `{session_id_str}`"
+            )]
+
+        teaching_case = chain.build_teaching_case(learner_level)
+
+        if export_format == "json":
+            file_path = self._write_export_file(
+                session_id_str,
+                "teaching_case",
+                export_format,
+                json.dumps(teaching_case.to_dict(), indent=2, ensure_ascii=False),
+            )
+            result = json.dumps(
+                {
+                    "teaching_case": teaching_case.to_dict(),
+                    "saved_to": file_path,
+                },
+                indent=2,
+                ensure_ascii=False,
+            )
+        else:
+            result = self._format_teaching_case_markdown(chain, teaching_case)
+            file_path = self._write_export_file(
+                session_id_str,
+                "teaching_case",
+                export_format,
+                result,
+            )
+            if file_path:
+                result += (
+                    f"\n\n---\n📁 **Saved to:** `{file_path}`\n"
+                    "💡 Open in VS Code to review or adapt for teaching sessions"
+                )
+
+        if self._progress is not None and export_format != "json":
+            progress = self._progress.update_from_why_tree(session_id_str, chain)
+            result = format_guided_response(result, progress, "rc_build_teaching_case")
+
+        return [TextContent(type="text", text=result)]
+
+    def _format_teaching_case_markdown(
+        self,
+        chain: WhyChain,
+        teaching_case: TeachingCase,
+    ) -> str:
+        """Format a teaching case as Markdown."""
+        lines = [
+            f"# Teaching Case: {chain.initial_problem}",
+            "",
+            f"**Learner Level:** `{teaching_case.learner_level.value}`",
+            "",
+            "## Case Summary",
+            teaching_case.case_summary,
+            "",
+            "## Learning Objectives",
+        ]
+        lines.extend(f"- {objective}" for objective in teaching_case.learning_objectives)
+        lines.extend(["", "## Teaching Flow"])
+        lines.extend(f"- {step}" for step in teaching_case.teaching_flow)
+        lines.extend(["", "## Clinical Pearls"])
+        lines.extend(f"- {pearl}" for pearl in teaching_case.clinical_pearls)
+        lines.extend(["", "## Common Pitfalls"])
+        lines.extend(f"- {pitfall}" for pitfall in teaching_case.common_pitfalls)
+        lines.extend(["", "## Discussion Questions"])
+        lines.extend(f"- {question}" for question in teaching_case.discussion_questions)
+
+        if teaching_case.feedback_loops:
+            lines.extend(["", "## Feedback Loops"])
+            lines.extend(f"- {loop}" for loop in teaching_case.feedback_loops)
+
+        lines.extend(["", "## Reverse Causality Prompts"])
+        lines.extend(
+            f"- {prompt}" for prompt in teaching_case.reverse_causality_prompts
+        )
+        return "\n".join(lines)
 
     def _generate_why_tree_mermaid(self, chain: WhyChain) -> str:
         """Generate an enhanced Why Tree diagram in Mermaid format.
@@ -510,9 +706,23 @@ class WhyTreeHandlers:
                 lines.append(f'    {parent_id} -->|"{arrow_label}"| {node_id}')
                 lines.append("")
 
+        if chain.causal_links:
+            lines.append("    %% --- Cross Causal Links / Feedback Loops ---")
+            for index, link in enumerate(chain.causal_links, start=1):
+                source_ref = f"N{str(link.source_id)[-8:]}"
+                target_ref = f"N{str(link.target_id)[-8:]}"
+                label = f"{link.relationship.value}<br/>{int(link.strength * 100)}%"
+                lines.append(f'    {source_ref} -. "{label}" .-> {target_ref}')
+                if link.bidirectional:
+                    lines.append(
+                        f'    {target_ref} -. "feedback #{index}" .-> {source_ref}'
+                    )
+            lines.append("")
+
         # Add depth indicator
         lines.append(f"    %% Analysis Depth: {chain.depth}")
         lines.append(f"    %% Root Causes Found: {len(chain.root_causes)}")
+        lines.append(f"    %% Feedback Loops: {len(chain.detect_feedback_loops())}")
         lines.append("")
 
         # Enhanced styling with gradient colors showing progression

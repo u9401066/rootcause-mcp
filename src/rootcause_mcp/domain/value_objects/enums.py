@@ -4,7 +4,7 @@ Domain Enumerations.
 Strongly-typed enums for domain concepts.
 """
 
-from enum import Enum, auto
+from enum import Enum
 
 
 class Stage(str, Enum):
@@ -117,6 +117,24 @@ class CausalStrength(str, Enum):
     CONTRIBUTING_FACTOR = "contributing_factor"  # 貢獻因素
     CONTEXTUAL_FACTOR = "contextual_factor"  # 背景因素
     NOT_CAUSAL = "not_causal"  # 非因果
+
+
+class CausalLinkType(str, Enum):
+    """Relationship type between two causal nodes."""
+
+    CONTRIBUTES_TO = "contributes_to"
+    FEEDBACK = "feedback"
+    ESCALATES = "escalates"
+    MITIGATES = "mitigates"
+
+
+class TeachingLevel(str, Enum):
+    """Target learner level for lesson-plan generation."""
+
+    MEDICAL_STUDENT = "medical_student"
+    INTERN = "intern"
+    RESIDENT = "resident"
+    FELLOW = "fellow"
 
 
 class Priority(str, Enum):

@@ -146,6 +146,17 @@
 ## Doing
 
 - 🔄 Review Deep RCA Framework v2.0 設計
+- 🔄 將 Why Tree 擴展為雙向因果與教案建構入口
+
+## Done (2026-04-09)
+
+- ✅ **Bidirectional Causality + Teaching Case MVP**
+  - WhyChain 新增 causal links / feedback loop 偵測
+  - 新增 `rc_add_causal_link`
+  - 新增 `rc_build_teaching_case`
+  - Why Tree 匯出/摘要可顯示 cross-links 與 loops
+  - README / README.zh-TW 更新為「因果分析 + 教案設計」定位
+  - 新增聚焦測試 `tests/test_bidirectional_teaching_case.py`
 
 ## Next (Phase 3-4)
 
