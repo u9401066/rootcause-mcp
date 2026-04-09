@@ -197,10 +197,8 @@ class WhyNode:
         answer: str,
     ) -> Self:
         """Create the first "Why?" node.
-
         The first Why is typically a proximate (direct) cause - the immediate
-        action/error that directly led to the incident (HFACS Level 1-2).
-        """
+        action/error that directly led to the incident (HFACS Level 1-2)."""
         return cls(
             id=CauseId.generate(),
             session_id=session_id,
@@ -253,9 +251,15 @@ class WhyChain:
         """Add a directed or bidirectional causal link between existing nodes."""
         existing_node_ids = {str(node.id) for node in self.nodes}
         if str(link.source_id) not in existing_node_ids:
-            raise ValueError(f"Source node not found: {link.source_id}")
+            raise ValueError(
+                f"Source node {link.source_id} not found in chain "
+                f"with {len(self.nodes)} nodes"
+            )
         if str(link.target_id) not in existing_node_ids:
-            raise ValueError(f"Target node not found: {link.target_id}")
+            raise ValueError(
+                f"Target node {link.target_id} not found in chain "
+                f"with {len(self.nodes)} nodes"
+            )
         if link not in self.causal_links:
             self.causal_links.append(link)
 
@@ -391,7 +395,7 @@ class WhyChain:
         case_summary = (
             f"{self.initial_problem}. Case starts from proximate factor "
             f"'{first_proximate}' and traces deeper cause '{first_root}' "
-            "for causal-chain and systems-thinking teaching."
+            "for causal chain and systems-thinking teaching."
         )
 
         learning_objectives = (

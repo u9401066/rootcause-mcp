@@ -626,7 +626,7 @@ class WhyTreeHandlers:
             lines.extend(["", "## Feedback Loops"])
             lines.extend(f"- {loop}" for loop in teaching_case.feedback_loops)
 
-        lines.extend(["", "## Reverse-Causality Prompts"])
+        lines.extend(["", "## Reverse Causality Prompts"])
         lines.extend(
             f"- {prompt}" for prompt in teaching_case.reverse_causality_prompts
         )
