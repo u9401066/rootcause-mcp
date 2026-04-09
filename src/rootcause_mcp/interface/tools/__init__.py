@@ -5,10 +5,10 @@ Contains tool schema definitions organized by domain:
 - HFACS classification tools (5 tools)
 - Session management tools (4 tools)
 - Fishbone diagram tools (4 tools)
-- Why Tree analysis tools (4 tools)
+- Why Tree analysis tools (6 tools)
 - Verification tools (1 tool)
 
-Total: 18 MCP tools
+Total: 21 MCP tools
 """
 
 from mcp.types import Tool
@@ -21,7 +21,7 @@ from rootcause_mcp.interface.tools.verification_tools import get_verification_to
 
 
 def get_all_tools() -> list[Tool]:
-    """Get all 18 MCP tool definitions."""
+    """Get all 21 MCP tool definitions."""
     tools = []
     tools.extend(get_hfacs_tools())      # 5 tools
     tools.extend(get_session_tools())     # 4 tools

@@ -14,6 +14,8 @@ from rootcause_mcp.domain.value_objects.enums import (
     SessionStatus,
     StageStatus,
     FishboneCategoryType,
+    CausalLinkType,
+    TeachingLevel,
 )
 
 __all__ = [
@@ -27,4 +29,6 @@ __all__ = [
     "SessionStatus",
     "StageStatus",
     "FishboneCategoryType",
+    "CausalLinkType",
+    "TeachingLevel",
 ]

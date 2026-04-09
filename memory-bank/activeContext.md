@@ -10,6 +10,8 @@
 - **God Level 案例**: PRIS, LVAD Suction, SAM/Dynamic LVOT ⭐
 - **19 個 MCP Tools** 穩定運行
 - 準備 Git commit: `feat(examples): add God Level RCA cases`
+- **新方向**：從單向死亡案例 RCA 擴展為「雙向因果循環 + 醫學生教案建構」
+- **最新 MVP**：Why Tree 可補 causal links、偵測 feedback loop、直接輸出 teaching case
 
 ### 最新完成 - Case 6: SAM (Dynamic LVOT Obstruction)
 - Session: `rc_sess_5c486e7c`

@@ -242,6 +242,12 @@ async def call_tool(name: str, arguments: dict[str, Any]) -> Sequence[TextConten
         elif name == "rc_export_why_tree":
             assert _why_tree_handlers is not None
             return await _why_tree_handlers.handle_export_why_tree(arguments)
+        elif name == "rc_add_causal_link":
+            assert _why_tree_handlers is not None
+            return await _why_tree_handlers.handle_add_causal_link(arguments)
+        elif name == "rc_build_teaching_case":
+            assert _why_tree_handlers is not None
+            return await _why_tree_handlers.handle_build_teaching_case(arguments)
         
         # Verification Tools
         elif name == "rc_verify_causation":
@@ -267,8 +273,8 @@ async def list_prompts() -> list[Prompt]:
         Prompt(
             name="analyze_incident",
             description=(
-                "Analyze a clinical incident using systematic RCA methodology. "
-                "Guides through 5-Why analysis and HFACS classification."
+                "Analyze a clinical incident using systematic RCA methodology, "
+                "then optionally transform it into a teaching-ready causal lesson."
             ),
             arguments=[
                 PromptArgument(
@@ -348,6 +354,11 @@ Based on the analysis, suggest:
 2. Systemic improvements
 3. Training needs
 4. Process changes
+
+### Step 6: Teaching Translation
+If the chain is rich enough, use `rc_add_causal_link` to capture feedback loops
+or bidirectional escalation, then use `rc_build_teaching_case` to turn the RCA
+into learner objectives, pitfalls, and discussion prompts for medical students.
 
 ---
 Begin your analysis by summarizing the key facts."""

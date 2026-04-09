@@ -1,18 +1,21 @@
-# RootCause MCP - Clinical Root Cause Analysis MCP Server
+# RootCause MCP - Clinical Causality & Teaching Design MCP Server
 
-> 🏥 AI-guided structured Root Cause Analysis for healthcare quality improvement
+> 🏥 AI-guided causal analysis, feedback-loop modeling, and teaching-case construction for healthcare quality improvement
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-1.10+-green.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub](https://img.shields.io/github/stars/u9401066/rootcause-mcp?style=social)](https://github.com/u9401066/rootcause-mcp)
-[![Tools](https://img.shields.io/badge/MCP_Tools-19-purple.svg)](#-available-tools)
+[![Tools](https://img.shields.io/badge/MCP_Tools-21-purple.svg)](#-available-tools)
 
 **English** | [中文版](README.zh-TW.md)
 
 ## 🎯 Vision
 
-Enable AI Agents to guide clinical staff through **structured, traceable, and learnable** Root Cause Analysis.
+Enable AI Agents to move in **both directions of causality**:
+
+- from clinical incidents → structured, traceable root cause analysis
+- from root causes → learner-ready lesson plans for medical education
 
 RootCause MCP supports three categories of analysis models through **Domain Cartridges**:
 
@@ -31,7 +34,7 @@ RootCause MCP supports three categories of analysis models through **Domain Cart
 │                          ▼                                      │
 │              ┌───────────────────────┐                          │
 │              │   Unified Graph API   │                          │
-│              │    (19 MCP Tools)     │                          │
+│              │    (21 MCP Tools)     │                          │
 │              └───────────────────────┘                          │
 └─────────────────────────────────────────────────────────────────┘
 ```
@@ -44,6 +47,8 @@ RootCause MCP supports three categories of analysis models through **Domain Cart
 |---------|-------------|--------|
 | 🐟 **Fishbone (6M)** | Healthcare-specialized Ishikawa diagram | ✅ 4 tools |
 | 🔍 **5-Why Analysis** | Deep cause exploration with Proximate/Ultimate classification | ✅ 4 tools |
+| 🔁 **Bidirectional Causality** | Cross-links, escalation loops, and feedback cycle modeling | ✅ 1 tool |
+| 🎓 **Teaching Case Builder** | Convert RCA chains into medical student lesson plans | ✅ 1 tool |
 | 📊 **HFACS-MES** | Human Factors Analysis auto-suggestion (5-level, 25 categories) | ✅ 6 tools |
 | ✅ **Causation Verify** | Bradford Hill criteria-based verification | ✅ 1 tool |
 | 🔗 **6M-HFACS Mapping** | Cross-reference between taxonomies | ✅ 1 tool |
@@ -88,13 +93,15 @@ RootCause MCP supports three categories of analysis models through **Domain Cart
 | `rc_get_fishbone` | Get fishbone structure |
 | `rc_export_fishbone` | Export as Mermaid/Markdown/JSON |
 
-### Why Tree Tools (4)
+### Why Tree Tools (6)
 | Tool | Description |
 |------|-------------|
 | `rc_ask_why` | Progressive 5-Why questioning |
 | `rc_get_why_tree` | Get Why tree structure |
 | `rc_mark_root_cause` | Mark node as root cause |
 | `rc_export_why_tree` | Export as Mermaid/Markdown/JSON |
+| `rc_add_causal_link` | Add feedback loops and bidirectional causal links |
+| `rc_build_teaching_case` | Build a teaching-ready lesson plan from an RCA chain |
 
 ### Verification Tools (1)
 | Tool | Description |

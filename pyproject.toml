@@ -5,14 +5,14 @@ build-backend = "hatchling.build"
 [project]
 name = "rootcause-mcp"
 version = "0.1.0"
-description = "Clinical Root Cause Analysis MCP Server - 臨床根因分析工具"
+description = "Clinical causality analysis and teaching design MCP Server - 臨床因果分析與教案建構工具"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.12"
 authors = [
     { name = "RCA Team" }
 ]
-keywords = ["mcp", "root-cause-analysis", "clinical", "fishbone", "5-why", "hfacs"]
+keywords = ["mcp", "root-cause-analysis", "clinical", "fishbone", "5-why", "hfacs", "teaching", "causal-loops"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Healthcare Industry",
