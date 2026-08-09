@@ -10,7 +10,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 
-from rootcause_mcp.domain.value_objects.enums import VerificationResult, CausalStrength
+from rootcause_mcp.domain.value_objects.enums import CausalStrength, VerificationResult
 from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
 
 
@@ -154,17 +154,13 @@ class CausationValidator:
 
         # For standard level, stop here
         if level == VerificationLevel.STANDARD:
-            return self._build_result(
-                verification_id, level, cause, effect, tests
-            )
+            return self._build_result(verification_id, level, cause, effect, tests)
 
         # For comprehensive level, run additional tests
         tests.mechanism = self._check_mechanism(cause, effect)
         tests.sufficiency = self._check_sufficiency(cause, effect)
 
-        return self._build_result(
-            verification_id, level, cause, effect, tests
-        )
+        return self._build_result(verification_id, level, cause, effect, tests)
 
     def _check_temporality(
         self,
@@ -210,16 +206,16 @@ class CausationValidator:
             f"若「{cause.description}」未發生，「{effect.description}」是否仍會發生？"
         )
 
-        # Heuristic: If there's strong evidence linking them, assume necessity
-        # This is a simplified version - Phase 3 will use proper causal inference
+        # Evidence attached to both events increases confidence, but cannot by itself
+        # establish the counterfactual claim.
         has_evidence = bool(cause.evidence and effect.evidence)
 
         return NecessityResult(
-            passed=True,  # Default to passed in MVP (needs Agent confirmation)
+            passed=False,
             counterfactual_question=counterfactual_question,
-            counterfactual_answer="unlikely",  # Default assumption
+            counterfactual_answer="uncertain",
             confidence=ConfidenceScore(0.6 if has_evidence else 0.4),
-            reasoning="MVP 階段：需要 Agent 確認反事實推論結果",
+            reasoning="缺少明確反事實評估，不能將必要性視為已通過",
         )
 
     def _check_mechanism(
@@ -232,15 +228,16 @@ class CausationValidator:
 
         This checks if there's a logical pathway from cause to effect.
         """
-        # In MVP, return a template for Agent to fill in
+        # A plausible mechanism must be supplied or supported; do not infer one
+        # merely from the event descriptions.
         return MechanismResult(
-            passed=True,  # Default to passed, needs Agent to provide pathway
+            passed=False,
             causal_pathway=[
                 cause.description,
                 "[需要 Agent 補充中間步驟]",
                 effect.description,
             ],
-            mechanism_plausibility="medium",
+            mechanism_plausibility="low",
             domain_knowledge_support=False,
         )
 
@@ -304,7 +301,11 @@ class CausationValidator:
         elif passed_count == total_count:
             overall = VerificationResult.VERIFIED
             confidence = 0.85
-            strength = CausalStrength.ROOT_CAUSE if tests.sufficiency and tests.sufficiency.passed else CausalStrength.CONTRIBUTING_FACTOR
+            strength = (
+                CausalStrength.ROOT_CAUSE
+                if tests.sufficiency and tests.sufficiency.passed
+                else CausalStrength.CONTRIBUTING_FACTOR
+            )
             interpretation = "因果關係已驗證"
         else:
             overall = VerificationResult.VERIFIED_WITH_CAVEATS

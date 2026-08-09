@@ -6,48 +6,79 @@ Persists Hypothesis entities to SQLite database.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
-from rootcause_mcp.domain.entities.hypothesis import Hypothesis
+from sqlmodel import select
+
+from rootcause_mcp.domain.entities.hypothesis import (
+    BayesianUpdate,
+    Hypothesis,
+    HypothesisStatus,
+    HypothesisStatusChange,
+    LikelihoodRatio,
+)
+from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept
+from rootcause_mcp.domain.value_objects.identifiers import HypothesisId
+from rootcause_mcp.infrastructure.persistence.models import HypothesisModel
 
 if TYPE_CHECKING:
     from rootcause_mcp.infrastructure.persistence.database import Database
 
 
 class SQLiteHypothesisRepository:
-    """SQLite implementation of Hypothesis repository."""
+    """SQLModel implementation of the hypothesis repository."""
 
     def __init__(self, db: Database) -> None:
         """Initialize repository with database connection."""
         self.db = db
-        self._ensure_table()
-
-    def _ensure_table(self) -> None:
-        """Create hypothesis table if not exists."""
-        # For smoke test, use in-memory dict
-        self._store: dict[str, dict[str, Any]] = {}
 
     async def save(self, session_id: str, hypothesis: Hypothesis) -> None:
         """Save hypothesis to database."""
-        key = f"{session_id}:{hypothesis.id.value}"
-        self._store[key] = hypothesis.model_dump(mode="json")
+        model = HypothesisModel(
+            id=hypothesis.id.value,
+            session_id=session_id,
+            diagnosis_data=hypothesis.diagnosis.model_dump(mode="json"),
+            prior_probability=hypothesis.prior_probability,
+            current_probability=hypothesis.current_probability,
+            inclusion_criteria=hypothesis.inclusion_criteria,
+            exclusion_criteria=hypothesis.exclusion_criteria,
+            likelihood_ratios=[
+                item.model_dump(mode="json") for item in hypothesis.likelihood_ratios
+            ],
+            supporting_evidence_ids=hypothesis.supporting_evidence_ids,
+            contradicting_evidence_ids=hypothesis.contradicting_evidence_ids,
+            status=hypothesis.status.value,
+            status_history=[
+                item.model_dump(mode="json") for item in hypothesis.status_history
+            ],
+            bayesian_history=[
+                item.model_dump(mode="json") for item in hypothesis.bayesian_history
+            ],
+            clinical_rationale=hypothesis.clinical_rationale,
+            created_by=hypothesis.created_by,
+            created_at=hypothesis.created_at,
+        )
+        with self.db.get_session() as session:
+            session.merge(model)
+            session.commit()
 
     async def get_by_id(self, session_id: str, hypothesis_id: str) -> Hypothesis | None:
         """Get hypothesis by ID."""
-        key = f"{session_id}:{hypothesis_id}"
-        data = self._store.get(key)
-        if not data:
-            return None
-        return Hypothesis(**data)
+        with self.db.get_session() as session:
+            statement = select(HypothesisModel).where(
+                HypothesisModel.id == hypothesis_id,
+                HypothesisModel.session_id == session_id,
+            )
+            model = session.exec(statement).first()
+            return self._to_entity(model) if model else None
 
     async def list_by_session(self, session_id: str) -> list[Hypothesis]:
         """List all hypotheses for a session."""
-        prefix = f"{session_id}:"
-        results = []
-        for key, data in self._store.items():
-            if key.startswith(prefix):
-                results.append(Hypothesis(**data))
-        return results
+        with self.db.get_session() as session:
+            statement = select(HypothesisModel).where(
+                HypothesisModel.session_id == session_id
+            )
+            return [self._to_entity(model) for model in session.exec(statement).all()]
 
     async def update(self, session_id: str, hypothesis: Hypothesis) -> None:
         """Update existing hypothesis."""
@@ -55,6 +86,40 @@ class SQLiteHypothesisRepository:
 
     async def delete(self, session_id: str, hypothesis_id: str) -> None:
         """Delete hypothesis."""
-        key = f"{session_id}:{hypothesis_id}"
-        if key in self._store:
-            del self._store[key]
+        with self.db.get_session() as session:
+            statement = select(HypothesisModel).where(
+                HypothesisModel.id == hypothesis_id,
+                HypothesisModel.session_id == session_id,
+            )
+            model = session.exec(statement).first()
+            if model:
+                session.delete(model)
+                session.commit()
+
+    @staticmethod
+    def _to_entity(model: HypothesisModel) -> Hypothesis:
+        """Convert a persistence model into a domain entity."""
+        return Hypothesis(
+            id=HypothesisId(model.id),
+            diagnosis=ClinicalConcept.model_validate(model.diagnosis_data),
+            prior_probability=model.prior_probability,
+            current_probability=model.current_probability,
+            inclusion_criteria=model.inclusion_criteria,
+            exclusion_criteria=model.exclusion_criteria,
+            likelihood_ratios=[
+                LikelihoodRatio.model_validate(item) for item in model.likelihood_ratios
+            ],
+            supporting_evidence_ids=model.supporting_evidence_ids,
+            contradicting_evidence_ids=model.contradicting_evidence_ids,
+            status=HypothesisStatus(model.status),
+            status_history=[
+                HypothesisStatusChange.model_validate(item)
+                for item in model.status_history
+            ],
+            created_at=model.created_at,
+            created_by=model.created_by,
+            bayesian_history=[
+                BayesianUpdate.model_validate(item) for item in model.bayesian_history
+            ],
+            clinical_rationale=model.clinical_rationale,
+        )

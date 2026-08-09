@@ -6,23 +6,24 @@ Handles all thinking-related MCP tool calls.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from rootcause_mcp.domain.entities.thinking_step import (
     AlternativeConsidered,
-    ThinkingChain,
     ThinkingStep,
     ThinkingType,
 )
+
+if TYPE_CHECKING:
+    from rootcause_mcp.application.server_state import ServerState
 
 
 class ThinkingHandlers:
     """Handlers for thinking/reasoning transparency tools."""
 
-    def __init__(self):
-        """Initialize thinking handlers with in-memory storage."""
-        # session_id → ThinkingChain
-        self._thinking_chains: dict[str, ThinkingChain] = {}
+    def __init__(self, server_state: ServerState) -> None:
+        """Initialize thinking handlers with shared persisted state."""
+        self._state = server_state
 
     async def handle(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Route thinking tool calls to appropriate methods."""
@@ -43,15 +44,12 @@ class ThinkingHandlers:
         """Handle rc_think_aloud tool call."""
         session_id = args["session_id"]
 
-        # Get or create thinking chain
-        if session_id not in self._thinking_chains:
-            self._thinking_chains[session_id] = ThinkingChain(session_id=session_id)
-
-        chain = self._thinking_chains[session_id]
+        orchestrator = await self._state.get_or_create_orchestrator(session_id)
+        chain = orchestrator.thinking_chain
 
         # Parse alternatives
         alternatives = []
-        if "alternatives" in args and args["alternatives"]:
+        if args.get("alternatives"):
             for alt in args["alternatives"]:
                 alternatives.append(
                     AlternativeConsidered(
@@ -76,6 +74,7 @@ class ThinkingHandlers:
         )
 
         chain.add_step(step)
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
@@ -88,11 +87,8 @@ class ThinkingHandlers:
         """Handle rc_reflect tool call."""
         session_id = args["session_id"]
 
-        # Get or create thinking chain
-        if session_id not in self._thinking_chains:
-            self._thinking_chains[session_id] = ThinkingChain(session_id=session_id)
-
-        chain = self._thinking_chains[session_id]
+        orchestrator = await self._state.get_or_create_orchestrator(session_id)
+        chain = orchestrator.thinking_chain
 
         # Create reflection step (special type of thinking step)
         step = ThinkingStep(
@@ -106,6 +102,7 @@ class ThinkingHandlers:
         )
 
         chain.add_step(step)
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
@@ -119,11 +116,8 @@ class ThinkingHandlers:
         """Handle rc_identify_gaps tool call."""
         session_id = args["session_id"]
 
-        # Get or create thinking chain
-        if session_id not in self._thinking_chains:
-            self._thinking_chains[session_id] = ThinkingChain(session_id=session_id)
-
-        chain = self._thinking_chains[session_id]
+        orchestrator = await self._state.get_or_create_orchestrator(session_id)
+        chain = orchestrator.thinking_chain
 
         # Create gap identification step
         step = ThinkingStep(
@@ -135,6 +129,7 @@ class ThinkingHandlers:
         )
 
         chain.add_step(step)
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
@@ -148,11 +143,8 @@ class ThinkingHandlers:
         """Handle rc_challenge_assumption tool call."""
         session_id = args["session_id"]
 
-        # Get or create thinking chain
-        if session_id not in self._thinking_chains:
-            self._thinking_chains[session_id] = ThinkingChain(session_id=session_id)
-
-        chain = self._thinking_chains[session_id]
+        orchestrator = await self._state.get_or_create_orchestrator(session_id)
+        chain = orchestrator.thinking_chain
 
         # Create assumption challenge step
         step = ThinkingStep(
@@ -164,6 +156,7 @@ class ThinkingHandlers:
         )
 
         chain.add_step(step)
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
@@ -177,7 +170,8 @@ class ThinkingHandlers:
         """Handle rc_get_thinking_chain tool call."""
         session_id = args["session_id"]
 
-        if session_id not in self._thinking_chains:
+        orchestrator = await self._state.get_orchestrator(session_id)
+        if orchestrator is None or not orchestrator.thinking_chain.steps:
             return {
                 "status": "not_found",
                 "message": f"No thinking chain found for session {session_id}",
@@ -186,7 +180,7 @@ class ThinkingHandlers:
                 "steps": [],
             }
 
-        chain = self._thinking_chains[session_id]
+        chain = orchestrator.thinking_chain
 
         # Build response
         result = {

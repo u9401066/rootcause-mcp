@@ -14,7 +14,6 @@ import json
 import logging
 from collections.abc import Sequence
 from datetime import datetime
-from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from mcp.types import TextContent
@@ -23,6 +22,7 @@ from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.fishbone import Fishbone, FishboneCause
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
+from rootcause_mcp.infrastructure.export_paths import build_export_path
 
 if TYPE_CHECKING:
     from rootcause_mcp.application.session_progress import SessionProgressTracker
@@ -34,9 +34,6 @@ logger = logging.getLogger(__name__)
 
 class FishboneHandlers:
     """Handler class for Fishbone diagram tools."""
-
-    # Export directory relative to project root
-    EXPORT_DIR = Path("data/exports")
 
     def __init__(
         self,
@@ -54,17 +51,12 @@ class FishboneHandlers:
     ) -> str | None:
         """Write export content to file and return path."""
         try:
-            # Create session-specific export directory
-            export_dir = self.EXPORT_DIR / session_id
-            export_dir.mkdir(parents=True, exist_ok=True)
-
-            # Determine file extension
             ext = "md" if export_format in ("mermaid", "markdown") else "json"
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{export_type}_{timestamp}.{ext}"
-            file_path = export_dir / filename
-
-            # Add header for markdown files
+            file_path = build_export_path(
+                session_id=session_id,
+                artifact=export_type,
+                extension=ext,
+            )
             if ext == "md":
                 header = f"# {export_type.title()} Export\n\n"
                 header += f"**Session:** `{session_id}`\n"
@@ -72,10 +64,10 @@ class FishboneHandlers:
                 content = header + content
 
             file_path.write_text(content, encoding="utf-8")
-            logger.info(f"Exported {export_type} to {file_path}")
+            logger.info("Exported %s to %s", export_type, file_path)
             return str(file_path)
-        except Exception as e:
-            logger.warning(f"Failed to write export file: {e}")
+        except (OSError, ValueError) as exc:
+            logger.warning("Failed to write export file: %s", exc)
             return None
 
     async def handle_init_fishbone(
@@ -83,28 +75,34 @@ class FishboneHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_init_fishbone tool call."""
         if self._session_repo is None or self._fishbone_repo is None:
-            return [TextContent(type="text", text="Error: Repositories not initialized")]
+            return [
+                TextContent(type="text", text="Error: Repositories not initialized")
+            ]
 
         session_id = arguments["session_id"]
         problem_statement = arguments["problem_statement"]
 
         session = self._session_repo.get_by_id(session_id)
         if session is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id}`",
+                )
+            ]
 
         existing = self._fishbone_repo.get_by_session(SessionId.from_string(session_id))
         if existing:
-            return [TextContent(
-                type="text",
-                text=(
-                    f"⚠️ **Fishbone Already Exists**\n\n"
-                    f"Session `{session_id}` already has a Fishbone diagram.\n"
-                    f"Use `rc_get_fishbone` to view it or `rc_add_cause` to add causes."
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"⚠️ **Fishbone Already Exists**\n\n"
+                        f"Session `{session_id}` already has a Fishbone diagram.\n"
+                        f"Use `rc_get_fishbone` to view it or `rc_add_cause` to add causes."
+                    ),
                 )
-            )]
+            ]
 
         fishbone = Fishbone.create(
             session_id=SessionId.from_string(session_id),
@@ -123,8 +121,8 @@ class FishboneHandlers:
             f"- **Session:** `{session_id}`\n"
             f"- **Problem (Fish Head):** {problem_statement}\n\n"
             "**6M Categories Ready:**\n"
-            + "\n".join(f"- {cat}" for cat in categories) +
-            "\n\n**Next Steps:**\n"
+            + "\n".join(f"- {cat}" for cat in categories)
+            + "\n\n**Next Steps:**\n"
             "Use `rc_add_cause` to add causes to each category."
         )
 
@@ -140,7 +138,11 @@ class FishboneHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_add_cause tool call."""
         if self._fishbone_repo is None:
-            return [TextContent(type="text", text="Error: FishboneRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: FishboneRepository not initialized"
+                )
+            ]
 
         session_id = arguments["session_id"]
         category_str = arguments["category"]
@@ -151,25 +153,29 @@ class FishboneHandlers:
 
         fishbone = self._fishbone_repo.get_by_session(SessionId.from_string(session_id))
         if fishbone is None:
-            return [TextContent(
-                type="text",
-                text=(
-                    f"❌ **Fishbone Not Found**\n\n"
-                    f"No Fishbone for session `{session_id}`.\n"
-                    "Use `rc_init_fishbone` first."
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"❌ **Fishbone Not Found**\n\n"
+                        f"No Fishbone for session `{session_id}`.\n"
+                        "Use `rc_init_fishbone` first."
+                    ),
                 )
-            )]
+            ]
 
         try:
             category = FishboneCategoryType(category_str)
         except ValueError:
-            return [TextContent(
-                type="text",
-                text=(
-                    f"Error: Invalid category '{category_str}'. "
-                    f"Valid options: {[cat.value for cat in FishboneCategoryType]}"
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"Error: Invalid category '{category_str}'. "
+                        f"Valid options: {[cat.value for cat in FishboneCategoryType]}"
+                    ),
                 )
-            )]
+            ]
 
         cause = FishboneCause(
             cause_id=CauseId.generate(),
@@ -217,20 +223,26 @@ class FishboneHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_get_fishbone tool call."""
         if self._fishbone_repo is None:
-            return [TextContent(type="text", text="Error: FishboneRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: FishboneRepository not initialized"
+                )
+            ]
 
         session_id = arguments["session_id"]
 
         fishbone = self._fishbone_repo.get_by_session(SessionId.from_string(session_id))
         if fishbone is None:
-            return [TextContent(
-                type="text",
-                text=(
-                    f"❌ **Fishbone Not Found**\n\n"
-                    f"No Fishbone for session `{session_id}`.\n"
-                    "Use `rc_init_fishbone` to create one."
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"❌ **Fishbone Not Found**\n\n"
+                        f"No Fishbone for session `{session_id}`.\n"
+                        "Use `rc_init_fishbone` to create one."
+                    ),
                 )
-            )]
+            ]
 
         lines = [
             "# Fishbone Diagram\n",
@@ -261,20 +273,26 @@ class FishboneHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_export_fishbone tool call."""
         if self._fishbone_repo is None:
-            return [TextContent(type="text", text="Error: FishboneRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: FishboneRepository not initialized"
+                )
+            ]
 
         session_id = arguments["session_id"]
         export_format = arguments.get("format", "mermaid")
 
         fishbone = self._fishbone_repo.get_by_session(SessionId.from_string(session_id))
         if fishbone is None:
-            return [TextContent(
-                type="text",
-                text=(
-                    f"❌ **Fishbone Not Found**\n\n"
-                    f"No Fishbone for session `{session_id}`."
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"❌ **Fishbone Not Found**\n\n"
+                        f"No Fishbone for session `{session_id}`."
+                    ),
                 )
-            )]
+            ]
 
         if export_format == "json":
             result = json.dumps(fishbone.to_dict(), indent=2, ensure_ascii=False)
@@ -301,7 +319,9 @@ class FishboneHandlers:
             result = self._generate_fishbone_mermaid(fishbone)
 
         # Write to file for easy preview
-        file_path = self._write_export_file(session_id, "fishbone", export_format, result)
+        file_path = self._write_export_file(
+            session_id, "fishbone", export_format, result
+        )
         if file_path:
             result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
 
@@ -318,6 +338,7 @@ class FishboneHandlers:
         - Upper categories (Personnel, Equipment, Material) branch upward
         - Lower categories (Process, Environment, Monitoring) branch downward
         """
+
         # Escape quotes in text for Mermaid
         def escape(text: str, max_len: int = 35) -> str:
             text = text.replace('"', "'").replace("\n", " ")
@@ -349,7 +370,7 @@ class FishboneHandlers:
             f'    HEAD(["🐟 {problem}"]):::head',
             "",
             "    %% Main Spine",
-            '    SPINE[ ]:::spine',
+            "    SPINE[ ]:::spine",
             "    SPINE --> HEAD",
             "",
         ]
@@ -399,13 +420,15 @@ class FishboneHandlers:
             lines.append("")
 
         # Add styling to make it look more like a fishbone
-        lines.extend([
-            "    %% === STYLING ===",
-            "    classDef head fill:#e74c3c,stroke:#c0392b,stroke-width:3px,color:#fff,font-weight:bold",
-            "    classDef spine fill:#456,stroke:#234,stroke-width:4px,color:#fff",
-            "    classDef category fill:#f96,stroke:#c63,stroke-width:2px,color:#fff,font-weight:bold",
-            "    classDef cause fill:#9cf,stroke:#36a,stroke-width:1px",
-            "```",
-        ])
+        lines.extend(
+            [
+                "    %% === STYLING ===",
+                "    classDef head fill:#e74c3c,stroke:#c0392b,stroke-width:3px,color:#fff,font-weight:bold",
+                "    classDef spine fill:#456,stroke:#234,stroke-width:4px,color:#fff",
+                "    classDef category fill:#f96,stroke:#c63,stroke-width:2px,color:#fff,font-weight:bold",
+                "    classDef cause fill:#9cf,stroke:#36a,stroke-width:1px",
+                "```",
+            ]
+        )
 
         return "\n".join(lines)

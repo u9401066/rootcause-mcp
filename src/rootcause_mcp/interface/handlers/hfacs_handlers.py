@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import logging
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from mcp.types import TextContent
 
@@ -29,7 +29,7 @@ class HFACSHandlers:
     """Handler class for HFACS-related tools."""
 
     # HFACS-MES Framework structure
-    FRAMEWORK = {
+    FRAMEWORK: ClassVar[dict[str, dict[str, Any]]] = {
         "EF": {
             "name": "External Factors",
             "description": "Factors outside the organization's direct control",
@@ -109,7 +109,7 @@ class HFACSHandlers:
     }
 
     # 6M to HFACS Mapping (表圖樹 cross-reference)
-    MAPPING_6M_HFACS = {
+    MAPPING_6M_HFACS: ClassVar[dict[str, dict[str, Any]]] = {
         "Personnel": {
             "hfacs_levels": ["Level 1 (Unsafe Acts)", "Level 2 (Preconditions)"],
             "hfacs_codes": ["UA-*", "PC-C-*", "PC-P-*"],
@@ -117,8 +117,16 @@ class HFACSHandlers:
             "cause_type": "proximate",  # 近端原因
             "why_tree_depth": {"typical": "1-2", "max": 3},
             "example_mappings": [
-                {"cause": "護理師因疲勞未及時發現異常", "6m": "Personnel", "hfacs": "PC-C-APS"},
-                {"cause": "醫師計算藥物劑量錯誤", "6m": "Personnel", "hfacs": "UA-E-SB"},
+                {
+                    "cause": "護理師因疲勞未及時發現異常",
+                    "6m": "Personnel",
+                    "hfacs": "PC-C-APS",
+                },
+                {
+                    "cause": "醫師計算藥物劑量錯誤",
+                    "6m": "Personnel",
+                    "hfacs": "UA-E-SB",
+                },
                 {"cause": "交班時漏傳重要資訊", "6m": "Personnel", "hfacs": "PC-P-CRM"},
             ],
         },
@@ -129,8 +137,16 @@ class HFACSHandlers:
             "cause_type": "intermediate",  # 中間原因
             "why_tree_depth": {"typical": "2-3", "max": 4},
             "example_mappings": [
-                {"cause": "監測儀器故障未及時維修", "6m": "Equipment", "hfacs": "OI-RM"},
-                {"cause": "軟體介面設計不良導致誤操作", "6m": "Equipment", "hfacs": "PC-E-TE"},
+                {
+                    "cause": "監測儀器故障未及時維修",
+                    "6m": "Equipment",
+                    "hfacs": "OI-RM",
+                },
+                {
+                    "cause": "軟體介面設計不良導致誤操作",
+                    "6m": "Equipment",
+                    "hfacs": "PC-E-TE",
+                },
             ],
         },
         "Material": {
@@ -165,7 +181,11 @@ class HFACSHandlers:
             "example_mappings": [
                 {"cause": "照明不足影響判讀", "6m": "Environment", "hfacs": "PC-E-PE"},
                 {"cause": "噪音干擾溝通", "6m": "Environment", "hfacs": "PC-E-PE"},
-                {"cause": "安全文化薄弱不敢提出疑慮", "6m": "Environment", "hfacs": "OI-OC"},
+                {
+                    "cause": "安全文化薄弱不敢提出疑慮",
+                    "6m": "Environment",
+                    "hfacs": "OI-OC",
+                },
             ],
         },
         "Monitoring": {
@@ -196,7 +216,9 @@ class HFACSHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_suggest_hfacs tool call."""
         if self._suggester is None:
-            return [TextContent(type="text", text="Error: HFACSSuggester not initialized")]
+            return [
+                TextContent(type="text", text="Error: HFACSSuggester not initialized")
+            ]
 
         description = arguments["description"]
         max_suggestions = arguments.get("max_suggestions", 3)
@@ -228,7 +250,9 @@ class HFACSHandlers:
                 lines.append(f"- **Reason:** {suggestion.reason}")
 
             lines.append("\n---")
-            lines.append("Use `rc_confirm_classification` to confirm the correct classification.")
+            lines.append(
+                "Use `rc_confirm_classification` to confirm the correct classification."
+            )
 
             result = "\n".join(lines)
 
@@ -239,7 +263,11 @@ class HFACSHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_confirm_classification tool call."""
         if self._learned_rules is None:
-            return [TextContent(type="text", text="Error: LearnedRulesService not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: LearnedRulesService not initialized"
+                )
+            ]
 
         description = arguments["description"]
         hfacs_code = arguments["hfacs_code"]
@@ -309,7 +337,11 @@ class HFACSHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_list_learned_rules tool call."""
         if self._learned_rules is None:
-            return [TextContent(type="text", text="Error: LearnedRulesService not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: LearnedRulesService not initialized"
+                )
+            ]
 
         hfacs_code_filter = arguments.get("hfacs_code")
         min_confidence = arguments.get("min_confidence", 0.0)
@@ -348,7 +380,9 @@ class HFACSHandlers:
     async def handle_reload_rules(self) -> Sequence[TextContent]:
         """Handle rc_reload_rules tool call."""
         if self._suggester is None:
-            return [TextContent(type="text", text="Error: HFACSSuggester not initialized")]
+            return [
+                TextContent(type="text", text="Error: HFACSSuggester not initialized")
+            ]
 
         self._suggester.reload_rules()
         summary = self._suggester.get_loaded_rules_summary()
@@ -367,7 +401,7 @@ class HFACSHandlers:
         self, arguments: dict[str, Any]
     ) -> Sequence[TextContent]:
         """Handle rc_get_6m_hfacs_mapping tool call.
-        
+
         Returns the mapping between 6M Fishbone categories and HFACS codes,
         including Why Tree depth guidance for comprehensive analysis.
         """
@@ -414,26 +448,38 @@ class HFACSHandlers:
 
             lines.append(f"\n## {cause_type_emoji} {category}\n")
             lines.append(f"**{description}**\n")
-            lines.append(f"- **HFACS Levels:** {', '.join(str(x) for x in hfacs_levels)}")
+            lines.append(
+                f"- **HFACS Levels:** {', '.join(str(x) for x in hfacs_levels)}"
+            )
             lines.append(f"- **HFACS Codes:** {', '.join(str(x) for x in hfacs_codes)}")
             lines.append(f"- **Cause Type:** {cause_type.title()}")
 
             depth_info = data_dict.get("why_tree_depth", {})
             if isinstance(depth_info, dict):
-                lines.append(f"- **Why Tree Depth:** 通常 {depth_info.get('typical', 'N/A')}, 最深 {depth_info.get('max', 'N/A')}")
+                lines.append(
+                    f"- **Why Tree Depth:** 通常 {depth_info.get('typical', 'N/A')}, 最深 {depth_info.get('max', 'N/A')}"
+                )
 
             example_mappings = data_dict.get("example_mappings", [])
             if example_mappings:
                 lines.append("\n**範例對照：**")
                 for ex in example_mappings:
                     if isinstance(ex, dict):
-                        lines.append(f"- 「{ex.get('cause', '')}」 → **{ex.get('hfacs', '')}**")
+                        lines.append(
+                            f"- 「{ex.get('cause', '')}」 → **{ex.get('hfacs', '')}**"
+                        )
 
         lines.append("\n---\n")
         lines.append("## 使用建議\n")
         lines.append("1. **起點 (Proximate):** 從 Personnel 類別開始，通常是 Why 1-2")
-        lines.append("2. **深入 (Intermediate):** Equipment/Material/Environment 是 Why 2-4")
-        lines.append("3. **終點 (Ultimate):** Process/Monitoring 是真正的根本原因，通常是 Why 3-5")
-        lines.append("\n> 💡 **RCA 原則：** 不要停在近端原因 (Level 1)，要追溯到組織/系統層面 (Level 3-4)")
+        lines.append(
+            "2. **深入 (Intermediate):** Equipment/Material/Environment 是 Why 2-4"
+        )
+        lines.append(
+            "3. **終點 (Ultimate):** Process/Monitoring 是真正的根本原因，通常是 Why 3-5"
+        )
+        lines.append(
+            "\n> 💡 **RCA 原則：** 不要停在近端原因 (Level 1)，要追溯到組織/系統層面 (Level 3-4)"
+        )
 
         return [TextContent(type="text", text="\n".join(lines))]

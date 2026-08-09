@@ -6,20 +6,16 @@ Handles all evidence-related MCP tool calls.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from rootcause_mcp.domain.entities.evidence import Evidence, EvidenceSource, EvidenceType
-from rootcause_mcp.domain.value_objects.evidence_quality import (
-    EvidenceQuality,
-    EvidenceReliability,
-    EvidenceStrength,
-)
+if TYPE_CHECKING:
+    from rootcause_mcp.application.server_state import ServerState
 
 
 class EvidenceHandlers:
     """Handlers for evidence management tools (thin wrapper around Orchestrator)."""
 
-    def __init__(self, server_state: Any) -> None:
+    def __init__(self, server_state: ServerState) -> None:
         """
         Initialize evidence handlers with shared server state.
 
@@ -44,7 +40,7 @@ class EvidenceHandlers:
         session_id = args["session_id"]
 
         # Get or create orchestrator
-        orch = self._state.get_or_create_orchestrator(session_id)
+        orch = await self._state.get_or_create_orchestrator(session_id)
 
         # Delegate to orchestrator
         evidence = orch.add_evidence(
@@ -57,6 +53,7 @@ class EvidenceHandlers:
             source_reliability=args.get("source_reliability", "GRADE_B"),
             clinical_context=args.get("clinical_context"),
         )
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
@@ -71,7 +68,7 @@ class EvidenceHandlers:
         session_id = args["session_id"]
         evidence_id = args["evidence_id"]
 
-        orch = self._state.get_orchestrator(session_id)
+        orch = await self._state.get_orchestrator(session_id)
         if not orch:
             return {
                 "status": "not_found",
@@ -96,7 +93,7 @@ class EvidenceHandlers:
         evidence_id = args["evidence_id"]
         verified_by = args["verified_by"]
 
-        orch = self._state.get_orchestrator(session_id)
+        orch = await self._state.get_orchestrator(session_id)
         if not orch:
             return {
                 "status": "not_found",
@@ -113,11 +110,14 @@ class EvidenceHandlers:
         # Mark as verified (via orchestrator)
         verified_evidence = evidence.mark_verified(verified_by)
         orch.evidence_store[evidence_id] = verified_evidence
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
             "evidence_id": evidence_id,
             "verified": True,
             "verified_by": verified_by,
-            "verification_timestamp": verified_evidence.verification_timestamp.isoformat() if verified_evidence.verification_timestamp else None,
+            "verification_timestamp": verified_evidence.verification_timestamp.isoformat()
+            if verified_evidence.verification_timestamp
+            else None,
         }

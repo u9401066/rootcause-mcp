@@ -7,19 +7,20 @@ Handles all reasoning chain-related MCP tool calls.
 from __future__ import annotations
 
 import json
-from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from rootcause_mcp.domain.entities.reasoning_step import ReasoningChain
+from rootcause_mcp.infrastructure.export_paths import build_export_path
+
+if TYPE_CHECKING:
+    from rootcause_mcp.application.server_state import ServerState
 
 
 class ReasoningHandlers:
     """Handlers for reasoning chain tools."""
 
-    def __init__(self) -> None:
-        """Initialize reasoning handlers with in-memory storage."""
-        # session_id → ReasoningChain
-        self._reasoning_chains: dict[str, ReasoningChain] = {}
+    def __init__(self, server_state: ServerState) -> None:
+        """Initialize reasoning handlers with shared persisted state."""
+        self._state = server_state
 
     async def handle(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Route reasoning tool calls to appropriate methods."""
@@ -34,7 +35,8 @@ class ReasoningHandlers:
         """Handle rc_get_reasoning_chain tool call."""
         session_id = args["session_id"]
 
-        if session_id not in self._reasoning_chains:
+        orchestrator = await self._state.get_orchestrator(session_id)
+        if orchestrator is None or not orchestrator.reasoning_chain.steps:
             return {
                 "status": "not_found",
                 "message": f"No reasoning chain found for session {session_id}",
@@ -43,7 +45,7 @@ class ReasoningHandlers:
                 "steps": [],
             }
 
-        chain = self._reasoning_chains[session_id]
+        chain = orchestrator.reasoning_chain
 
         result = {
             "status": "success",
@@ -58,28 +60,28 @@ class ReasoningHandlers:
 
         return result
 
-    async def handle_export_reasoning_chain(self, args: dict[str, Any]) -> dict[str, Any]:
+    async def handle_export_reasoning_chain(
+        self, args: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle rc_export_reasoning_chain tool call."""
         session_id = args["session_id"]
         export_format = args.get("format", "json")
 
-        if session_id not in self._reasoning_chains:
+        orchestrator = await self._state.get_orchestrator(session_id)
+        if orchestrator is None or not orchestrator.reasoning_chain.steps:
             return {
                 "status": "not_found",
                 "message": f"No reasoning chain found for session {session_id}",
             }
 
-        chain = self._reasoning_chains[session_id]
+        chain = orchestrator.reasoning_chain
 
-        # Generate output path if not provided
-        if "output_path" in args and args["output_path"]:
-            output_path = Path(args["output_path"])
-        else:
-            output_dir = Path("data/exports") / session_id
-            output_dir.mkdir(parents=True, exist_ok=True)
-            from datetime import datetime
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            output_path = output_dir / f"reasoning_chain_{timestamp}.{export_format}"
+        output_path = build_export_path(
+            session_id=session_id,
+            artifact="reasoning_chain",
+            extension=export_format,
+            requested_path=args.get("output_path"),
+        )
 
         # Export based on format
         if export_format == "json":

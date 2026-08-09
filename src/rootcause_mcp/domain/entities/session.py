@@ -7,16 +7,16 @@ The aggregate root for a Root Cause Analysis session.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from rootcause_mcp.domain.value_objects.identifiers import SessionId
 from rootcause_mcp.domain.value_objects.enums import (
     CaseType,
     SessionStatus,
     Stage,
     StageStatus,
 )
+from rootcause_mcp.domain.value_objects.identifiers import SessionId
 
 
 @dataclass
@@ -34,12 +34,12 @@ class StageRecord:
     def start(self) -> None:
         """Mark stage as in progress."""
         self.status = StageStatus.IN_PROGRESS
-        self.started_at = datetime.now(timezone.utc)
+        self.started_at = datetime.now(UTC)
 
     def complete(self) -> None:
         """Mark stage as completed."""
         self.status = StageStatus.COMPLETED
-        self.completed_at = datetime.now(timezone.utc)
+        self.completed_at = datetime.now(UTC)
 
     def fail(self, errors: list[str]) -> None:
         """Mark stage as failed with validation errors."""
@@ -78,8 +78,8 @@ class RCASession:
     stage_records: dict[Stage, StageRecord] = field(default_factory=dict)
 
     # Metadata
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     created_by: str = ""
 
     def __post_init__(self) -> None:
@@ -136,6 +136,7 @@ class RCASession:
         # Reset current stage
         self.current_stage = target_stage
         self.stage_records[target_stage].start()
+        self.stage_records[target_stage].data["rollback_reason"] = reason
         self._touch()
 
         return True
@@ -193,9 +194,7 @@ class RCASession:
 
     def get_progress(self) -> dict[str, str]:
         """Get progress of all stages."""
-        return {
-            stage.value: self.stage_records[stage].status.value for stage in Stage
-        }
+        return {stage.value: self.stage_records[stage].status.value for stage in Stage}
 
     def get_completed_stages(self) -> list[Stage]:
         """Get list of completed stages."""
@@ -209,7 +208,7 @@ class RCASession:
 
     def _touch(self) -> None:
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     # === Factory Methods ===
 
@@ -220,7 +219,7 @@ class RCASession:
         case_title: str,
         initial_description: str = "",
         created_by: str = "",
-    ) -> "RCASession":
+    ) -> RCASession:
         """Factory method to create a new RCA Session."""
         return cls(
             id=SessionId.generate(),

@@ -6,16 +6,16 @@ ORM models for SQLite persistence.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlmodel import Field, SQLModel, Column, JSON
+from sqlmodel import JSON, Column, Field, SQLModel
 
 
 class SessionModel(SQLModel, table=True):
     """SQLModel for RCA Session."""
 
-    __tablename__ = "sessions"  # type: ignore[assignment]
+    __tablename__ = "sessions"
 
     # Primary Key
     id: str = Field(primary_key=True)  # SessionId string value
@@ -34,15 +34,15 @@ class SessionModel(SQLModel, table=True):
     stage_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
 
     # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: str = ""
 
 
 class CauseModel(SQLModel, table=True):
     """SQLModel for Cause."""
 
-    __tablename__ = "causes"  # type: ignore[assignment]
+    __tablename__ = "causes"
 
     # Primary Key
     id: str = Field(primary_key=True)  # CauseId string value
@@ -70,14 +70,14 @@ class CauseModel(SQLModel, table=True):
     depth: int = 1
 
     # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class FishboneModel(SQLModel, table=True):
     """SQLModel for Fishbone diagram."""
 
-    __tablename__ = "fishbones"  # type: ignore[assignment]
+    __tablename__ = "fishbones"
 
     # Primary Key
     id: str = Field(primary_key=True)  # FishboneId string value
@@ -94,14 +94,14 @@ class FishboneModel(SQLModel, table=True):
     )
 
     # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class WhyNodeModel(SQLModel, table=True):
     """SQLModel for 5-Why Node."""
 
-    __tablename__ = "why_nodes"  # type: ignore[assignment]
+    __tablename__ = "why_nodes"
 
     # Primary Key
     id: str = Field(primary_key=True)  # CauseId string value
@@ -119,6 +119,14 @@ class WhyNodeModel(SQLModel, table=True):
     evidence: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     confidence: float | None = None
 
+    # Status
+    is_root_cause: bool = False
+    needs_further_analysis: bool = True
+
+    # Metadata
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
 
 # ============================================================================
 # NEW in v2.0: Medical Reasoning Models
@@ -128,7 +136,7 @@ class WhyNodeModel(SQLModel, table=True):
 class EvidenceModel(SQLModel, table=True):
     """SQLModel for Evidence entity."""
 
-    __tablename__ = "evidence"  # type: ignore[assignment]
+    __tablename__ = "evidence"
 
     # Primary Key
     id: str = Field(primary_key=True)  # EvidenceId string value
@@ -152,8 +160,12 @@ class EvidenceModel(SQLModel, table=True):
 
     # Relationships (stored as JSON arrays)
     supports_cause_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    supports_hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    contradicts_hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    supports_hypothesis_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
+    contradicts_hypothesis_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
 
     # Verification
     verified: bool = False
@@ -162,13 +174,13 @@ class EvidenceModel(SQLModel, table=True):
 
     # Metadata
     tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class HypothesisModel(SQLModel, table=True):
     """SQLModel for Hypothesis entity."""
 
-    __tablename__ = "hypotheses"  # type: ignore[assignment]
+    __tablename__ = "hypotheses"
 
     # Primary Key
     id: str = Field(primary_key=True)  # HypothesisId string value
@@ -188,26 +200,38 @@ class HypothesisModel(SQLModel, table=True):
     exclusion_criteria: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
     # Evidence linking (stored as JSON arrays)
-    likelihood_ratios: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
-    supporting_evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    contradicting_evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    likelihood_ratios: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
+    supporting_evidence_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
+    contradicting_evidence_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
 
     # Status
     status: str  # HypothesisStatus enum value
+    status_history: list[dict[str, Any]] = Field(
+        default_factory=list,
+        sa_column=Column(JSON),
+    )
 
     # Audit trail (stored as JSON)
-    bayesian_history: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    bayesian_history: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
 
     # Metadata
     clinical_rationale: str
     created_by: str
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 class ThinkingStepModel(SQLModel, table=True):
     """SQLModel for ThinkingStep entity."""
 
-    __tablename__ = "thinking_steps"  # type: ignore[assignment]
+    __tablename__ = "thinking_steps"
 
     # Primary Key
     id: str = Field(primary_key=True)
@@ -221,7 +245,9 @@ class ThinkingStepModel(SQLModel, table=True):
     internal_reasoning: str
 
     # Structured data (stored as JSON)
-    alternatives: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    alternatives: list[dict[str, Any]] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
     uncertainty_factors: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     assumptions_made: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     potential_biases: list[str] = Field(default_factory=list, sa_column=Column(JSON))
@@ -230,17 +256,40 @@ class ThinkingStepModel(SQLModel, table=True):
     confidence: float
 
     # Relationships (stored as JSON arrays)
-    related_evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
-    related_hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    related_evidence_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
+    related_hypothesis_ids: list[str] = Field(
+        default_factory=list, sa_column=Column(JSON)
+    )
 
     # Metadata
-    structured_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    structured_data: dict[str, Any] = Field(
+        default_factory=dict, sa_column=Column(JSON)
+    )
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
-    # Status
-    is_root_cause: bool = False
-    needs_further_analysis: bool = True
 
-    # Metadata
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+class ReasoningStepModel(SQLModel, table=True):
+    """SQLModel for a persisted clinical reasoning step."""
+
+    __tablename__ = "reasoning_steps"
+
+    id: str = Field(primary_key=True)
+    session_id: str = Field(index=True)
+    sequence_number: int = Field(index=True)
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    step_type: str
+    content: str
+    rationale: str
+    evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    cause_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    agent_id: str
+    agent_model: str | None = None
+    confidence: float | None = None
+    tokens_used: int | None = None
+    chain_of_thought: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JSON, nullable=True),
+    )

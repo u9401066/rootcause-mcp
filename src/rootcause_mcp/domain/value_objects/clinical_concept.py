@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import re
 from enum import Enum
-from typing import Any, Self
 
 from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
@@ -55,7 +54,7 @@ class ClinicalConcept(BaseModel):
         """
         system = info.data.get("system")
 
-        if system == CodingSystem.ICD_10 or system == CodingSystem.ICD_10_CM:
+        if system in {CodingSystem.ICD_10, CodingSystem.ICD_10_CM}:
             # ICD-10 format: Letter + 2 digits + optional decimal + more digits
             # Examples: I21.9, E11.65, S52.501A
             if not re.match(r"^[A-Z]\d{2}(\.\d{1,4}[A-Z]?)?$", v):
@@ -67,21 +66,18 @@ class ClinicalConcept(BaseModel):
         elif system == CodingSystem.SNOMED_CT:
             # SNOMED CT codes are numeric
             if not v.isdigit():
-                raise ValueError(
-                    f"Invalid SNOMED CT code: {v}. Must be numeric."
-                )
+                raise ValueError(f"Invalid SNOMED CT code: {v}. Must be numeric.")
 
         elif system == CodingSystem.RXNORM:
             # RxNorm CUIs are numeric
             if not v.isdigit():
                 raise ValueError(f"Invalid RxNorm code: {v}. Must be numeric.")
 
-        elif system == CodingSystem.LOINC:
-            # LOINC format: digits + hyphen + check digit
-            if not re.match(r"^\d+-\d$", v):
-                raise ValueError(
-                    f"Invalid LOINC code: {v}. Expected format: digits-checkdigit (e.g., 10839-9)"
-                )
+        elif system == CodingSystem.LOINC and not re.match(r"^\d+-\d$", v):
+            raise ValueError(
+                f"Invalid LOINC code: {v}. "
+                "Expected format: digits-checkdigit (e.g., 10839-9)"
+            )
 
         return v
 
@@ -96,6 +92,8 @@ class ClinicalConcept(BaseModel):
     def __str__(self) -> str:
         """Human-readable representation."""
         return f"{self.display} ({self.system.value}:{self.code})"
+
+    def to_fhir_coding(self) -> dict[str, str]:
         """
         Convert to FHIR Coding format.
 

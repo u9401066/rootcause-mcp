@@ -8,9 +8,13 @@ Uses SDK 2.0 callback-based API.
 from __future__ import annotations
 
 import asyncio
+import json
 import logging
 import os
+from collections.abc import AsyncIterator, Awaitable, Callable
 from contextlib import asynccontextmanager
+from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -21,21 +25,35 @@ from mcp.types import (
     CallToolResult,
     ListToolsResult,
     TextContent,
-    Tool,
 )
 
-# Tool definitions
-from rootcause_mcp.interface.tools import (
-    get_contract_tools,
-    get_dd_tools,
-    get_evidence_tools,
-    get_fishbone_tools,
-    get_hfacs_tools,
-    get_reasoning_tools,
-    get_session_tools,
-    get_thinking_tools,
-    get_verification_tools,
-    get_why_tree_tools,
+# Application layer
+from rootcause_mcp.application.server_state import ServerState
+from rootcause_mcp.application.session_progress import SessionProgressTracker
+
+# Domain and Infrastructure
+from rootcause_mcp.domain.services import HFACSSuggester, LearnedRulesService
+from rootcause_mcp.infrastructure.persistence.database import Database
+from rootcause_mcp.infrastructure.persistence.evidence_repository import (
+    SQLiteEvidenceRepository,
+)
+from rootcause_mcp.infrastructure.persistence.fishbone_repository import (
+    SQLiteFishboneRepository,
+)
+from rootcause_mcp.infrastructure.persistence.hypothesis_repository import (
+    SQLiteHypothesisRepository,
+)
+from rootcause_mcp.infrastructure.persistence.reasoning_chain_repository import (
+    SQLiteReasoningChainRepository,
+)
+from rootcause_mcp.infrastructure.persistence.session_repository import (
+    SQLiteSessionRepository,
+)
+from rootcause_mcp.infrastructure.persistence.thinking_chain_repository import (
+    SQLiteThinkingChainRepository,
+)
+from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
+    InMemoryWhyTreeRepository,
 )
 
 # Handlers
@@ -52,42 +70,38 @@ from rootcause_mcp.interface.handlers import (
     WhyTreeHandlers,
 )
 
-# Domain and Infrastructure
-from rootcause_mcp.domain.services import HFACSSuggester, LearnedRulesService
-from rootcause_mcp.infrastructure.persistence.database import Database
-from rootcause_mcp.infrastructure.persistence.fishbone_repository import (
-    SQLiteFishboneRepository,
-)
-from rootcause_mcp.infrastructure.persistence.session_repository import (
-    SQLiteSessionRepository,
-)
-from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
-    InMemoryWhyTreeRepository,
-)
-
-# Application layer
-from rootcause_mcp.application.clinical_reasoning_orchestrator import (
-    ClinicalReasoningOrchestrator,
-)
-from rootcause_mcp.application.session_progress import SessionProgressTracker
+# Tool definitions
+from rootcause_mcp.interface.tools import get_all_tools
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Global handler instances (initialized in lifespan)
-_server_state: Any = None  # ServerState
-_thinking_handlers: ThinkingHandlers | None = None
-_evidence_handlers: EvidenceHandlers | None = None
-_dd_handlers: DDHandlers | None = None
-_reasoning_handlers: ReasoningHandlers | None = None
-_contract_handlers: ContractHandlers | None = None
-_hfacs_handlers: HFACSHandlers | None = None
-_session_handlers: SessionHandlers | None = None
-_fishbone_handlers: FishboneHandlers | None = None
-_why_tree_handlers: WhyTreeHandlers | None = None
-_verification_handlers: VerificationHandlers | None = None
-_database: Database | None = None
+
+@dataclass(slots=True)
+class ServerRuntime:
+    """Mutable resources owned by one MCP server lifespan."""
+
+    server_state: ServerState | None = None
+    thinking_handlers: ThinkingHandlers | None = None
+    evidence_handlers: EvidenceHandlers | None = None
+    dd_handlers: DDHandlers | None = None
+    reasoning_handlers: ReasoningHandlers | None = None
+    contract_handlers: ContractHandlers | None = None
+    hfacs_handlers: HFACSHandlers | None = None
+    session_handlers: SessionHandlers | None = None
+    fishbone_handlers: FishboneHandlers | None = None
+    why_tree_handlers: WhyTreeHandlers | None = None
+    verification_handlers: VerificationHandlers | None = None
+    database: Database | None = None
+
+    def clear(self) -> None:
+        """Release references after lifespan shutdown."""
+        for field_name in self.__dataclass_fields__:
+            setattr(self, field_name, None)
+
+
+_runtime = ServerRuntime()
 
 
 def _get_config_path() -> Path:
@@ -115,17 +129,12 @@ def _get_data_path() -> Path:
 
 
 @asynccontextmanager
-async def lifespan(server: Server):
+async def lifespan(_server: Server) -> AsyncIterator[None]:
     """
     Lifespan context manager for SDK 2.0.
 
     Initializes all handlers and repositories on startup.
     """
-    global _server_state, _thinking_handlers, _evidence_handlers, _dd_handlers
-    global _reasoning_handlers, _contract_handlers
-    global _hfacs_handlers, _session_handlers, _fishbone_handlers
-    global _why_tree_handlers, _verification_handlers, _database
-
     logger.info("Initializing RootCause MCP Server (SDK 2.0)...")
 
     # Setup paths
@@ -135,39 +144,68 @@ async def lifespan(server: Server):
 
     # Initialize database
     db_path = data_path / "rca_sessions.db"
-    _database = Database(db_path)
-    await _database.initialize()
+    database = Database(db_path)
+    database.create_tables()
 
     # Initialize repositories
-    session_repo = SQLiteSessionRepository(_database)
-    fishbone_repo = SQLiteFishboneRepository(_database)
+    session_repo = SQLiteSessionRepository(database)
+    fishbone_repo = SQLiteFishboneRepository(database)
     why_tree_repo = InMemoryWhyTreeRepository()
+    evidence_repo = SQLiteEvidenceRepository(database)
+    hypothesis_repo = SQLiteHypothesisRepository(database)
+    thinking_repo = SQLiteThinkingChainRepository(database)
+    reasoning_repo = SQLiteReasoningChainRepository(database)
 
     # Initialize services
     hfacs_suggester = HFACSSuggester(config_path / "hfacs")
-    learned_rules_service = LearnedRulesService(config_path / "hfacs" / "learned_rules.yaml")
+    learned_rules_service = LearnedRulesService(config_path / "hfacs")
 
     # Initialize application layer
     progress_tracker = SessionProgressTracker()
 
     # Initialize ServerState (shared across handlers)
-    from rootcause_mcp.application.server_state import ServerState
-    _server_state = ServerState()
+    server_state = ServerState(
+        evidence_repository=evidence_repo,
+        hypothesis_repository=hypothesis_repo,
+        thinking_repository=thinking_repo,
+        reasoning_repository=reasoning_repo,
+    )
 
     # Initialize handlers
     # NEW in 2.0: Cognitive layer + Medical reasoning handlers (use ServerState)
-    _thinking_handlers = ThinkingHandlers()
-    _evidence_handlers = EvidenceHandlers(_server_state)
-    _dd_handlers = DDHandlers(_server_state)
-    _reasoning_handlers = ReasoningHandlers()
-    _contract_handlers = ContractHandlers(_server_state)
+    thinking_handlers = ThinkingHandlers(server_state)
+    evidence_handlers = EvidenceHandlers(server_state)
+    dd_handlers = DDHandlers(server_state)
+    reasoning_handlers = ReasoningHandlers(server_state)
+    contract_handlers = ContractHandlers(server_state)
 
     # Existing RCA handlers
-    _hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
-    _session_handlers = SessionHandlers(session_repo, progress_tracker)
-    _fishbone_handlers = FishboneHandlers(fishbone_repo, session_repo, progress_tracker)
-    _why_tree_handlers = WhyTreeHandlers(why_tree_repo, session_repo, progress_tracker)
-    _verification_handlers = VerificationHandlers(progress_tracker)
+    hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
+    session_handlers = SessionHandlers(session_repo, progress_tracker)
+    fishbone_handlers = FishboneHandlers(
+        fishbone_repo,
+        session_repo,
+        progress_tracker,
+    )
+    why_tree_handlers = WhyTreeHandlers(
+        why_tree_repo,
+        session_repo,
+        progress_tracker,
+    )
+    verification_handlers = VerificationHandlers(progress_tracker)
+
+    _runtime.server_state = server_state
+    _runtime.thinking_handlers = thinking_handlers
+    _runtime.evidence_handlers = evidence_handlers
+    _runtime.dd_handlers = dd_handlers
+    _runtime.reasoning_handlers = reasoning_handlers
+    _runtime.contract_handlers = contract_handlers
+    _runtime.hfacs_handlers = hfacs_handlers
+    _runtime.session_handlers = session_handlers
+    _runtime.fishbone_handlers = fishbone_handlers
+    _runtime.why_tree_handlers = why_tree_handlers
+    _runtime.verification_handlers = verification_handlers
+    _runtime.database = database
 
     logger.info("✅ All handlers initialized")
 
@@ -175,71 +213,174 @@ async def lifespan(server: Server):
 
     # Cleanup
     logger.info("Shutting down RootCause MCP Server...")
-    if _database:
-        await _database.close()
+    database.close()
+    _runtime.clear()
 
 
-async def on_list_tools(
-    ctx: ServerRequestContext, params: Any
-) -> ListToolsResult:
+async def on_list_tools(_ctx: ServerRequestContext, _params: Any) -> ListToolsResult:
     """
     List all available MCP tools (SDK 2.0 callback).
 
     Returns:
         ListToolsResult with all tool definitions
     """
-    tools: list[Tool] = []
-    # NEW in 2.0: Cognitive Layer
-    tools.extend(get_thinking_tools())
-    # NEW in 2.0: Medical Reasoning
-    tools.extend(get_evidence_tools())
-    tools.extend(get_dd_tools())
-    tools.extend(get_reasoning_tools())
-    tools.extend(get_contract_tools())
-    # Existing RCA Tools
-    tools.extend(get_hfacs_tools())
-    tools.extend(get_session_tools())
-    tools.extend(get_fishbone_tools())
-    tools.extend(get_why_tree_tools())
-    tools.extend(get_verification_tools())
-
-    return ListToolsResult(tools=tools)
+    return ListToolsResult(tools=get_all_tools())
 
 
-async def _legacy_adapter(handler: Any, method_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
-    """
-    Adapter for legacy handlers that return Sequence[TextContent].
+ToolHandler = Callable[[dict[str, Any]], Awaitable[Any]]
 
-    Converts legacy handler output to dict format expected by SDK 2.0.
-    """
-    import json
 
-    method = getattr(handler, method_name)
-    result = await method(arguments)
+async def _call_without_arguments(
+    method: Callable[[], Awaitable[Any]], _arguments: dict[str, Any]
+) -> Any:
+    """Adapt a no-argument legacy handler to the common tool signature."""
+    return await method()
 
-    # Convert Sequence[TextContent] to dict
+
+def _build_tool_dispatch() -> dict[str, ToolHandler]:
+    """Build the explicit tool-to-handler registry for every advertised tool."""
+    _thinking_handlers = _runtime.thinking_handlers
+    _evidence_handlers = _runtime.evidence_handlers
+    _dd_handlers = _runtime.dd_handlers
+    _reasoning_handlers = _runtime.reasoning_handlers
+    _contract_handlers = _runtime.contract_handlers
+    _hfacs_handlers = _runtime.hfacs_handlers
+    _session_handlers = _runtime.session_handlers
+    _fishbone_handlers = _runtime.fishbone_handlers
+    _why_tree_handlers = _runtime.why_tree_handlers
+    _verification_handlers = _runtime.verification_handlers
+    handlers = (
+        _thinking_handlers,
+        _evidence_handlers,
+        _dd_handlers,
+        _reasoning_handlers,
+        _contract_handlers,
+        _hfacs_handlers,
+        _session_handlers,
+        _fishbone_handlers,
+        _why_tree_handlers,
+        _verification_handlers,
+    )
+    if any(handler is None for handler in handlers):
+        raise RuntimeError("Server handlers are not initialized")
+
+    assert _thinking_handlers is not None
+    assert _evidence_handlers is not None
+    assert _dd_handlers is not None
+    assert _reasoning_handlers is not None
+    assert _contract_handlers is not None
+    assert _hfacs_handlers is not None
+    assert _session_handlers is not None
+    assert _fishbone_handlers is not None
+    assert _why_tree_handlers is not None
+    assert _verification_handlers is not None
+
+    dispatch: dict[str, ToolHandler] = {
+        name: partial(_thinking_handlers.handle, name)
+        for name in (
+            "rc_think_aloud",
+            "rc_reflect",
+            "rc_identify_gaps",
+            "rc_challenge_assumption",
+            "rc_get_thinking_chain",
+        )
+    }
+    dispatch.update(
+        {
+            name: partial(_evidence_handlers.handle, name)
+            for name in (
+                "rc_add_evidence",
+                "rc_get_evidence",
+                "rc_verify_evidence",
+            )
+        }
+    )
+    dispatch.update(
+        {
+            name: partial(_dd_handlers.handle, name)
+            for name in (
+                "rc_propose_hypothesis",
+                "rc_link_evidence_to_hypothesis",
+                "rc_get_differential_diagnosis",
+                "rc_exclude_hypothesis",
+            )
+        }
+    )
+    dispatch.update(
+        {
+            name: partial(_reasoning_handlers.handle, name)
+            for name in ("rc_get_reasoning_chain", "rc_export_reasoning_chain")
+        }
+    )
+    dispatch["rc_generate_contract_report"] = partial(
+        _contract_handlers.handle, "rc_generate_contract_report"
+    )
+    dispatch.update(
+        {
+            "rc_suggest_hfacs": _hfacs_handlers.handle_suggest_hfacs,
+            "rc_confirm_classification": (
+                _hfacs_handlers.handle_confirm_classification
+            ),
+            "rc_get_hfacs_framework": _hfacs_handlers.handle_get_framework,
+            "rc_get_6m_hfacs_mapping": (_hfacs_handlers.handle_get_6m_hfacs_mapping),
+            "rc_list_learned_rules": _hfacs_handlers.handle_list_learned_rules,
+            "rc_reload_rules": partial(
+                _call_without_arguments, _hfacs_handlers.handle_reload_rules
+            ),
+            "rc_start_session": _session_handlers.handle_start_session,
+            "rc_get_session": _session_handlers.handle_get_session,
+            "rc_list_sessions": _session_handlers.handle_list_sessions,
+            "rc_archive_session": _session_handlers.handle_archive_session,
+            "rc_init_fishbone": _fishbone_handlers.handle_init_fishbone,
+            "rc_add_cause": _fishbone_handlers.handle_add_cause,
+            "rc_get_fishbone": _fishbone_handlers.handle_get_fishbone,
+            "rc_export_fishbone": _fishbone_handlers.handle_export_fishbone,
+            "rc_ask_why": _why_tree_handlers.handle_ask_why,
+            "rc_get_why_tree": _why_tree_handlers.handle_get_why_tree,
+            "rc_mark_root_cause": _why_tree_handlers.handle_mark_root_cause,
+            "rc_add_causal_link": _why_tree_handlers.handle_add_causal_link,
+            "rc_export_why_tree": _why_tree_handlers.handle_export_why_tree,
+            "rc_build_teaching_case": _why_tree_handlers.handle_build_teaching_case,
+            "rc_verify_causation": (_verification_handlers.handle_verify_causation),
+        }
+    )
+    return dispatch
+
+
+def _to_call_tool_result(result: Any) -> CallToolResult:
+    """Normalize modern dict and legacy content responses for MCP SDK 2.0."""
+    if isinstance(result, CallToolResult):
+        return result
+    if isinstance(result, dict):
+        return CallToolResult(
+            content=[
+                TextContent(
+                    type="text",
+                    text=json.dumps(result, ensure_ascii=False, indent=2, default=str),
+                )
+            ],
+            structured_content=result,
+        )
     if isinstance(result, (list, tuple)):
-        texts = []
-        for item in result:
-            if isinstance(item, TextContent):
-                texts.append(item.text)
-            else:
-                texts.append(str(item))
-
-        combined_text = "\n".join(texts)
-
-        # Try to parse as JSON
-        try:
-            return json.loads(combined_text)
-        except (json.JSONDecodeError, ValueError):
-            return {"result": combined_text}
-
-    # Already a dict
-    return result
+        content: list[Any] = [
+            item
+            if isinstance(item, TextContent)
+            else TextContent(type="text", text=str(item))
+            for item in result
+        ]
+        text_content = [
+            item.text if isinstance(item, TextContent) else str(item)
+            for item in content
+        ]
+        return CallToolResult(
+            content=content,
+            structured_content={"status": "success", "content": text_content},
+        )
+    return CallToolResult(content=[TextContent(type="text", text=str(result))])
 
 
 async def on_call_tool(
-    ctx: ServerRequestContext, params: CallToolRequestParams
+    _ctx: ServerRequestContext, params: CallToolRequestParams
 ) -> CallToolResult:
     """
     Handle tool calls (SDK 2.0 callback).
@@ -253,106 +394,24 @@ async def on_call_tool(
     Returns:
         CallToolResult with tool execution result
     """
-    if _hfacs_handlers is None or _session_handlers is None:
-        return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text="Error: Server not initialized. Please wait for startup to complete.",
-                )
-            ],
-            is_error=True,
-        )
-
     tool_name = params.name
     arguments = params.arguments or {}
 
     try:
-        # Route to appropriate handler based on tool name
-        # NEW in 2.0: Cognitive Layer + Medical Reasoning (already have handle() method)
-        if tool_name.startswith(("rc_think", "rc_reflect", "rc_identify", "rc_challenge")):
-            result = await _thinking_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith(("rc_add_evidence", "rc_get_evidence", "rc_verify_evidence")):
-            result = await _evidence_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith(("rc_propose", "rc_link", "rc_get_differential", "rc_exclude")):
-            result = await _dd_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith(("rc_get_reasoning", "rc_export_reasoning")):
-            result = await _reasoning_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_generate_contract"):
-            result = await _contract_handlers.handle(tool_name, arguments)
-
-        # Legacy RCA Tools (use adapter to convert to dict)
-        elif tool_name.startswith("rc_suggest_hfacs"):
-            result = await _legacy_adapter(_hfacs_handlers, "handle_suggest_hfacs", arguments)
-        elif tool_name.startswith("rc_confirm_classification"):
-            result = await _legacy_adapter(_hfacs_handlers, "handle_confirm_classification", arguments)
-        elif tool_name.startswith("rc_get_hfacs_framework"):
-            result = await _legacy_adapter(_hfacs_handlers, "handle_get_framework", arguments)
-        elif tool_name.startswith("rc_get_6m"):
-            result = await _legacy_adapter(_hfacs_handlers, "handle_get_6m_hfacs_mapping", arguments)
-        elif tool_name.startswith("rc_list_learned"):
-            result = await _legacy_adapter(_hfacs_handlers, "handle_list_learned_rules", arguments)
-        elif tool_name.startswith("rc_reload"):
-            result = await _legacy_adapter(_hfacs_handlers, "handle_reload_rules", arguments)
-
-        elif tool_name.startswith("rc_start_session"):
-            result = await _legacy_adapter(_session_handlers, "handle_start_session", arguments)
-        elif tool_name.startswith("rc_get_session"):
-            result = await _legacy_adapter(_session_handlers, "handle_get_session", arguments)
-        elif tool_name.startswith("rc_list_sessions"):
-            result = await _legacy_adapter(_session_handlers, "handle_list_sessions", arguments)
-        elif tool_name.startswith("rc_archive"):
-            result = await _legacy_adapter(_session_handlers, "handle_archive_session", arguments)
-
-        elif tool_name.startswith("rc_init_fishbone"):
-            result = await _legacy_adapter(_fishbone_handlers, "handle_init_fishbone", arguments)
-        elif tool_name.startswith("rc_add_cause"):
-            result = await _legacy_adapter(_fishbone_handlers, "handle_add_cause", arguments)
-        elif tool_name.startswith("rc_get_fishbone"):
-            result = await _legacy_adapter(_fishbone_handlers, "handle_get_fishbone", arguments)
-        elif tool_name.startswith("rc_export_fishbone"):
-            result = await _legacy_adapter(_fishbone_handlers, "handle_export_fishbone", arguments)
-
-        elif tool_name.startswith("rc_ask_why"):
-            result = await _legacy_adapter(_why_tree_handlers, "handle_ask_why", arguments)
-        elif tool_name.startswith("rc_get_why"):
-            result = await _legacy_adapter(_why_tree_handlers, "handle_get_why_tree", arguments)
-        elif tool_name.startswith("rc_mark_root"):
-            result = await _legacy_adapter(_why_tree_handlers, "handle_mark_root_cause", arguments)
-        elif tool_name.startswith("rc_export_why"):
-            result = await _legacy_adapter(_why_tree_handlers, "handle_export_why_tree", arguments)
-
-        elif tool_name.startswith("rc_verify"):
-            result = await _legacy_adapter(_verification_handlers, "handle_verify_causation", arguments)
-        else:
+        handler = _build_tool_dispatch().get(tool_name)
+        if handler is None:
             return CallToolResult(
                 content=[
-                    TextContent(
-                        type="text", text=f"Error: Unknown tool '{tool_name}'"
-                    )
+                    TextContent(type="text", text=f"Error: Unknown tool '{tool_name}'")
                 ],
                 is_error=True,
             )
-
-        # Convert result to CallToolResult
-        if isinstance(result, dict):
-            import json
-
-            return CallToolResult(
-                content=[TextContent(type="text", text=json.dumps(result, indent=2))]
-            )
-        else:
-            return CallToolResult(
-                content=[TextContent(type="text", text=str(result))]
-            )
-
-    except Exception as e:
-        logger.exception(f"Error executing tool {tool_name}")
+        return _to_call_tool_result(await handler(arguments))
+    except Exception as exc:
+        logger.exception("Error executing tool %s", tool_name)
         return CallToolResult(
             content=[
-                TextContent(
-                    type="text", text=f"Error executing {tool_name}: {str(e)}"
-                )
+                TextContent(type="text", text=f"Error executing {tool_name}: {exc}")
             ],
             is_error=True,
         )
@@ -368,7 +427,7 @@ server = Server(
 )
 
 
-async def main():
+async def main() -> None:
     """Main entry point for stdio transport."""
     async with stdio_server() as (read_stream, write_stream):
         await server.run(

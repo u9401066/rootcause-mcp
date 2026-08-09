@@ -7,17 +7,25 @@ This is the core "harness" that enables any AI agent to perform specialist-level
 
 from __future__ import annotations
 
-from datetime import UTC, datetime
+from datetime import datetime
 from typing import Any
 
-from rootcause_mcp.domain.entities.evidence import Evidence, EvidenceSource, EvidenceType
+from rootcause_mcp.domain.entities.evidence import (
+    Evidence,
+    EvidenceSource,
+    EvidenceType,
+)
 from rootcause_mcp.domain.entities.hypothesis import Hypothesis, HypothesisStatus
 from rootcause_mcp.domain.entities.reasoning_step import (
     ReasoningChain,
     ReasoningStep,
     ReasoningStepType,
 )
-from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept, CodingSystem
+from rootcause_mcp.domain.entities.thinking_step import ThinkingChain
+from rootcause_mcp.domain.value_objects.clinical_concept import (
+    ClinicalConcept,
+    CodingSystem,
+)
 from rootcause_mcp.domain.value_objects.evidence_quality import (
     EvidenceQuality,
     EvidenceReliability,
@@ -45,26 +53,39 @@ class ClinicalReasoningOrchestrator:
     def __init__(
         self,
         session_id: str,
-        evidence_repo: Any | None = None,
-        hypothesis_repo: Any | None = None,
-    ):
+    ) -> None:
         """
         Initialize orchestrator for a clinical session.
 
         Args:
             session_id: RCA session ID
-            evidence_repo: Evidence repository (optional, for persistence)
-            hypothesis_repo: Hypothesis repository (optional, for persistence)
         """
         self.session_id = session_id
-        self.reasoning_chain = ReasoningChain(session_id=session_id)
+        self.reasoning_chain = ReasoningChain(
+            session_id=session_id,
+            finalized_at=None,
+        )
+        self.thinking_chain = ThinkingChain(session_id=session_id)
         self.evidence_store: dict[str, Evidence] = {}
         self.hypothesis_store: dict[str, Hypothesis] = {}
         self._step_counter = 0
 
-        # Repositories for persistence
-        self._evidence_repo = evidence_repo
-        self._hypothesis_repo = hypothesis_repo
+    def restore(
+        self,
+        *,
+        evidence: list[Evidence],
+        hypotheses: list[Hypothesis],
+        thinking_chain: ThinkingChain | None,
+        reasoning_chain: ReasoningChain | None,
+    ) -> None:
+        """Restore the aggregate from repository snapshots."""
+        self.evidence_store = {item.id.value: item for item in evidence}
+        self.hypothesis_store = {item.id.value: item for item in hypotheses}
+        if thinking_chain is not None:
+            self.thinking_chain = thinking_chain
+        if reasoning_chain is not None:
+            self.reasoning_chain = reasoning_chain
+        self._step_counter = len(self.reasoning_chain.steps)
 
     def add_evidence(
         self,
@@ -205,7 +226,8 @@ class ClinicalReasoningOrchestrator:
             inclusion_criteria=inclusion_criteria or [],
             exclusion_criteria=exclusion_criteria or [],
             created_by=created_by,
-            clinical_rationale=rationale or f"Considering {diagnosis} based on clinical presentation",
+            clinical_rationale=rationale
+            or f"Considering {diagnosis} based on clinical presentation",
         )
 
         # Store hypothesis
@@ -326,6 +348,30 @@ class ClinicalReasoningOrchestrator:
 
         return hypotheses
 
+    def exclude_hypothesis(
+        self,
+        hypothesis_id: str,
+        *,
+        excluded_by: str,
+        reason: str,
+    ) -> Hypothesis:
+        """Exclude a hypothesis and record the decision in the audit chain."""
+        hypothesis = self.hypothesis_store.get(hypothesis_id)
+        if hypothesis is None:
+            raise KeyError(f"Hypothesis {hypothesis_id} not found")
+
+        excluded = hypothesis.mark_excluded(excluded_by=excluded_by, reason=reason)
+        self.hypothesis_store[hypothesis_id] = excluded
+        self._add_reasoning_step(
+            step_type=ReasoningStepType.HYPOTHESIS_ELIMINATION,
+            content=f"Excluded hypothesis: {excluded.diagnosis.display}",
+            rationale=reason,
+            hypothesis_ids=[hypothesis_id],
+            confidence=excluded.current_probability,
+            agent_id=excluded_by,
+        )
+        return excluded
+
     def get_reasoning_chain(self) -> ReasoningChain:
         """Get complete reasoning chain with audit trail."""
         return self.reasoning_chain
@@ -341,7 +387,8 @@ class ClinicalReasoningOrchestrator:
     def get_evidence_for_hypothesis(self, hypothesis_id: str) -> list[Evidence]:
         """Get all evidence linked to a hypothesis."""
         return [
-            e for e in self.evidence_store.values()
+            e
+            for e in self.evidence_store.values()
             if hypothesis_id in e.supports_hypothesis_ids
         ]
 
@@ -358,10 +405,13 @@ class ClinicalReasoningOrchestrator:
             "session_id": self.session_id,
             "total_evidence": len(self.evidence_store),
             "total_hypotheses": len(self.hypothesis_store),
-            "active_hypotheses": len([
-                h for h in self.hypothesis_store.values()
-                if h.status == HypothesisStatus.ACTIVE
-            ]),
+            "active_hypotheses": len(
+                [
+                    h
+                    for h in self.hypothesis_store.values()
+                    if h.status == HypothesisStatus.ACTIVE
+                ]
+            ),
             "reasoning_steps": metrics["total_steps"],
             "avg_confidence": metrics["avg_confidence"],
             "hypothesis_coverage": metrics["hypothesis_coverage"],
@@ -387,9 +437,13 @@ class ClinicalReasoningOrchestrator:
             content=content,
             rationale=rationale,
             agent_id=agent_id,
+            agent_model=None,
             evidence_ids=evidence_ids or [],
             hypothesis_ids=hypothesis_ids or [],
+            cause_ids=[],
             confidence=confidence,
+            tokens_used=None,
+            chain_of_thought=None,
         )
 
         self.reasoning_chain.add_step(step)

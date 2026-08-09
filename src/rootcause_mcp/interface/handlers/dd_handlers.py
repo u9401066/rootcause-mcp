@@ -6,16 +6,18 @@ Handles all DD-related MCP tool calls.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from rootcause_mcp.domain.entities.hypothesis import Hypothesis, HypothesisStatus
-from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept, CodingSystem
+from rootcause_mcp.domain.entities.hypothesis import HypothesisStatus
+
+if TYPE_CHECKING:
+    from rootcause_mcp.application.server_state import ServerState
 
 
 class DDHandlers:
     """Handlers for differential diagnosis tools (thin wrapper around Orchestrator)."""
 
-    def __init__(self, server_state: Any) -> None:
+    def __init__(self, server_state: ServerState) -> None:
         """
         Initialize DD handlers with shared server state.
 
@@ -42,7 +44,7 @@ class DDHandlers:
         session_id = args["session_id"]
 
         # Get or create orchestrator
-        orch = self._state.get_or_create_orchestrator(session_id)
+        orch = await self._state.get_or_create_orchestrator(session_id)
 
         # Delegate to orchestrator
         hypothesis = orch.propose_hypothesis(
@@ -54,6 +56,7 @@ class DDHandlers:
             inclusion_criteria=args.get("inclusion_criteria"),
             exclusion_criteria=args.get("exclusion_criteria"),
         )
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
@@ -61,7 +64,9 @@ class DDHandlers:
             "session_id": session_id,
             "diagnosis": hypothesis.diagnosis.display,
             "prior_probability": hypothesis.prior_probability,
-            "differential_diagnoses_considered": args.get("differential_diagnoses_considered", []),
+            "differential_diagnoses_considered": args.get(
+                "differential_diagnoses_considered", []
+            ),
             "uncertainty_factors": args.get("uncertainty_factors", []),
         }
 
@@ -73,7 +78,7 @@ class DDHandlers:
         likelihood_ratio = args.get("likelihood_ratio", 1.0)
         supports = args.get("supports", True)
 
-        orch = self._state.get_orchestrator(session_id)
+        orch = await self._state.get_orchestrator(session_id)
         if not orch:
             return {
                 "status": "not_found",
@@ -89,6 +94,7 @@ class DDHandlers:
                 supports=supports,
                 rationale=args.get("rationale", ""),
             )
+            await self._state.persist_orchestrator(session_id)
         except KeyError as e:
             return {
                 "status": "not_found",
@@ -104,13 +110,15 @@ class DDHandlers:
             "supports": supports,
         }
 
-    async def handle_get_differential_diagnosis(self, args: dict[str, Any]) -> dict[str, Any]:
+    async def handle_get_differential_diagnosis(
+        self, args: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle rc_get_differential_diagnosis tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
         status_filter = args.get("status_filter", "ACTIVE")
         min_probability = args.get("min_probability", 0.01)
 
-        orch = self._state.get_orchestrator(session_id)
+        orch = await self._state.get_orchestrator(session_id)
         if not orch:
             return {
                 "status": "success",
@@ -120,7 +128,6 @@ class DDHandlers:
             }
 
         # Delegate to orchestrator
-        from rootcause_mcp.domain.entities.hypothesis import HypothesisStatus
         status_enum = HypothesisStatus(status_filter) if status_filter else None
         hypotheses = orch.get_differential_diagnosis(
             status_filter=status_enum,
@@ -139,31 +146,30 @@ class DDHandlers:
         session_id = args["session_id"]
         hypothesis_id = args["hypothesis_id"]
 
-        orch = self._state.get_orchestrator(session_id)
+        orch = await self._state.get_orchestrator(session_id)
         if not orch:
             return {
                 "status": "not_found",
                 "message": f"No orchestrator found for session {session_id}",
             }
 
-        hypothesis = orch.get_hypothesis(hypothesis_id)
-        if not hypothesis:
+        try:
+            excluded_hypothesis = orch.exclude_hypothesis(
+                hypothesis_id,
+                excluded_by=args["excluded_by"],
+                reason=args["exclusion_reason"],
+            )
+        except KeyError:
             return {
                 "status": "not_found",
                 "message": f"Hypothesis {hypothesis_id} not found in session {session_id}",
             }
-
-        # Mark as excluded
-        excluded_hypothesis = hypothesis.mark_excluded(
-            excluded_by=args["excluded_by"],
-            reason=args["exclusion_reason"],
-        )
-        orch.hypothesis_store[hypothesis_id] = excluded_hypothesis
+        await self._state.persist_orchestrator(session_id)
 
         return {
             "status": "success",
             "hypothesis_id": hypothesis_id,
             "diagnosis": excluded_hypothesis.diagnosis.display,
-            "status": excluded_hypothesis.status.value,
+            "hypothesis_status": excluded_hypothesis.status.value,
             "exclusion_reason": args["exclusion_reason"],
         }

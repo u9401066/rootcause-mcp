@@ -286,6 +286,45 @@ HFACS_CODE_TABLE: dict[str, dict[str, HFACSLevel | str]] = {
     },
 }
 
+# HFACS-MES 2024 taxonomy (Jalali et al., PMID 38394116). Legacy entries
+# above remain readable, while all new classifications should use these codes.
+_HFACS_MES_2024_CODES: dict[str, tuple[HFACSLevel, str, str]] = {
+    "EO-L": (HFACSLevel.LEVEL_5, "組織外部因素", "法規制度"),
+    "EO-N": (HFACSLevel.LEVEL_5, "組織外部因素", "國家層級缺陷"),
+    "OF-RM": (HFACSLevel.LEVEL_4, "組織因素", "資源管理"),
+    "OF-OP": (HFACSLevel.LEVEL_4, "組織因素", "組織流程"),
+    "OF-PSC": (HFACSLevel.LEVEL_4, "組織因素", "病人安全文化"),
+    "OF-MOC": (HFACSLevel.LEVEL_4, "組織因素", "變革管理"),
+    "US-IS": (HFACSLevel.LEVEL_3, "不安全督導", "監督不足"),
+    "US-IP": (HFACSLevel.LEVEL_3, "不安全督導", "計畫不當"),
+    "US-FK": (HFACSLevel.LEVEL_3, "不安全督導", "未處理已知問題"),
+    "US-SV": (HFACSLevel.LEVEL_3, "不安全督導", "督導違規"),
+    "PP-AMS": (HFACSLevel.LEVEL_2, "個人前提", "不良心理狀態"),
+    "PP-APS": (HFACSLevel.LEVEL_2, "個人前提", "不良生理狀態"),
+    "PP-CPL": (HFACSLevel.LEVEL_2, "個人前提", "慢性能力限制"),
+    "PP-PR": (HFACSLevel.LEVEL_2, "個人前提", "個人準備度"),
+    "TC-COM": (HFACSLevel.LEVEL_2, "團隊協作", "溝通"),
+    "TC-TD": (HFACSLevel.LEVEL_2, "團隊協作", "團隊動力"),
+    "EF-PE": (HFACSLevel.LEVEL_2, "環境因素", "物理環境"),
+    "EF-PMI": (HFACSLevel.LEVEL_2, "環境因素", "人機介面"),
+    "EF-TE": (HFACSLevel.LEVEL_2, "環境因素", "任務要素"),
+    "EF-PRF": (HFACSLevel.LEVEL_2, "環境因素", "病人相關因素"),
+    "UA-DE": (HFACSLevel.LEVEL_1, "不安全行為", "決策錯誤"),
+    "UA-SBE": (HFACSLevel.LEVEL_1, "不安全行為", "技能錯誤"),
+    "UA-PE": (HFACSLevel.LEVEL_1, "不安全行為", "感知錯誤"),
+    "UA-RV": (HFACSLevel.LEVEL_1, "不安全行為", "常規違規"),
+    "UA-EV": (HFACSLevel.LEVEL_1, "不安全行為", "例外違規"),
+    "UA-SV": (HFACSLevel.LEVEL_1, "不安全行為", "情境違規"),
+}
+
+for _code, (_level, _category, _description) in _HFACS_MES_2024_CODES.items():
+    HFACS_CODE_TABLE[_code] = {
+        "level": _level,
+        "category": _category,
+        "subcategory": _description,
+        "description": _description,
+    }
+
 
 def get_all_hfacs_codes() -> list[HFACSCode]:
     """Get all HFACS-MES codes."""

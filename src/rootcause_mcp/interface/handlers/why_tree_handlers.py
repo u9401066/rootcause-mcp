@@ -16,8 +16,7 @@ import json
 import logging
 from collections.abc import Sequence
 from datetime import datetime
-from pathlib import Path
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING, Any, ClassVar
 
 from mcp.types import TextContent
 
@@ -30,6 +29,7 @@ from rootcause_mcp.domain.entities.why_node import (
 )
 from rootcause_mcp.domain.value_objects.enums import CausalLinkType, TeachingLevel
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
+from rootcause_mcp.infrastructure.export_paths import build_export_path
 
 if TYPE_CHECKING:
     from rootcause_mcp.application.session_progress import SessionProgressTracker
@@ -42,11 +42,8 @@ logger = logging.getLogger(__name__)
 class WhyTreeHandlers:
     """Handler class for Why Tree tools."""
 
-    # Export directory relative to project root
-    EXPORT_DIR = Path("data/exports")
-
     # Cause type mapping by Why Tree depth
-    CAUSE_TYPE_BY_LEVEL = {
+    CAUSE_TYPE_BY_LEVEL: ClassVar[dict[int, dict[str, str]]] = {
         1: {
             "type": "Proximate",
             "chinese": "近端原因",
@@ -95,45 +92,43 @@ class WhyTreeHandlers:
     ) -> str | None:
         """Write export content to file and return path."""
         try:
-            # Create session-specific export directory
-            export_dir = self.EXPORT_DIR / session_id
-            export_dir.mkdir(parents=True, exist_ok=True)
-
-            # Determine file extension
             ext = "md" if export_format in ("mermaid", "markdown") else "json"
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"{export_type}_{timestamp}.{ext}"
-            file_path = export_dir / filename
-
-            # Add header for markdown files
+            file_path = build_export_path(
+                session_id=session_id,
+                artifact=export_type,
+                extension=ext,
+            )
             if ext == "md":
-                header = f"# {export_type.replace('_', ' ').title()} Export\n\n"
+                header = f"# {export_type.title()} Export\n\n"
                 header += f"**Session:** `{session_id}`\n"
                 header += f"**Exported:** {datetime.now().isoformat()}\n\n"
                 content = header + content
 
             file_path.write_text(content, encoding="utf-8")
-            logger.info(f"Exported {export_type} to {file_path}")
+            logger.info("Exported %s to %s", export_type, file_path)
             return str(file_path)
-        except Exception as e:
-            logger.warning(f"Failed to write export file: {e}")
+        except (OSError, ValueError) as exc:
+            logger.warning("Failed to write export file: %s", exc)
             return None
 
     def _get_cause_type_by_level(self, level: int) -> dict[str, str]:
         """Get cause type information based on Why Tree depth."""
-        return self.CAUSE_TYPE_BY_LEVEL.get(level, {
-            "type": "Unknown",
-            "chinese": "未知",
-            "emoji": "⚪",
-            "hfacs_hint": "無對應資訊",
-        })
+        return self.CAUSE_TYPE_BY_LEVEL.get(
+            level,
+            {
+                "type": "Unknown",
+                "chinese": "未知",
+                "emoji": "⚪",
+                "hfacs_hint": "無對應資訊",
+            },
+        )
 
-    async def handle_ask_why(
-        self, arguments: dict[str, Any]
-    ) -> Sequence[TextContent]:
+    async def handle_ask_why(self, arguments: dict[str, Any]) -> Sequence[TextContent]:
         """Handle rc_ask_why tool call - the core reasoning tool."""
         if self._why_repo is None or self._session_repo is None:
-            return [TextContent(type="text", text="Error: Repositories not initialized")]
+            return [
+                TextContent(type="text", text="Error: Repositories not initialized")
+            ]
 
         session_id_str = arguments["session_id"]
         answer = arguments["answer"]
@@ -145,10 +140,12 @@ class WhyTreeHandlers:
 
         session = self._session_repo.get_by_id(session_id_str)
         if session is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id_str}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id_str}`",
+                )
+            ]
 
         chain = self._why_repo.get_chain(session_id)
 
@@ -194,25 +191,35 @@ class WhyTreeHandlers:
             if parent_node_id:
                 parent = self._why_repo.get_node(CauseId.from_string(parent_node_id))
             else:
-                leaves = [n for n in chain.nodes if n.needs_further_analysis and not n.is_root_cause]
-                parent = leaves[-1] if leaves else (chain.nodes[-1] if chain.nodes else None)
+                leaves = [
+                    n
+                    for n in chain.nodes
+                    if n.needs_further_analysis and not n.is_root_cause
+                ]
+                parent = (
+                    leaves[-1] if leaves else (chain.nodes[-1] if chain.nodes else None)
+                )
 
             if parent is None:
-                return [TextContent(
-                    type="text",
-                    text="❌ **No parent node found.** The chain may be complete or corrupted."
-                )]
+                return [
+                    TextContent(
+                        type="text",
+                        text="❌ **No parent node found.** The chain may be complete or corrupted.",
+                    )
+                ]
 
             if not parent.can_ask_why:
-                return [TextContent(
-                    type="text",
-                    text=(
-                        f"⚠️ **Cannot add more Why**\n\n"
-                        f"Node `{parent.id}` is at level {parent.level} "
-                        f"and {'is marked as root cause' if parent.is_root_cause else 'is at max depth (5)'}.\n"
-                        f"Consider using `rc_mark_root_cause` to identify root causes."
+                return [
+                    TextContent(
+                        type="text",
+                        text=(
+                            f"⚠️ **Cannot add more Why**\n\n"
+                            f"Node `{parent.id}` is at level {parent.level} "
+                            f"and {'is marked as root cause' if parent.is_root_cause else 'is at max depth (5)'}.\n"
+                            f"Consider using `rc_mark_root_cause` to identify root causes."
+                        ),
                     )
-                )]
+                ]
 
             node = WhyNode.create_follow_up_why(
                 session_id=session_id,
@@ -275,21 +282,27 @@ class WhyTreeHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_get_why_tree tool call."""
         if self._why_repo is None:
-            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: WhyTreeRepository not initialized"
+                )
+            ]
 
         session_id_str = arguments["session_id"]
         session_id = SessionId.from_string(session_id_str)
 
         chain = self._why_repo.get_chain(session_id)
         if chain is None:
-            return [TextContent(
-                type="text",
-                text=(
-                    f"❌ **No Why Tree Found**\n\n"
-                    f"No 5-Why analysis for session `{session_id_str}`.\n"
-                    "Use `rc_ask_why` to start one."
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"❌ **No Why Tree Found**\n\n"
+                        f"No 5-Why analysis for session `{session_id_str}`.\n"
+                        "Use `rc_ask_why` to start one."
+                    ),
                 )
-            )]
+            ]
 
         lines = [
             "# 5-Why Analysis Tree\n",
@@ -318,7 +331,11 @@ class WhyTreeHandlers:
             nodes = by_level[level]
             for node in nodes:
                 prefix = "  " * (level - 1)
-                status = "🎯" if node.is_root_cause else ("❓" if node.needs_further_analysis else "✅")
+                status = (
+                    "🎯"
+                    if node.is_root_cause
+                    else ("❓" if node.needs_further_analysis else "✅")
+                )
 
                 lines.append(f"{prefix}{status} **Why {level}:** {node.question}")
                 lines.append(f"{prefix}   → {node.answer}")
@@ -326,7 +343,9 @@ class WhyTreeHandlers:
                 if node.evidence:
                     lines.append(f"{prefix}   📋 Evidence: {', '.join(node.evidence)}")
                 if node.is_root_cause:
-                    lines.append(f"{prefix}   🎯 **ROOT CAUSE** (confidence: {node.confidence_level})")
+                    lines.append(
+                        f"{prefix}   🎯 **ROOT CAUSE** (confidence: {node.confidence_level})"
+                    )
 
                 lines.append(f"{prefix}   (ID: `{node.id}`)\n")
 
@@ -354,7 +373,11 @@ class WhyTreeHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_mark_root_cause tool call."""
         if self._why_repo is None:
-            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: WhyTreeRepository not initialized"
+                )
+            ]
 
         session_id_str = arguments["session_id"]
         node_id_str = arguments["node_id"]
@@ -365,17 +388,21 @@ class WhyTreeHandlers:
 
         chain = self._why_repo.get_chain(session_id)
         if chain is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **No Why Tree Found** for session `{session_id_str}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **No Why Tree Found** for session `{session_id_str}`",
+                )
+            ]
 
         node = chain.get_node(node_id)
         if node is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **Node Not Found**\n\nNo node with ID: `{node_id_str}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **Node Not Found**\n\nNo node with ID: `{node_id_str}`",
+                )
+            ]
 
         node.mark_as_root_cause(confidence)
         self._why_repo.update_node(node)
@@ -420,17 +447,23 @@ class WhyTreeHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_add_causal_link tool call."""
         if self._why_repo is None:
-            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: WhyTreeRepository not initialized"
+                )
+            ]
 
         session_id_str = arguments["session_id"]
         session_id = SessionId.from_string(session_id_str)
         chain = self._why_repo.get_chain(session_id)
 
         if chain is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **No Why Tree Found** for session `{session_id_str}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **No Why Tree Found** for session `{session_id_str}`",
+                )
+            ]
 
         source_node_id = CauseId.from_string(arguments["source_node_id"])
         target_node_id = CauseId.from_string(arguments["target_node_id"])
@@ -453,7 +486,9 @@ class WhyTreeHandlers:
             chain.add_causal_link(link)
             self._why_repo.save_chain(chain)
         except ValueError as exc:
-            return [TextContent(type="text", text=f"❌ **Invalid Causal Link**\n\n{exc}")]
+            return [
+                TextContent(type="text", text=f"❌ **Invalid Causal Link**\n\n{exc}")
+            ]
 
         source_node = chain.get_node(source_node_id)
         target_node = chain.get_node(target_node_id)
@@ -492,7 +527,11 @@ class WhyTreeHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_export_why_tree tool call."""
         if self._why_repo is None:
-            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: WhyTreeRepository not initialized"
+                )
+            ]
 
         session_id_str = arguments["session_id"]
         export_format = arguments.get("format", "mermaid")
@@ -501,10 +540,12 @@ class WhyTreeHandlers:
         chain = self._why_repo.get_chain(session_id)
 
         if chain is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **No Why Tree Found** for session `{session_id_str}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **No Why Tree Found** for session `{session_id_str}`",
+                )
+            ]
 
         if export_format == "json":
             result = json.dumps(chain.to_dict(), indent=2, ensure_ascii=False)
@@ -534,7 +575,9 @@ class WhyTreeHandlers:
             result = self._generate_why_tree_mermaid(chain)
 
         # Write to file for easy preview
-        file_path = self._write_export_file(session_id_str, "why_tree", export_format, result)
+        file_path = self._write_export_file(
+            session_id_str, "why_tree", export_format, result
+        )
         if file_path:
             result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
 
@@ -545,7 +588,11 @@ class WhyTreeHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_build_teaching_case tool call."""
         if self._why_repo is None:
-            return [TextContent(type="text", text="Error: WhyTreeRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: WhyTreeRepository not initialized"
+                )
+            ]
 
         session_id_str = arguments["session_id"]
         export_format = arguments.get("format", "markdown")
@@ -554,10 +601,12 @@ class WhyTreeHandlers:
         session_id = SessionId.from_string(session_id_str)
         chain = self._why_repo.get_chain(session_id)
         if chain is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **No Why Tree Found** for session `{session_id_str}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **No Why Tree Found** for session `{session_id_str}`",
+                )
+            ]
 
         teaching_case = chain.build_teaching_case(learner_level)
 
@@ -612,7 +661,9 @@ class WhyTreeHandlers:
             "",
             "## Learning Objectives",
         ]
-        lines.extend(f"- {objective}" for objective in teaching_case.learning_objectives)
+        lines.extend(
+            f"- {objective}" for objective in teaching_case.learning_objectives
+        )
         lines.extend(["", "## Teaching Flow"])
         lines.extend(f"- {step}" for step in teaching_case.teaching_flow)
         lines.extend(["", "## Clinical Pearls"])
@@ -641,6 +692,7 @@ class WhyTreeHandlers:
         - Root causes highlighted with special styling
         - Branch support if multiple analysis paths exist
         """
+
         # Escape quotes and limit text length
         def escape(text: str, max_len: int = 45) -> str:
             text = text.replace('"', "'").replace("\n", " ")
@@ -680,7 +732,9 @@ class WhyTreeHandlers:
 
             for node in nodes:
                 node_id = f"N{str(node.id)[-8:]}"
-                parent_id = f"N{str(node.parent_id)[-8:]}" if node.parent_id else "PROBLEM"
+                parent_id = (
+                    f"N{str(node.parent_id)[-8:]}" if node.parent_id else "PROBLEM"
+                )
 
                 answer = escape(node.answer)
                 level_class = level_classes.get(level, "why5")
@@ -726,17 +780,19 @@ class WhyTreeHandlers:
         lines.append("")
 
         # Enhanced styling with gradient colors showing progression
-        lines.extend([
-            "    %% === STYLING ===",
-            "    %% Colors progress from red (surface) to green (root)",
-            "    classDef problem fill:#2196F3,stroke:#1565C0,stroke-width:3px,color:#fff,font-weight:bold",
-            "    classDef why1 fill:#FF5722,stroke:#E64A19,stroke-width:2px,color:#fff",
-            "    classDef why2 fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff",
-            "    classDef why3 fill:#FFC107,stroke:#FFA000,stroke-width:2px,color:#000",
-            "    classDef why4 fill:#8BC34A,stroke:#689F38,stroke-width:2px,color:#fff",
-            "    classDef why5 fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff",
-            "    classDef rootcause fill:#9C27B0,stroke:#7B1FA2,stroke-width:4px,color:#fff,font-weight:bold",
-            "```",
-        ])
+        lines.extend(
+            [
+                "    %% === STYLING ===",
+                "    %% Colors progress from red (surface) to green (root)",
+                "    classDef problem fill:#2196F3,stroke:#1565C0,stroke-width:3px,color:#fff,font-weight:bold",
+                "    classDef why1 fill:#FF5722,stroke:#E64A19,stroke-width:2px,color:#fff",
+                "    classDef why2 fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff",
+                "    classDef why3 fill:#FFC107,stroke:#FFA000,stroke-width:2px,color:#000",
+                "    classDef why4 fill:#8BC34A,stroke:#689F38,stroke-width:2px,color:#fff",
+                "    classDef why5 fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff",
+                "    classDef rootcause fill:#9C27B0,stroke:#7B1FA2,stroke-width:4px,color:#fff,font-weight:bold",
+                "```",
+            ]
+        )
 
         return "\n".join(lines)

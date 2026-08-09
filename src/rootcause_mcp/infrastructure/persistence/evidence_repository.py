@@ -6,11 +6,17 @@ Persists Evidence entities to SQLite database.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from sqlmodel import select
 
-from rootcause_mcp.domain.entities.evidence import Evidence
+from rootcause_mcp.domain.entities.evidence import (
+    Evidence,
+    EvidenceSource,
+    EvidenceType,
+)
+from rootcause_mcp.domain.value_objects.evidence_quality import EvidenceQuality
+from rootcause_mcp.domain.value_objects.identifiers import EvidenceId
 from rootcause_mcp.infrastructure.persistence.models import EvidenceModel
 
 if TYPE_CHECKING:
@@ -45,7 +51,7 @@ class SQLiteEvidenceRepository:
         )
 
         with self.db.get_session() as session:
-            session.add(model)
+            session.merge(model)
             session.commit()
 
     async def get_by_id(self, session_id: str, evidence_id: str) -> Evidence | None:
@@ -65,15 +71,15 @@ class SQLiteEvidenceRepository:
     async def list_by_session(self, session_id: str) -> list[Evidence]:
         """List all evidence for a session."""
         with self.db.get_session() as session:
-            statement = select(EvidenceModel).where(EvidenceModel.session_id == session_id)
+            statement = select(EvidenceModel).where(
+                EvidenceModel.session_id == session_id
+            )
             models = session.exec(statement).all()
 
             return [self._to_entity(m) for m in models]
 
     async def update(self, session_id: str, evidence: Evidence) -> None:
         """Update existing evidence."""
-        # Delete old, insert new (simple approach)
-        await self.delete(session_id, evidence.id.value)
         await self.save(session_id, evidence)
 
     async def delete(self, session_id: str, evidence_id: str) -> None:
@@ -90,10 +96,6 @@ class SQLiteEvidenceRepository:
 
     def _to_entity(self, model: EvidenceModel) -> Evidence:
         """Convert EvidenceModel to Evidence entity."""
-        from rootcause_mcp.domain.entities.evidence import EvidenceSource, EvidenceType
-        from rootcause_mcp.domain.value_objects.evidence_quality import EvidenceQuality
-        from rootcause_mcp.domain.value_objects.identifiers import EvidenceId
-
         return Evidence(
             id=EvidenceId(model.id),
             content=model.content,

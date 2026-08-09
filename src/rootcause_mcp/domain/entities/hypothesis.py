@@ -16,7 +16,7 @@ from enum import Enum
 from typing import Any, Self
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept
 from rootcause_mcp.domain.value_objects.identifiers import HypothesisId
@@ -29,6 +29,18 @@ class HypothesisStatus(str, Enum):
     CONFIRMED = "CONFIRMED"  # Confirmed as the actual diagnosis
     EXCLUDED = "EXCLUDED"  # Ruled out by evidence
     ON_HOLD = "ON_HOLD"  # Temporarily suspended (insufficient evidence)
+
+
+class HypothesisStatusChange(BaseModel):
+    """Auditable transition between hypothesis lifecycle states."""
+
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    previous_status: HypothesisStatus
+    new_status: HypothesisStatus
+    changed_by: str = Field(..., min_length=1)
+    reason: str = Field(..., min_length=1)
+
+    model_config = {"frozen": True}
 
 
 class LikelihoodRatio(BaseModel):
@@ -62,7 +74,9 @@ class BayesianUpdate(BaseModel):
     evidence_id: str = Field(..., description="Evidence used for update")
     prior_probability: float = Field(..., ge=0, le=1, description="P(H) before update")
     likelihood_ratio: float = Field(..., gt=0, description="LR applied")
-    posterior_probability: float = Field(..., ge=0, le=1, description="P(H|E) after update")
+    posterior_probability: float = Field(
+        ..., ge=0, le=1, description="P(H|E) after update"
+    )
     updated_by: str = Field(..., description="Who performed this update")
 
     model_config = {"frozen": True}
@@ -93,7 +107,9 @@ class Hypothesis(BaseModel):
     """
 
     # Identity
-    id: HypothesisId = Field(default_factory=lambda: HypothesisId(f"HYP-{uuid4().hex[:8]}"))
+    id: HypothesisId = Field(
+        default_factory=lambda: HypothesisId(f"HYP-{uuid4().hex[:8]}")
+    )
 
     # Diagnosis
     diagnosis: ClinicalConcept = Field(..., description="Clinical diagnosis concept")
@@ -127,6 +143,7 @@ class Hypothesis(BaseModel):
 
     # Audit trail
     status: HypothesisStatus = Field(default=HypothesisStatus.ACTIVE)
+    status_history: list[HypothesisStatusChange] = Field(default_factory=list)
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     created_by: str = Field(..., description="Who proposed this hypothesis")
 
@@ -139,18 +156,19 @@ class Hypothesis(BaseModel):
         ..., min_length=10, description="Why is this hypothesis being considered?"
     )
 
-    @field_validator("current_probability")
-    @classmethod
-    def validate_current_matches_prior_on_creation(cls, v: float, info) -> float:
+    @model_validator(mode="after")
+    def validate_current_matches_prior_on_creation(self) -> Self:
         """Ensure current_probability matches prior on initial creation."""
-        # On first creation, current should equal prior
-        if "prior_probability" in info.data and not info.data.get("bayesian_history"):
-            if abs(v - info.data["prior_probability"]) > 0.001:
-                raise ValueError(
-                    f"Initial current_probability ({v}) must equal prior_probability "
-                    f"({info.data['prior_probability']}) when no Bayesian history exists"
-                )
-        return v
+        if (
+            not self.bayesian_history
+            and abs(self.current_probability - self.prior_probability) > 0.001
+        ):
+            raise ValueError(
+                f"Initial current_probability ({self.current_probability}) must equal "
+                f"prior_probability ({self.prior_probability}) when no Bayesian "
+                "history exists"
+            )
+        return self
 
     def bayesian_update(
         self,
@@ -175,18 +193,15 @@ class Hypothesis(BaseModel):
             Posterior Odds = Prior Odds × LR
             Posterior P = Posterior Odds / (1 + Posterior Odds)
         """
-        # Convert probability to odds
-        prior_odds = self.current_probability / (1 - self.current_probability)
-
-        # Apply likelihood ratio
         lr = likelihood_ratio if supports else (1.0 / likelihood_ratio)
-        posterior_odds = prior_odds * lr
-
-        # Convert back to probability
-        posterior_prob = posterior_odds / (1 + posterior_odds)
-
-        # Clamp to [0, 1] to avoid numerical issues
-        posterior_prob = max(0.0, min(1.0, posterior_prob))
+        if self.current_probability <= 0.0:
+            posterior_prob = 0.0
+        elif self.current_probability >= 1.0:
+            posterior_prob = 1.0
+        else:
+            prior_odds = self.current_probability / (1 - self.current_probability)
+            posterior_odds = prior_odds * lr
+            posterior_prob = posterior_odds / (1 + posterior_odds)
 
         # Create update record
         update = BayesianUpdate(
@@ -241,17 +256,48 @@ class Hypothesis(BaseModel):
             rationale=rationale,
         )
 
-        return self.model_copy(update={"likelihood_ratios": [*self.likelihood_ratios, lr]})
+        return self.model_copy(
+            update={"likelihood_ratios": [*self.likelihood_ratios, lr]}
+        )
 
-    def mark_confirmed(self, confirmed_by: str) -> Self:
+    def mark_confirmed(
+        self,
+        confirmed_by: str,
+        reason: str = "Diagnostic criteria satisfied",
+    ) -> Self:
         """Mark hypothesis as confirmed."""
-        return self.model_copy(update={"status": HypothesisStatus.CONFIRMED})
+        return self._transition_to(HypothesisStatus.CONFIRMED, confirmed_by, reason)
 
     def mark_excluded(self, excluded_by: str, reason: str) -> Self:
         """Mark hypothesis as excluded."""
-        return self.model_copy(update={"status": HypothesisStatus.EXCLUDED})
+        return self._transition_to(HypothesisStatus.EXCLUDED, excluded_by, reason)
 
-    def get_confidence_interval(self, confidence_level: float = 0.95) -> tuple[float, float]:
+    def mark_on_hold(self, held_by: str, reason: str) -> Self:
+        """Put hypothesis on hold pending more information."""
+        return self._transition_to(HypothesisStatus.ON_HOLD, held_by, reason)
+
+    def _transition_to(
+        self,
+        new_status: HypothesisStatus,
+        changed_by: str,
+        reason: str,
+    ) -> Self:
+        change = HypothesisStatusChange(
+            previous_status=self.status,
+            new_status=new_status,
+            changed_by=changed_by,
+            reason=reason,
+        )
+        return self.model_copy(
+            update={
+                "status": new_status,
+                "status_history": [*self.status_history, change],
+            }
+        )
+
+    def get_confidence_interval(
+        self, confidence_level: float = 0.95
+    ) -> tuple[float, float]:
         """
         Calculate confidence interval for current probability.
 
