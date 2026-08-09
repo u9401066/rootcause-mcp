@@ -6,17 +6,22 @@
 
 ## 🎯 當前焦點
 
-**架構設計階段**：Contract-Level DD + MCP SDK 2.0 升級規劃完成
+**🔴 v2.0.0-alpha 深度審計完成 — 發現 4 個 P0 缺陷**
 
-- 完成 Contract-Level Differential Diagnosis 架構設計文件
-- 設計 8 個新 Domain 物件（Evidence, Hypothesis, ReasoningStep, EvidenceQuality 等）
-- 規劃 +8 個新 MCP Tools（總計 27 tools）
-- 制定 SDK 1.x → 2.0 遷移 checklist（8 Phase，13 天）
+審計結論：v2.0.0-alpha **不適合發布**。核心問題：
+1. server_v2 路由對 5 個舊 handlers 呼叫不存在的 `handle()` → 53% tools 損壞
+2. `ClinicalReasoningOrchestrator` 設計了但未整合（import 後未使用）
+3. Evidence/Hypothesis/ThinkingChain 無持久化（repos 是死代碼，handlers 用 in-memory dict）
+4. test_mcp_tools.py 崩潰（SDK 1.x API），覆蓋率僅 46%
 
-### 下一步行動
-1. 建立分支 `feat/sdk-2-contract-level-dd`
-2. Phase 1：`uv add "mcp>=2.0.0"` + 確認 breaking changes
-3. Phase 3：建立新 Domain entities（Evidence, Hypothesis, ReasoningStep）
+### 下一步行動（依優先級）
+1. **P0**：為 5 個舊 handlers 加上 `handle()` dispatcher，或遷移為 dict-returning 風格
+2. **P0**：修正 `isError` → `is_error`（server_v2.py:280,303）
+3. **P0**：修復或移除 test_mcp_tools.py（import 舊 server.py）
+4. **P1**：決定 Orchestrator 去留 — 整合進 handlers 或刪除
+5. **P1**：接通 3 個新 repositories 的持久化，或刪除
+6. **P1**：ContractHandlers 接通真實資料來源
+7. **P2**：補 Hypothesis ON_HOLD setter、Evidence update/delete
 
 
 ## 📝 專案狀態
