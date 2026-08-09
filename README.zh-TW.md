@@ -1,21 +1,75 @@
-# RootCause MCP - 臨床因果分析與教案設計 MCP 伺服器
+# RootCause MCP - 臨床根因分析 MCP 伺服器
 
-> 🏥 AI 引導的醫療因果分析、回饋迴圈建模與教案建構
+> 🏥 **將 AI 洞察轉化為可稽核的組織智慧**  
+> 從臨時推理到可追溯、可學習、可防禦的 RCA 工作流
 
 [![Python 3.12+](https://img.shields.io/badge/python-3.12+-blue.svg)](https://www.python.org/downloads/)
 [![MCP](https://img.shields.io/badge/MCP-1.10+-green.svg)](https://modelcontextprotocol.io/)
 [![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 [![GitHub](https://img.shields.io/github/stars/u9401066/rootcause-mcp?style=social)](https://github.com/u9401066/rootcause-mcp)
-[![Tools](https://img.shields.io/badge/MCP_Tools-21-purple.svg)](#-可用工具)
+[![Tools](https://img.shields.io/badge/MCP_Tools-19-purple.svg)](#-可用工具)
 
 [English](README.md) | **中文版**
 
-## 🎯 願景
+## 🎯 為何重要（當 AI 已經能秒解 RCA）
 
-讓 AI Agent 能在**雙向因果循環**中工作：
+### 問題意識
 
-- 從臨床事件 → 做結構化、可追溯的根因分析
-- 從根因與回饋迴圈 → 反向建構醫學生可用的教案
+**AI agent（如 Claude）可以瞬間找出根本原因。** 那為什麼還需要結構化 RCA 工具？
+
+因為在受監管產業（醫療、航空、核能），**只有答案是不夠的**：
+
+| 你需要什麼 | AI 直接推理 | RootCause MCP |
+|-----------|-------------|---------------|
+| ⚡ **速度** | ✅ 瞬間（秒級） | ⚠️ 較慢（引導式流程） |
+| 🧠 **準確性** | ✅ 高（Claude Sonnet 4.5） | ✅ 高 + 框架約束 |
+| 📜 **法律效力** | ❌ 「AI 這樣說」在法庭不成立 | ✅ 符合 TJC/AHRQ 標準的稽核軌跡 |
+| 👥 **團隊協作** | ❌ 單人黑盒 | ✅ 共享魚骨圖 + 多審查者 |
+| 📚 **知識累積** | ❌ 對話結束後就遺失 | ✅ 學習規則資料庫 |
+| ✅ **監管合規** | ❌ 無法通過 JCAHO 稽核 | ✅ 結構化報告（Mermaid/PDF） |
+| 🧪 **因果驗證** | ❌ 無反事實測試 | ✅ Bradford Hill 準則檢查 |
+
+### 解決方案
+
+**RootCause MCP 不取代 AI 推理—它讓 AI 推理變得可稽核、可協作、可累積。**
+
+```
+AI 洞察（30 秒） → RCA 工具（30 分鐘） → 可防禦報告（10 年）
+```
+
+### 真實情境
+
+#### 情境 1：法律訴訟
+```
+❌ 「我們的 AI 判斷根本原因是..."
+   律師：「你們的方法論是什麼？能重現嗎？」
+   你：「呃... Claude 這樣說...」
+
+✅ 「我們依照 WHO ICPS 進行 HFACS-MES 分類，
+    執行 5-Why 分析並進行反事實驗證，
+    記錄於魚骨圖並經 3 位專家審查。」
+   律師：「好的，這符合標準流程。」
+```
+
+#### 情境 2：M&M 會議（多科別團隊）
+```
+❌ 各自用 AI 聊天 → 每個人結論不同 → 無共識
+
+✅ 共享魚骨圖 → 所有科別新增原因 → 投票決定優先項目
+```
+
+#### 情境 3：組織學習
+```
+❌ AI 分析在對話封存後遺失
+
+✅ 學習規則資料庫：
+    「sigmoid septum + LVH + syncope」 → HOCM 風險（信心度：95%）
+    → 下次案例觸發自動警告
+```
+
+---
+
+## 🏗️ 領域卡匣
 
 RootCause MCP 透過**領域卡匣 (Domain Cartridges)** 支援三大類分析模型：
 
@@ -34,10 +88,41 @@ RootCause MCP 透過**領域卡匣 (Domain Cartridges)** 支援三大類分析�
 │                          ▼                                      │
 │              ┌───────────────────────┐                          │
 │              │   Unified Graph API   │                          │
-│              │    (21 MCP Tools)     │                          │
+│              │    (19 MCP Tools)     │                          │
 │              └───────────────────────┘                          │
 └─────────────────────────────────────────────────────────────────┘
 ```
+
+## 💎 核心價值主張
+
+### 這個工具實際在做什麼
+
+1. **🔒 法律盔甲**
+   - 產生符合 JCAHO、CMS、衛福部稽核的報告
+   - 提供方法論可追溯性（「我們遵循 TJC 框架」）
+   - 為訴訟建立可防禦的文件
+
+2. **👥 協作基板**
+   - 10 人可同時編輯的共享魚骨圖
+   - 版本控制的因果鏈
+   - 多利害關係人審查流程
+
+3. **📚 知識圖譜**
+   - `learned_rules.yaml` 隨每個案例變聰明
+   - 模式識別：「最近 3 個 LVOT 梗阻案例都有這個特徵」
+   - 不受人員流動影響的機構記憶
+
+4. **🎓 教育框架**
+   - 訓練住院醫師批判性思考（而非只求答案）
+   - 教導反事實推理（「如果我們有識別 HOCM 會怎樣？」）
+   - 提供結構化的 QI 能力練習
+
+5. **🧪 驗證層**
+   - 因果關係測試（時序性、必要性、充分性、機制）
+   - 防止虛假相關性變成「根本原因」
+   - 強制實證推理
+
+---
 
 ## ✨ 核心功能
 
@@ -47,8 +132,6 @@ RootCause MCP 透過**領域卡匣 (Domain Cartridges)** 支援三大類分析�
 |------|------|------|
 | 🐟 **魚骨圖 (6M)** | 醫療專用石川圖分析 | ✅ 4 tools |
 | 🔍 **5-Why 分析** | 深入原因探索，含近端/遠端原因分類 | ✅ 4 tools |
-| 🔁 **雙向因果連結** | 補上 cross-link、升級惡性循環與 feedback loop | ✅ 1 tool |
-| 🎓 **教案建構器** | 將 RCA 鏈轉成醫學生教案、討論題與 pitfalls | ✅ 1 tool |
 | 📊 **HFACS-MES** | 人因分析自動建議 (5 層 25 類) | ✅ 6 tools |
 | ✅ **因果驗證** | 基於 Bradford Hill 準則的驗證 | ✅ 1 tool |
 | 🔗 **6M-HFACS 對照** | 分類系統交叉參照 | ✅ 1 tool |
@@ -96,7 +179,7 @@ RootCause MCP 透過**領域卡匣 (Domain Cartridges)** 支援三大類分析�
 | `rc_get_fishbone` | 取得魚骨圖結構 |
 | `rc_export_fishbone` | 匯出為 Mermaid/Markdown/JSON |
 
-### Why Tree 工具 (6)
+### Why Tree 工具 (4)
 
 | 工具 | 說明 |
 |------|------|
@@ -104,8 +187,6 @@ RootCause MCP 透過**領域卡匣 (Domain Cartridges)** 支援三大類分析�
 | `rc_get_why_tree` | 取得 Why 樹結構 |
 | `rc_mark_root_cause` | 標記節點為根本原因 |
 | `rc_export_why_tree` | 匯出為 Mermaid/Markdown/JSON |
-| `rc_add_causal_link` | 新增雙向因果關係與回饋迴圈 |
-| `rc_build_teaching_case` | 從 RCA 鏈直接產生教案 |
 
 ### 驗證工具 (1)
 
@@ -214,4 +295,22 @@ Apache 2.0 授權 - 詳見 [LICENSE](LICENSE)
 
 ---
 
-**以 ❤️ 打造，致力於醫療品質改善**
+## 🎯 何時該使用這個工具？
+
+### ❌ 不要用這個如果：
+- 你只是想快速學習個人練習
+- 你單獨作業，不需要證明你的推理
+- 你的組織不要求結構化 RCA
+
+### ✅ 應該用這個如果：
+- 🏥 你需要通過 JCAHO/CMS/衛福部稽核
+- 👥 多科別需要協作（外科 + 麻醉 + 護理 + 藥局）
+- 📚 你想建立機構知識庫
+- 🎓 你在訓練住院醫師/研究員 RCA 方法論
+- ⚖️ 你在準備潛在訴訟
+- 🔬 你需要可重現、實證為本的分析
+
+---
+
+**以 ❤️ 打造，致力於醫療品質改善**  
+*「AI 可以在 30 秒找到答案。我們幫你防禦 30 年。」*
