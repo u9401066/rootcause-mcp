@@ -578,3 +578,28 @@ Why Tree 使用 **InMemory 儲存**（而非 SQLite），因為：
 3. **技術路線**：MCP Server + Harness = 醫學推理「賦能層」，不是另一個診斷引擎
 4. **設計原則**：Agent-friendly API（隱藏 Bayesian/FHIR/HFACS 複雜度）
 5. **參考架構**：MEDDxAgent (DDxDriver) + ClinClaw (Harness pattern) + fastmcp (SDK 2.0) |
+| 2026-08-09 | MCP SDK 2.0 遷移策略：採用回調式 API（on_list_tools, on_call_tool） | SDK 2.0 完全移除 @server.list_tools() 和 @server.call_tool() decorator，改為在 Server.__init__() 傳入回調函數。需要重寫 server.py：
+
+舊 API (1.x):
+```python
+server = Server("name")
+@server.list_tools()
+async def list_tools() -> list[Tool]: ...
+
+@server.call_tool()
+async def call_tool(name, arguments) -> ...
+```
+
+新 API (2.0):
+```python
+async def on_list_tools(ctx, params) -> ListToolsResult: ...
+async def on_call_tool(ctx, params) -> CallToolResult: ...
+
+server = Server(
+    "name",
+    on_list_tools=on_list_tools,
+    on_call_tool=on_call_tool
+)
+```
+
+影響範圍：server.py 完全重寫，所有 19 個現有 tools 需遷移。 |
