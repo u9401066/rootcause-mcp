@@ -42,13 +42,29 @@ class ClinicalReasoningOrchestrator:
     4. get_differential_diagnosis()
     """
 
-    def __init__(self, session_id: str):
-        """Initialize orchestrator for a clinical session."""
+    def __init__(
+        self,
+        session_id: str,
+        evidence_repo: Any | None = None,
+        hypothesis_repo: Any | None = None,
+    ):
+        """
+        Initialize orchestrator for a clinical session.
+
+        Args:
+            session_id: RCA session ID
+            evidence_repo: Evidence repository (optional, for persistence)
+            hypothesis_repo: Hypothesis repository (optional, for persistence)
+        """
         self.session_id = session_id
         self.reasoning_chain = ReasoningChain(session_id=session_id)
         self.evidence_store: dict[str, Evidence] = {}
         self.hypothesis_store: dict[str, Hypothesis] = {}
         self._step_counter = 0
+
+        # Repositories for persistence
+        self._evidence_repo = evidence_repo
+        self._hypothesis_repo = hypothesis_repo
 
     def add_evidence(
         self,

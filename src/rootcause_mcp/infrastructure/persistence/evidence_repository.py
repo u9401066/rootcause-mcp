@@ -1,5 +1,5 @@
 """
-Evidence Repository (SQLite).
+Evidence Repository (SQLite with SQLModel).
 
 Persists Evidence entities to SQLite database.
 """
@@ -8,54 +8,105 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from sqlmodel import select
+
 from rootcause_mcp.domain.entities.evidence import Evidence
+from rootcause_mcp.infrastructure.persistence.models import EvidenceModel
 
 if TYPE_CHECKING:
     from rootcause_mcp.infrastructure.persistence.database import Database
 
 
 class SQLiteEvidenceRepository:
-    """SQLite implementation of Evidence repository."""
+    """SQLite implementation of Evidence repository using SQLModel."""
 
     def __init__(self, db: Database) -> None:
         """Initialize repository with database connection."""
         self.db = db
-        self._ensure_table()
-
-    def _ensure_table(self) -> None:
-        """Create evidence table if not exists."""
-        # For smoke test, use in-memory dict
-        # In production, this would create actual SQLite tables
-        self._store: dict[str, dict[str, Any]] = {}
 
     async def save(self, session_id: str, evidence: Evidence) -> None:
         """Save evidence to database."""
-        key = f"{session_id}:{evidence.id.value}"
-        self._store[key] = evidence.model_dump(mode="json")
+        model = EvidenceModel(
+            id=evidence.id.value,
+            session_id=session_id,
+            content=evidence.content,
+            evidence_type=evidence.evidence_type.value,
+            clinical_context=evidence.clinical_context,
+            quality_data=evidence.quality.model_dump(mode="json"),
+            source_data=evidence.source.model_dump(mode="json"),
+            event_timestamp=evidence.event_timestamp,
+            supports_cause_ids=evidence.supports_cause_ids,
+            supports_hypothesis_ids=evidence.supports_hypothesis_ids,
+            contradicts_hypothesis_ids=evidence.contradicts_hypothesis_ids,
+            verified=evidence.verified,
+            verifier=evidence.verifier,
+            verification_timestamp=evidence.verification_timestamp,
+            tags=evidence.tags,
+        )
+
+        with self.db.get_session() as session:
+            session.add(model)
+            session.commit()
 
     async def get_by_id(self, session_id: str, evidence_id: str) -> Evidence | None:
         """Get evidence by ID."""
-        key = f"{session_id}:{evidence_id}"
-        data = self._store.get(key)
-        if not data:
-            return None
-        return Evidence(**data)
+        with self.db.get_session() as session:
+            statement = select(EvidenceModel).where(
+                EvidenceModel.id == evidence_id,
+                EvidenceModel.session_id == session_id,
+            )
+            model = session.exec(statement).first()
+
+            if not model:
+                return None
+
+            return self._to_entity(model)
 
     async def list_by_session(self, session_id: str) -> list[Evidence]:
         """List all evidence for a session."""
-        prefix = f"{session_id}:"
-        results = []
-        for key, data in self._store.items():
-            if key.startswith(prefix):
-                results.append(Evidence(**data))
-        return results
+        with self.db.get_session() as session:
+            statement = select(EvidenceModel).where(EvidenceModel.session_id == session_id)
+            models = session.exec(statement).all()
+
+            return [self._to_entity(m) for m in models]
 
     async def update(self, session_id: str, evidence: Evidence) -> None:
         """Update existing evidence."""
+        # Delete old, insert new (simple approach)
+        await self.delete(session_id, evidence.id.value)
         await self.save(session_id, evidence)
 
     async def delete(self, session_id: str, evidence_id: str) -> None:
         """Delete evidence."""
-        key = f"{session_id}:{evidence_id}"
-        if key in self._store:
-            del self._store[key]
+        with self.db.get_session() as session:
+            statement = select(EvidenceModel).where(
+                EvidenceModel.id == evidence_id,
+                EvidenceModel.session_id == session_id,
+            )
+            model = session.exec(statement).first()
+            if model:
+                session.delete(model)
+                session.commit()
+
+    def _to_entity(self, model: EvidenceModel) -> Evidence:
+        """Convert EvidenceModel to Evidence entity."""
+        from rootcause_mcp.domain.entities.evidence import EvidenceSource, EvidenceType
+        from rootcause_mcp.domain.value_objects.evidence_quality import EvidenceQuality
+        from rootcause_mcp.domain.value_objects.identifiers import EvidenceId
+
+        return Evidence(
+            id=EvidenceId(model.id),
+            content=model.content,
+            evidence_type=EvidenceType(model.evidence_type),
+            clinical_context=model.clinical_context,
+            quality=EvidenceQuality(**model.quality_data),
+            source=EvidenceSource(**model.source_data),
+            event_timestamp=model.event_timestamp,
+            supports_cause_ids=model.supports_cause_ids,
+            supports_hypothesis_ids=model.supports_hypothesis_ids,
+            contradicts_hypothesis_ids=model.contradicts_hypothesis_ids,
+            verified=model.verified,
+            verifier=model.verifier,
+            verification_timestamp=model.verification_timestamp,
+            tags=model.tags,
+        )

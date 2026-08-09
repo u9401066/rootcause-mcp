@@ -119,6 +119,124 @@ class WhyNodeModel(SQLModel, table=True):
     evidence: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     confidence: float | None = None
 
+
+# ============================================================================
+# NEW in v2.0: Medical Reasoning Models
+# ============================================================================
+
+
+class EvidenceModel(SQLModel, table=True):
+    """SQLModel for Evidence entity."""
+
+    __tablename__ = "evidence"  # type: ignore[assignment]
+
+    # Primary Key
+    id: str = Field(primary_key=True)  # EvidenceId string value
+
+    # Foreign Key
+    session_id: str = Field(index=True)
+
+    # Content
+    content: str
+    evidence_type: str  # EvidenceType enum value
+    clinical_context: str | None = None
+
+    # Quality (stored as JSON)
+    quality_data: dict[str, Any] = Field(sa_column=Column(JSON))
+
+    # Source (stored as JSON)
+    source_data: dict[str, Any] = Field(sa_column=Column(JSON))
+
+    # Temporal
+    event_timestamp: datetime | None = None
+
+    # Relationships (stored as JSON arrays)
+    supports_cause_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    supports_hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    contradicts_hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    # Verification
+    verified: bool = False
+    verifier: str | None = None
+    verification_timestamp: datetime | None = None
+
+    # Metadata
+    tags: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class HypothesisModel(SQLModel, table=True):
+    """SQLModel for Hypothesis entity."""
+
+    __tablename__ = "hypotheses"  # type: ignore[assignment]
+
+    # Primary Key
+    id: str = Field(primary_key=True)  # HypothesisId string value
+
+    # Foreign Key
+    session_id: str = Field(index=True)
+
+    # Diagnosis (stored as JSON)
+    diagnosis_data: dict[str, Any] = Field(sa_column=Column(JSON))
+
+    # Bayesian
+    prior_probability: float
+    current_probability: float
+
+    # Criteria (stored as JSON arrays)
+    inclusion_criteria: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    exclusion_criteria: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    # Evidence linking (stored as JSON arrays)
+    likelihood_ratios: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    supporting_evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    contradicting_evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    # Status
+    status: str  # HypothesisStatus enum value
+
+    # Audit trail (stored as JSON)
+    bayesian_history: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+
+    # Metadata
+    clinical_rationale: str
+    created_by: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+
+class ThinkingStepModel(SQLModel, table=True):
+    """SQLModel for ThinkingStep entity."""
+
+    __tablename__ = "thinking_steps"  # type: ignore[assignment]
+
+    # Primary Key
+    id: str = Field(primary_key=True)
+
+    # Foreign Key
+    session_id: str = Field(index=True)
+
+    # Content
+    thinking_type: str  # ThinkingType enum value
+    content: str
+    internal_reasoning: str
+
+    # Structured data (stored as JSON)
+    alternatives: list[dict[str, Any]] = Field(default_factory=list, sa_column=Column(JSON))
+    uncertainty_factors: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    assumptions_made: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    potential_biases: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    # Confidence
+    confidence: float
+
+    # Relationships (stored as JSON arrays)
+    related_evidence_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    related_hypothesis_ids: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+
+    # Metadata
+    structured_data: dict[str, Any] = Field(default_factory=dict, sa_column=Column(JSON))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
     # Status
     is_root_cause: bool = False
     needs_further_analysis: bool = True
