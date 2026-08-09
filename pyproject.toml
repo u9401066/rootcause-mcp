@@ -68,7 +68,7 @@ dev = [
 ]
 
 [project.scripts]
-rootcause-mcp = "rootcause_mcp.server:main"
+rootcause-mcp = "rootcause_mcp.server_v2:main"
 
 [project.urls]
 Documentation = "https://github.com/YOUR_ORG/rootcause-mcp#readme"
