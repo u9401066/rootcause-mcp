@@ -2,22 +2,22 @@
 
 > 📌 此檔案記錄當前工作焦點，每次工作階段開始時檢視，結束時更新。
 > 
-> **Last Updated**: 2026-01-16T02:30
+> **Last Updated**: 2026-08-09
 
 ## 🎯 當前焦點
 
-- **6 個完整 RCA 案例** ✅ 全部完成
-- **God Level 案例**: PRIS, LVAD Suction, SAM/Dynamic LVOT ⭐
-- **19 個 MCP Tools** 穩定運行
-- 準備 Git commit: `feat(examples): add God Level RCA cases`
-- **新方向**：從單向死亡案例 RCA 擴展為「雙向因果循環 + 醫學生教案建構」
-- **最新 MVP**：Why Tree 可補 causal links、偵測 feedback loop、直接輸出 teaching case
+**架構設計階段**：Contract-Level DD + MCP SDK 2.0 升級規劃完成
 
-### 最新完成 - Case 6: SAM (Dynamic LVOT Obstruction)
-- Session: `rc_sess_5c486e7c`
-- **三層診斷陷阱**：Hypovolemia → PE/MI → **Dynamic LVOT** (正確)
-- **Pathognomonic Signs**: Bisferiens pulse, Dagger-shaped Doppler, SAM on TEE
-- **關鍵規則**: "If Epi makes it WORSE, think OBSTRUCTION"
+- 完成 Contract-Level Differential Diagnosis 架構設計文件
+- 設計 8 個新 Domain 物件（Evidence, Hypothesis, ReasoningStep, EvidenceQuality 等）
+- 規劃 +8 個新 MCP Tools（總計 27 tools）
+- 制定 SDK 1.x → 2.0 遷移 checklist（8 Phase，13 天）
+
+### 下一步行動
+1. 建立分支 `feat/sdk-2-contract-level-dd`
+2. Phase 1：`uv add "mcp>=2.0.0"` + 確認 breaking changes
+3. Phase 3：建立新 Domain entities（Evidence, Hypothesis, ReasoningStep）
+
 
 ## 📝 專案狀態
 

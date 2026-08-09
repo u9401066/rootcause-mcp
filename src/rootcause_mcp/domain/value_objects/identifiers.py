@@ -117,3 +117,84 @@ class ActionId:
 
     def __str__(self) -> str:
         return self.value
+
+
+@dataclass(frozen=True, slots=True)
+class EvidenceId:
+    """Strongly-typed Evidence identifier."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        if not self.value:
+            raise ValueError("EvidenceId cannot be empty")
+        if not self.value.startswith("EVD-"):
+            raise ValueError(f"EvidenceId must start with 'EVD-', got: {self.value}")
+
+    @classmethod
+    def generate(cls) -> Self:
+        """Generate a new unique EvidenceId."""
+        unique_part = uuid.uuid4().hex[:8]
+        return cls(f"EVD-{unique_part}")
+
+    @classmethod
+    def from_string(cls, value: str) -> Self:
+        """Create EvidenceId from string, validating format."""
+        return cls(value)
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True, slots=True)
+class HypothesisId:
+    """Strongly-typed Hypothesis identifier."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        if not self.value:
+            raise ValueError("HypothesisId cannot be empty")
+        if not self.value.startswith("HYP-"):
+            raise ValueError(f"HypothesisId must start with 'HYP-', got: {self.value}")
+
+    @classmethod
+    def generate(cls) -> Self:
+        """Generate a new unique HypothesisId."""
+        unique_part = uuid.uuid4().hex[:8]
+        return cls(f"HYP-{unique_part}")
+
+    @classmethod
+    def from_string(cls, value: str) -> Self:
+        """Create HypothesisId from string, validating format."""
+        return cls(value)
+
+    def __str__(self) -> str:
+        return self.value
+
+
+@dataclass(frozen=True, slots=True)
+class ReasoningStepId:
+    """Strongly-typed Reasoning Step identifier."""
+
+    value: str
+
+    def __post_init__(self) -> None:
+        if not self.value:
+            raise ValueError("ReasoningStepId cannot be empty")
+        if not self.value.startswith("RS-"):
+            raise ValueError(f"ReasoningStepId must start with 'RS-', got: {self.value}")
+
+    @classmethod
+    def generate(cls) -> Self:
+        """Generate a new unique ReasoningStepId."""
+        unique_part = uuid.uuid4().hex[:8]
+        return cls(f"RS-{unique_part}")
+
+    @classmethod
+    def from_string(cls, value: str) -> Self:
+        """Create ReasoningStepId from string, validating format."""
+        return cls(value)
+
+    def __str__(self) -> str:
+        return self.value

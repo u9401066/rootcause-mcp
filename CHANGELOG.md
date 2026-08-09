@@ -7,6 +7,68 @@
 
 ## [Unreleased]
 
+### 🎯 Major Release: v2.0.0-alpha (2026-08-09)
+
+**核心定位轉向**：從「通用 RCA 工具」→「醫學推理專用 MCP Harness」
+
+#### Added - Core Architecture
+- **MCP SDK 2.0 遷移** - 完全重寫，不相容 1.x
+  - Typed input/output with Pydantic BaseModel
+  - Structured content support (outputSchema)
+  - Automatic validation with `validate_input=True`
+  - Version bump: `mcp[cli]>=1.10.1` → `mcp>=2.0.0`
+
+- **Evidence as First-Class Entity** 🆕
+  - `domain/entities/evidence.py` - Structured evidence with provenance
+  - `EvidenceQuality` VO - Oxford CEBM-inspired Strength × Reliability matrix
+  - `EvidenceSource` - Chain of custody (who, when, where)
+  - Many-to-many linking: Evidence ↔ Cause/Hypothesis
+  - Independent verification workflow
+
+- **Differential Diagnosis Engine** 🆕
+  - `domain/entities/hypothesis.py` - Bayesian hypothesis with LR updating
+  - Prior/posterior probability tracking
+  - Likelihood ratio (LR) based evidence integration
+  - Inclusion/exclusion criteria management
+  - Bayesian update audit trail
+
+- **Clinical Concept Standardization** 🆕
+  - `domain/value_objects/clinical_concept.py` - Medical terminology VO
+  - Support for SNOMED CT, ICD-10, RxNorm, LOINC, CPT
+  - FHIR-compatible coding export
+  - Regex validation for each coding system
+
+- **Strong-Typed Identifiers** 🆕
+  - `EvidenceId` (EVD-xxxxxxxx)
+  - `HypothesisId` (HYP-xxxxxxxx)
+  - `ReasoningStepId` (RS-xxxxxxxx)
+  - Prevents ID mixing bugs at compile time
+
+#### Changed
+- **README.md 完全重寫** - 反映新定位
+  - 新增 Mermaid 架構圖（5 層架構）
+  - 新增 SVG 架構圖（`docs/architecture/medical_reasoning_harness.svg`）
+  - 強調「Agent-friendly API」設計原則
+  - 新增與現有工具對比表（DDx vs RCA vs RootCause MCP）
+  - 27 個 MCP Tools 列表（19 現有 + 8 新增規劃）
+
+- **版本號更新**: `0.1.0` → `2.0.0a1` (alpha)
+
+#### Design Decisions
+- 參考 [MEDDxAgent](https://github.com/nec-research/meddxagent) 的 DDxDriver 架構
+- 參考 [ClinClaw](https://github.com/rbr7/ClinClaw) 的 Harness pattern
+- 採用 [fastmcp](https://github.com/PrefectHQ/fastmcp) 作為 SDK 2.0 參考實作
+- 保留自定義 schema，後續可選配 FHIR adapter
+
+#### Documentation
+- Memory Bank 更新：decisionLog.md, activeContext.md, progress.md
+- 新增 `docs/architecture/medical_reasoning_harness.svg`
+- 完整調查報告：GitHub 開源醫療 AI 專案全景（見對話記錄）
+
+---
+
+## [0.1.0] - 2026-01-16
+
 ### Added
 - **Deep RCA Framework v2.0 架構設計** - 5 層分析架構 + 10 個新工具規劃
   - 設計文件：`docs/architecture/deep_rca_framework_v2.md` (794 行)
