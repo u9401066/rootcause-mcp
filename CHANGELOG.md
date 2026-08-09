@@ -20,11 +20,43 @@
   - Summary statistics and quality metrics
 
 #### Added - MCP Tools (2026-08-09)
-- **10 New MCP Tools** for medical reasoning:
+- **15 New MCP Tools** for medical reasoning:
+  - Cognitive Layer (5): `rc_think_aloud`, `rc_reflect`, `rc_identify_gaps`, `rc_challenge_assumption`, `rc_get_thinking_chain`
   - Evidence Management (3): `rc_add_evidence`, `rc_get_evidence`, `rc_verify_evidence`
   - Differential Diagnosis (4): `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`, `rc_get_differential_diagnosis`, `rc_exclude_hypothesis`
   - Reasoning Chain (2): `rc_get_reasoning_chain`, `rc_export_reasoning_chain`
   - CONTRACT Report (1): `rc_generate_contract_report`
+
+#### Added - Handlers (2026-08-09)
+- **5 New Handlers** implementing all new tools:
+  - `ThinkingHandlers` - Cognitive layer transparency
+  - `EvidenceHandlers` - Evidence CRUD with quality grading
+  - `DDHandlers` - Bayesian differential diagnosis
+  - `ReasoningHandlers` - Reasoning chain management
+  - `ContractHandlers` - CONTRACT report generation
+
+#### Added - Persistence Layer (2026-08-09)
+- **SQLite Repositories**:
+  - `SQLiteEvidenceRepository` - Evidence persistence
+  - `SQLiteHypothesisRepository` - Hypothesis persistence
+  - `SQLiteThinkingChainRepository` - Thinking chain persistence
+
+#### Added - Domain Layer (2026-08-09)
+- **ContractReport VO** - Immutable, auditable report
+  - `EvidenceCoverageMetrics` - Evidence quality metrics
+  - `ReasoningQualityMetrics` - Reasoning quality metrics
+  - FHIR export support
+  - Content hash for immutability
+
+#### Added - Testing (2026-08-09)
+- **Smoke Test** (`tests/test_smoke.py`) - 8 tests, all passing
+  - Tool loading and schema validation
+  - Handler instantiation
+  - Basic functionality tests
+- **End-to-End Test** (`tests/test_e2e.py`) - 3 tests, all passing
+  - Complete clinical reasoning workflow
+  - Persistence layer functionality
+  - ContractReport value object
 
 #### Added - Core Architecture
 - **MCP SDK 2.0 遷移** - 完全重寫，不相容 1.x
