@@ -21,7 +21,7 @@ def get_fishbone_tools() -> list[Tool]:
                 "Creates a 6M structure (Personnel, Equipment, Material, Process, "
                 "Environment, Monitoring) with the problem statement as the fish head."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -42,7 +42,7 @@ def get_fishbone_tools() -> list[Tool]:
                 "Add a cause to a Fishbone category. "
                 "Each cause can have sub-causes, evidence, and HFACS classification."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -52,7 +52,14 @@ def get_fishbone_tools() -> list[Tool]:
                     "category": {
                         "type": "string",
                         "description": "The 6M category for this cause",
-                        "enum": ["Personnel", "Equipment", "Material", "Process", "Environment", "Monitoring"],
+                        "enum": [
+                            "Personnel",
+                            "Equipment",
+                            "Material",
+                            "Process",
+                            "Environment",
+                            "Monitoring",
+                        ],
                     },
                     "description": {
                         "type": "string",
@@ -85,7 +92,7 @@ def get_fishbone_tools() -> list[Tool]:
                 "Get the complete Fishbone diagram for a session. "
                 "Returns all categories and causes in structured format."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -102,7 +109,7 @@ def get_fishbone_tools() -> list[Tool]:
                 "Export Fishbone diagram in various formats. "
                 "Supports Mermaid, JSON, and Markdown formats."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {

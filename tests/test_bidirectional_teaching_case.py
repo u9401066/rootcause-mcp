@@ -151,5 +151,7 @@ async def test_build_teaching_case_outputs_learning_artifacts(tmp_path: Path) ->
 
     assert teaching_case["learner_level"] == "resident"
     assert teaching_case["feedback_loops"]
-    assert any("倒推出" in prompt for prompt in teaching_case["reverse_causality_prompts"])
+    assert any(
+        "倒推出" in prompt for prompt in teaching_case["reverse_causality_prompts"]
+    )
     assert teaching_case["learning_objectives"]

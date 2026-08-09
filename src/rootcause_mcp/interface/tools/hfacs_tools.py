@@ -23,7 +23,7 @@ def get_hfacs_tools() -> list[Tool]:
                 "HFACS-MES has 5 levels: External Factors, Organizational Influences, "
                 "Unsafe Supervision, Preconditions, Unsafe Acts."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "description": {
@@ -56,7 +56,7 @@ def get_hfacs_tools() -> list[Tool]:
                 "This helps the system learn from expert decisions and improve future suggestions. "
                 "Confirmed classifications are stored as learned rules."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "description": {
@@ -96,7 +96,7 @@ def get_hfacs_tools() -> list[Tool]:
                 "Get HFACS-MES framework structure and category definitions. "
                 "Use this to understand the classification hierarchy and criteria."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "level": {
@@ -118,7 +118,7 @@ def get_hfacs_tools() -> list[Tool]:
                 "List all learned classification rules. "
                 "Shows rules that have been confirmed by experts."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "hfacs_code": {
@@ -143,7 +143,7 @@ def get_hfacs_tools() -> list[Tool]:
                 "Reload classification rules from YAML files. "
                 "Use this after manually editing config files."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {},
                 "required": [],
@@ -158,7 +158,7 @@ def get_hfacs_tools() -> list[Tool]:
                 "Useful for cross-framework analysis and ensuring comprehensive coverage. "
                 "Also provides Why Tree depth guidance for each category."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "category": {
@@ -168,8 +168,12 @@ def get_hfacs_tools() -> list[Tool]:
                             "If not specified, returns all mappings."
                         ),
                         "enum": [
-                            "Personnel", "Equipment", "Material",
-                            "Process", "Environment", "Monitoring"
+                            "Personnel",
+                            "Equipment",
+                            "Material",
+                            "Process",
+                            "Environment",
+                            "Monitoring",
                         ],
                         "default": None,
                     },

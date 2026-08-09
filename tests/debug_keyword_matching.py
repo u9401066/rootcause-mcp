@@ -16,8 +16,8 @@ for r in matching_rules[:10]:
     keyword_lower = r.keyword.lower()
     desc_lower = desc.lower()
     is_match = keyword_lower in desc_lower
-    print(f"  - keyword=\"{r.keyword}\", code={r.code}")
-    print(f"    Match check: \"{keyword_lower}\" in \"{desc_lower}\" = {is_match}")
+    print(f'  - keyword="{r.keyword}", code={r.code}')
+    print(f'    Match check: "{keyword_lower}" in "{desc_lower}" = {is_match}')
 print()
 
 # 直接測試關鍵字匹配

@@ -21,13 +21,19 @@ def get_session_tools() -> list[Tool]:
                 "Creates a new session with the specified case type and title. "
                 "Returns session_id for subsequent operations."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "case_type": {
                         "type": "string",
                         "description": "Type of case being analyzed",
-                        "enum": ["death", "complication", "near_miss", "safety", "staffing"],
+                        "enum": [
+                            "death",
+                            "complication",
+                            "near_miss",
+                            "safety",
+                            "staffing",
+                        ],
                     },
                     "case_title": {
                         "type": "string",
@@ -48,7 +54,7 @@ def get_session_tools() -> list[Tool]:
                 "Get details of an RCA session by ID. "
                 "Returns session status, current stage, and progress."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -65,7 +71,7 @@ def get_session_tools() -> list[Tool]:
                 "List all RCA sessions with optional filters. "
                 "Returns summary of all sessions."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "status": {
@@ -77,7 +83,13 @@ def get_session_tools() -> list[Tool]:
                     "case_type": {
                         "type": "string",
                         "description": "Filter by case type",
-                        "enum": ["death", "complication", "near_miss", "safety", "staffing"],
+                        "enum": [
+                            "death",
+                            "complication",
+                            "near_miss",
+                            "safety",
+                            "staffing",
+                        ],
                         "default": None,
                     },
                     "limit": {
@@ -97,7 +109,7 @@ def get_session_tools() -> list[Tool]:
                 "Archive a completed RCA session. "
                 "Archived sessions are preserved but marked as inactive."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {

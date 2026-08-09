@@ -24,7 +24,7 @@ def get_why_tree_tools() -> list[Tool]:
                 "Each call goes one level deeper (up to 5 levels). "
                 "This is the CORE tool for systematic root cause reasoning."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -70,7 +70,7 @@ def get_why_tree_tools() -> list[Tool]:
                 "Get the complete Why Tree (5-Why analysis chain) for a session. "
                 "Shows all Why questions and answers in hierarchical format."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -88,7 +88,7 @@ def get_why_tree_tools() -> list[Tool]:
                 "This indicates the analysis has reached a fundamental cause "
                 "that requires action."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -116,7 +116,7 @@ def get_why_tree_tools() -> list[Tool]:
                 "Export Why Tree in various formats. "
                 "Supports Mermaid (flowchart), JSON, and Markdown."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -140,7 +140,7 @@ def get_why_tree_tools() -> list[Tool]:
                 "Use this to capture escalation loops, feedback cycles, or mitigation links "
                 "that are not visible in a simple linear 5-Why chain."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
@@ -158,7 +158,12 @@ def get_why_tree_tools() -> list[Tool]:
                     "relationship": {
                         "type": "string",
                         "description": "Type of causal relationship",
-                        "enum": ["contributes_to", "feedback", "escalates", "mitigates"],
+                        "enum": [
+                            "contributes_to",
+                            "feedback",
+                            "escalates",
+                            "mitigates",
+                        ],
                         "default": "feedback",
                     },
                     "strength": {
@@ -195,7 +200,7 @@ def get_why_tree_tools() -> list[Tool]:
                 "Generates learning objectives, common pitfalls, discussion prompts, "
                 "and reverse-causality questions for medical learners."
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {

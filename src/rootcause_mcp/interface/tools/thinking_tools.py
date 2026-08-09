@@ -60,7 +60,11 @@ def get_thinking_tools() -> list[Tool]:
                             "properties": {
                                 "alternative": {"type": "string"},
                                 "reason_rejected": {"type": "string"},
-                                "confidence_if_chosen": {"type": "number", "minimum": 0, "maximum": 1},
+                                "confidence_if_chosen": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1,
+                                },
                             },
                             "required": ["alternative", "reason_rejected"],
                         },
@@ -98,7 +102,13 @@ def get_thinking_tools() -> list[Tool]:
                         "description": "Cognitive biases that might affect this thinking",
                     },
                 },
-                "required": ["session_id", "thinking_type", "content", "internal_reasoning", "confidence"],
+                "required": [
+                    "session_id",
+                    "thinking_type",
+                    "content",
+                    "internal_reasoning",
+                    "confidence",
+                ],
             },
         ),
         Tool(

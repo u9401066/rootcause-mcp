@@ -21,7 +21,7 @@ def get_verification_tools() -> list[Tool]:
                 "3) Mechanism - Is there a plausible causal pathway? "
                 "4) Sufficiency - Is cause alone sufficient for effect?"
             ),
-            inputSchema={
+            input_schema={
                 "type": "object",
                 "properties": {
                     "session_id": {
