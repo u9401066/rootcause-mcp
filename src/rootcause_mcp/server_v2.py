@@ -66,6 +66,9 @@ from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
 )
 
 # Application layer
+from rootcause_mcp.application.clinical_reasoning_orchestrator import (
+    ClinicalReasoningOrchestrator,
+)
 from rootcause_mcp.application.session_progress import SessionProgressTracker
 
 # Configure logging
@@ -198,6 +201,38 @@ async def on_list_tools(
     return ListToolsResult(tools=tools)
 
 
+async def _legacy_adapter(handler: Any, method_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
+    """
+    Adapter for legacy handlers that return Sequence[TextContent].
+
+    Converts legacy handler output to dict format expected by SDK 2.0.
+    """
+    import json
+
+    method = getattr(handler, method_name)
+    result = await method(arguments)
+
+    # Convert Sequence[TextContent] to dict
+    if isinstance(result, (list, tuple)):
+        texts = []
+        for item in result:
+            if isinstance(item, TextContent):
+                texts.append(item.text)
+            else:
+                texts.append(str(item))
+
+        combined_text = "\n".join(texts)
+
+        # Try to parse as JSON
+        try:
+            return json.loads(combined_text)
+        except (json.JSONDecodeError, ValueError):
+            return {"result": combined_text}
+
+    # Already a dict
+    return result
+
+
 async def on_call_tool(
     ctx: ServerRequestContext, params: CallToolRequestParams
 ) -> CallToolResult:
@@ -221,7 +256,7 @@ async def on_call_tool(
                     text="Error: Server not initialized. Please wait for startup to complete.",
                 )
             ],
-            isError=True,
+            is_error=True,
         )
 
     tool_name = params.name
@@ -229,7 +264,7 @@ async def on_call_tool(
 
     try:
         # Route to appropriate handler based on tool name
-        # NEW in 2.0: Cognitive Layer + Medical Reasoning
+        # NEW in 2.0: Cognitive Layer + Medical Reasoning (already have handle() method)
         if tool_name.startswith(("rc_think", "rc_reflect", "rc_identify", "rc_challenge")):
             result = await _thinking_handlers.handle(tool_name, arguments)
         elif tool_name.startswith(("rc_add_evidence", "rc_get_evidence", "rc_verify_evidence")):
@@ -240,39 +275,50 @@ async def on_call_tool(
             result = await _reasoning_handlers.handle(tool_name, arguments)
         elif tool_name.startswith("rc_generate_contract"):
             result = await _contract_handlers.handle(tool_name, arguments)
-        # Existing RCA Tools
-        elif tool_name.startswith("rc_suggest_hfacs") or tool_name.startswith(
-            "rc_confirm_classification"
-        ):
-            result = await _hfacs_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_get_hfacs") or tool_name.startswith("rc_get_6m"):
-            result = await _hfacs_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_list_learned") or tool_name.startswith("rc_reload"):
-            result = await _hfacs_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_start_session") or tool_name.startswith(
-            "rc_get_session"
-        ):
-            result = await _session_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_list_sessions") or tool_name.startswith(
-            "rc_archive"
-        ):
-            result = await _session_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_init_fishbone") or tool_name.startswith(
-            "rc_add_cause"
-        ):
-            result = await _fishbone_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_get_fishbone") or tool_name.startswith(
-            "rc_export_fishbone"
-        ):
-            result = await _fishbone_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_ask_why") or tool_name.startswith("rc_get_why"):
-            result = await _why_tree_handlers.handle(tool_name, arguments)
-        elif tool_name.startswith("rc_mark_root") or tool_name.startswith(
-            "rc_export_why"
-        ):
-            result = await _why_tree_handlers.handle(tool_name, arguments)
+
+        # Legacy RCA Tools (use adapter to convert to dict)
+        elif tool_name.startswith("rc_suggest_hfacs"):
+            result = await _legacy_adapter(_hfacs_handlers, "handle_suggest_hfacs", arguments)
+        elif tool_name.startswith("rc_confirm_classification"):
+            result = await _legacy_adapter(_hfacs_handlers, "handle_confirm_classification", arguments)
+        elif tool_name.startswith("rc_get_hfacs_framework"):
+            result = await _legacy_adapter(_hfacs_handlers, "handle_get_framework", arguments)
+        elif tool_name.startswith("rc_get_6m"):
+            result = await _legacy_adapter(_hfacs_handlers, "handle_get_6m_hfacs_mapping", arguments)
+        elif tool_name.startswith("rc_list_learned"):
+            result = await _legacy_adapter(_hfacs_handlers, "handle_list_learned_rules", arguments)
+        elif tool_name.startswith("rc_reload"):
+            result = await _legacy_adapter(_hfacs_handlers, "handle_reload_rules", arguments)
+
+        elif tool_name.startswith("rc_start_session"):
+            result = await _legacy_adapter(_session_handlers, "handle_start_session", arguments)
+        elif tool_name.startswith("rc_get_session"):
+            result = await _legacy_adapter(_session_handlers, "handle_get_session", arguments)
+        elif tool_name.startswith("rc_list_sessions"):
+            result = await _legacy_adapter(_session_handlers, "handle_list_sessions", arguments)
+        elif tool_name.startswith("rc_archive"):
+            result = await _legacy_adapter(_session_handlers, "handle_archive_session", arguments)
+
+        elif tool_name.startswith("rc_init_fishbone"):
+            result = await _legacy_adapter(_fishbone_handlers, "handle_init_fishbone", arguments)
+        elif tool_name.startswith("rc_add_cause"):
+            result = await _legacy_adapter(_fishbone_handlers, "handle_add_cause", arguments)
+        elif tool_name.startswith("rc_get_fishbone"):
+            result = await _legacy_adapter(_fishbone_handlers, "handle_get_fishbone", arguments)
+        elif tool_name.startswith("rc_export_fishbone"):
+            result = await _legacy_adapter(_fishbone_handlers, "handle_export_fishbone", arguments)
+
+        elif tool_name.startswith("rc_ask_why"):
+            result = await _legacy_adapter(_why_tree_handlers, "handle_ask_why", arguments)
+        elif tool_name.startswith("rc_get_why"):
+            result = await _legacy_adapter(_why_tree_handlers, "handle_get_why_tree", arguments)
+        elif tool_name.startswith("rc_mark_root"):
+            result = await _legacy_adapter(_why_tree_handlers, "handle_mark_root_cause", arguments)
+        elif tool_name.startswith("rc_export_why"):
+            result = await _legacy_adapter(_why_tree_handlers, "handle_export_why_tree", arguments)
+
         elif tool_name.startswith("rc_verify"):
-            result = await _verification_handlers.handle(tool_name, arguments)
+            result = await _legacy_adapter(_verification_handlers, "handle_verify_causation", arguments)
         else:
             return CallToolResult(
                 content=[
@@ -280,7 +326,7 @@ async def on_call_tool(
                         type="text", text=f"Error: Unknown tool '{tool_name}'"
                     )
                 ],
-                isError=True,
+                is_error=True,
             )
 
         # Convert result to CallToolResult
@@ -303,7 +349,7 @@ async def on_call_tool(
                     type="text", text=f"Error executing {tool_name}: {str(e)}"
                 )
             ],
-            isError=True,
+            is_error=True,
         )
 
 
