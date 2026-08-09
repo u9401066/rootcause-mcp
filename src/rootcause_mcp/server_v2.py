@@ -40,9 +40,14 @@ from rootcause_mcp.interface.tools import (
 
 # Handlers
 from rootcause_mcp.interface.handlers import (
+    ContractHandlers,
+    DDHandlers,
+    EvidenceHandlers,
     FishboneHandlers,
     HFACSHandlers,
+    ReasoningHandlers,
     SessionHandlers,
+    ThinkingHandlers,
     VerificationHandlers,
     WhyTreeHandlers,
 )
@@ -68,6 +73,11 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Global handler instances (initialized in lifespan)
+_thinking_handlers: ThinkingHandlers | None = None
+_evidence_handlers: EvidenceHandlers | None = None
+_dd_handlers: DDHandlers | None = None
+_reasoning_handlers: ReasoningHandlers | None = None
+_contract_handlers: ContractHandlers | None = None
 _hfacs_handlers: HFACSHandlers | None = None
 _session_handlers: SessionHandlers | None = None
 _fishbone_handlers: FishboneHandlers | None = None
@@ -107,6 +117,8 @@ async def lifespan(server: Server):
 
     Initializes all handlers and repositories on startup.
     """
+    global _thinking_handlers, _evidence_handlers, _dd_handlers
+    global _reasoning_handlers, _contract_handlers
     global _hfacs_handlers, _session_handlers, _fishbone_handlers
     global _why_tree_handlers, _verification_handlers, _database
 
@@ -135,11 +147,19 @@ async def lifespan(server: Server):
     progress_tracker = SessionProgressTracker()
 
     # Initialize handlers
+    # NEW in 2.0: Cognitive layer + Medical reasoning handlers
+    _thinking_handlers = ThinkingHandlers()
+    _evidence_handlers = EvidenceHandlers()
+    _dd_handlers = DDHandlers()
+    _reasoning_handlers = ReasoningHandlers()
+    _contract_handlers = ContractHandlers()
+    
+    # Existing RCA handlers
     _hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
     _session_handlers = SessionHandlers(session_repo, progress_tracker)
     _fishbone_handlers = FishboneHandlers(fishbone_repo, session_repo, progress_tracker)
     _why_tree_handlers = WhyTreeHandlers(why_tree_repo, session_repo, progress_tracker)
-    _verification_handlers = VerificationHandlers(session_repo, fishbone_repo)
+    _verification_handlers = VerificationHandlers(progress_tracker)
 
     logger.info("✅ All handlers initialized")
 
@@ -209,7 +229,19 @@ async def on_call_tool(
 
     try:
         # Route to appropriate handler based on tool name
-        if tool_name.startswith("rc_suggest_hfacs") or tool_name.startswith(
+        # NEW in 2.0: Cognitive Layer + Medical Reasoning
+        if tool_name.startswith(("rc_think", "rc_reflect", "rc_identify", "rc_challenge")):
+            result = await _thinking_handlers.handle(tool_name, arguments)
+        elif tool_name.startswith(("rc_add_evidence", "rc_get_evidence", "rc_verify_evidence")):
+            result = await _evidence_handlers.handle(tool_name, arguments)
+        elif tool_name.startswith(("rc_propose", "rc_link", "rc_get_differential", "rc_exclude")):
+            result = await _dd_handlers.handle(tool_name, arguments)
+        elif tool_name.startswith(("rc_get_reasoning", "rc_export_reasoning")):
+            result = await _reasoning_handlers.handle(tool_name, arguments)
+        elif tool_name.startswith("rc_generate_contract"):
+            result = await _contract_handlers.handle(tool_name, arguments)
+        # Existing RCA Tools
+        elif tool_name.startswith("rc_suggest_hfacs") or tool_name.startswith(
             "rc_confirm_classification"
         ):
             result = await _hfacs_handlers.handle(tool_name, arguments)
