@@ -33,7 +33,7 @@ async def test_complete_clinical_reasoning_workflow():
     evidence_handler = EvidenceHandlers(server_state)
     dd_handler = DDHandlers(server_state)
     reasoning_handler = ReasoningHandlers()
-    contract_handler = ContractHandlers()
+    contract_handler = ContractHandlers(server_state)
     
     session_id = "e2e_test_session"
     

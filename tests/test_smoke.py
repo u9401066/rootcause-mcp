@@ -97,7 +97,7 @@ def test_handlers_instantiable():
     reasoning = ReasoningHandlers()
     assert reasoning is not None
     
-    contract = ContractHandlers()
+    contract = ContractHandlers(state)
     assert contract is not None
 
 

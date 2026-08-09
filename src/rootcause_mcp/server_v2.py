@@ -160,7 +160,7 @@ async def lifespan(server: Server):
     _evidence_handlers = EvidenceHandlers(_server_state)
     _dd_handlers = DDHandlers(_server_state)
     _reasoning_handlers = ReasoningHandlers()
-    _contract_handlers = ContractHandlers()
+    _contract_handlers = ContractHandlers(_server_state)
 
     # Existing RCA handlers
     _hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
