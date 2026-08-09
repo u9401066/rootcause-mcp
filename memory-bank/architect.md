@@ -76,6 +76,24 @@
 - 原生支援 lockfile
 - 與 pip 完全相容
 
+### ADR-004: ServerState 作為醫學推理 Aggregate Registry
+
+**日期**：2026-08-09
+
+**背景**：Evidence、Hypothesis、ThinkingChain、ReasoningChain 曾分散在各 Handler 的
+in-memory store，造成跨工具斷鏈與重啟資料遺失。
+
+**決定**：以 `ServerState` 管理每個 session 的 `ClinicalReasoningOrchestrator`，並透過
+Domain repository contracts 注入 SQLModel repositories。
+
+**理由**：
+- 所有醫學推理工具共享同一 aggregate
+- 支援完整 case rehydration
+- Handler 維持薄介面層，不重複 Domain/Application 邏輯
+- ContractReport 可從單一資料來源產生
+
+**限制**：legacy Why Tree 仍使用 InMemory repository，列為下一個 persistence 工作。
+
 ## 📦 元件圖
 
 ```

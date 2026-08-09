@@ -97,32 +97,50 @@ Our tools have **required fields** that force you to expose your reasoning:
 ### Pattern 1: Systematic Differential Diagnosis
 
 ```python
-# Step 1: Analyze all available evidence FIRST
-analysis = await rc_analyze_evidence_batch(
+# Step 1: Register each source-grounded finding
+troponin = await rc_add_evidence(
     session_id="sess_001",
-    evidence_ids=["EVD-001", "EVD-002", "EVD-003"],
-    analysis_framework="SYSTEMATIC"
+    content="Troponin I: 2.5 ng/mL",
+    evidence_type="LAB_RESULT",
+    source_document="lab_results.pdf",
+    source_location="Page 1, Table 1",
+    clinical_strength="STRONG",
+    source_reliability="GRADE_A"
 )
 
-# Step 2: Generate differential diagnosis
-ddx = await rc_generate_differential_diagnosis(
+# Step 2: Record the explicit decision frame
+await rc_think_aloud(
     session_id="sess_001",
-    analysis_id=analysis.id,
-    max_hypotheses=5,
-    include_rare_diagnoses=False
+    thinking_type="DECISION_POINT",
+    content="Acute MI is currently the leading diagnosis",
+    internal_reasoning="Chest pain, ECG findings, and troponin support acute MI.",
+    alternatives=[
+        {
+            "alternative": "Pulmonary embolism",
+            "reason_rejected": "No hypoxemia or right-heart strain"
+        }
+    ],
+    confidence=0.7,
+    uncertainty_factors=["Serial ECG pending"]
 )
 
-# Step 3: For each hypothesis, propose with FULL reasoning
-for hyp in ddx.suggested_hypotheses:
-    await rc_propose_hypothesis(
-        session_id="sess_001",
-        diagnosis=hyp.diagnosis,
-        clinical_reasoning=hyp.reasoning,  # REQUIRED
-        differential_diagnoses_considered=hyp.alternatives,  # REQUIRED
-        evidence_supporting=hyp.supporting_evidence,  # REQUIRED
-        uncertainty_factors=hyp.uncertainties,  # REQUIRED
-        confidence_rationale=hyp.confidence_explanation  # REQUIRED
-    )
+# Step 3: Propose the hypothesis with a complete rationale contract
+await rc_propose_hypothesis(
+    session_id="sess_001",
+    diagnosis="Acute myocardial infarction",
+    icd10_code="I21.9",
+    prior_probability=0.3,
+    clinical_reasoning="Chest pain, ECG findings, and troponin support acute MI.",
+    differential_diagnoses_considered=[
+        {
+            "diagnosis": "Pulmonary embolism",
+            "reason_rejected": "No hypoxemia or right-heart strain"
+        }
+    ],
+    evidence_supporting=[troponin.evidence_id],
+    uncertainty_factors=["Serial ECG pending"],
+    confidence_rationale="Typical presentation with one important pending test"
+)
 ```
 
 ---
@@ -154,40 +172,33 @@ await rc_link_evidence_to_hypothesis(
 
 ---
 
-### Pattern 3: Checkpoint-Based Reasoning
+### Pattern 3: Decision-Point Records
 
 ```python
-# Checkpoint 1: Initial assessment
-await rc_checkpoint(
+# Decision point 1: Initial assessment
+await rc_think_aloud(
     session_id="sess_001",
-    checkpoint_type="INITIAL_ASSESSMENT",
-    findings=[
-        "65M, post-CABG Day 3",
-        "Acute onset chest pain 2 hours ago",
-        "BP 100/60, HR 95, RR 18, O2 sat 98%"
-    ],
-    initial_impression="Acute coronary syndrome vs. PE vs. aortic dissection"
+    thinking_type="DECISION_POINT",
+    content="Initial differential includes ACS, PE, and aortic dissection",
+    internal_reasoning="Acute chest pain requires simultaneous exclusion of time-critical causes.",
+    confidence=0.5
 )
 
-# Checkpoint 2: After ECG
-await rc_checkpoint(
+# Decision point 2: After ECG
+await rc_think_aloud(
     session_id="sess_001",
-    checkpoint_type="ECG_INTERPRETATION",
-    findings=[
-        "ST elevation in II, III, aVF",
-        "Reciprocal ST depression in I, aVL"
-    ],
-    updated_impression="Inferior STEMI, likely RCA occlusion"
+    thinking_type="PATTERN_RECOGNIZED",
+    content="Inferior STEMI pattern identified",
+    internal_reasoning="ST elevation in II, III, aVF with reciprocal changes supports inferior STEMI.",
+    confidence=0.85
 )
 
-# Checkpoint 3: After troponin
-await rc_checkpoint(
+# Reflection after key evidence
+await rc_reflect(
     session_id="sess_001",
-    checkpoint_type="BIOMARKER_EVALUATION",
-    findings=[
-        "Troponin I: 2.5 ng/mL (elevated)"
-    ],
-    updated_impression="Confirmed myocardial necrosis, likely acute MI"
+    reflection_content="Acute MI is likely, but competing causes of myocardial injury remain possible.",
+    identified_gaps=["Serial ECG and echocardiography pending"],
+    identified_biases=["Anchoring on the first ECG"]
 )
 ```
 
@@ -298,15 +309,15 @@ Agent reads documents → Agent thinks internally → Agent calls MCP with concl
 ```
 Agent reads documents
     ↓
-Agent calls rc_analyze_evidence_batch (forced to structure analysis)
+Agent calls rc_add_evidence for each source-grounded finding
     ↓
-Agent calls rc_generate_differential_diagnosis (forced to list alternatives)
+Agent calls rc_think_aloud to externalize the decision frame
     ↓
 Agent calls rc_propose_hypothesis (forced to explain reasoning)
     ↓
 Agent calls rc_link_evidence_to_hypothesis (forced to quantify evidence strength)
     ↓
-Agent calls rc_checkpoint at key decision points (forced to pause and reflect)
+Agent records key decision points with rc_think_aloud
     ↓
 Agent calls rc_reflect (forced to identify biases)
     ↓
@@ -350,7 +361,7 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 3. **Quantify uncertainty** — Tell us what makes you unsure
 4. **Explain confidence** — Don't just give a number, explain why
 5. **Acknowledge biases** — We all have them, identify yours
-6. **Use checkpoints** — Pause at key decision points
+6. **Record decision points** — Use `rc_think_aloud` when the ranking changes
 7. **Reflect regularly** — Use rc_reflect to audit your own reasoning
 
 ---
@@ -358,11 +369,11 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 ## 🚀 Getting Started
 
 1. Read the case documents
-2. Call `rc_analyze_evidence_batch` to structure your analysis
-3. Call `rc_generate_differential_diagnosis` to get DDx suggestions
+2. Call `rc_add_evidence` for each traceable finding
+3. Call `rc_think_aloud` to record the explicit decision frame
 4. For each hypothesis, call `rc_propose_hypothesis` with FULL reasoning
 5. Call `rc_link_evidence_to_hypothesis` to perform Bayesian updating
-6. Call `rc_checkpoint` at key decision points
+6. Call `rc_get_differential_diagnosis` to inspect the ranked DDx
 7. Call `rc_reflect` to identify biases
 8. Call `rc_generate_contract_report` to produce final auditable report
 

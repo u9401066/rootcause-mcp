@@ -7,6 +7,33 @@
 
 ## [Unreleased]
 
+### Fixed - Repository Audit (2026-08-09)
+
+- Replaced the obsolete SDK 1.x test/entry path with MCP SDK 2.0 lifecycle tests.
+- Fixed `server_v2` startup to use the real synchronous `Database` API.
+- Replaced prefix routing with an explicit 36-tool dispatch registry.
+- Added structured output envelopes and `output_schema` to all 36 tools.
+- Connected Evidence, Hypothesis, ThinkingChain, and ReasoningChain repositories to
+  the shared `ServerState` aggregate with restart rehydration.
+- Replaced in-memory placeholder repositories with SQLModel persistence.
+- Included real ThinkingChain metrics and content in CONTRACT reports.
+- Constrained generated artifact paths to `ROOTCAUSE_DATA_DIR/exports`.
+- Unified causation verification behind `CausationValidator`; unsupported
+  counterfactual/mechanism claims are no longer marked fully verified.
+- Restored `ClinicalConcept.to_fhir_coding()` and added auditable hypothesis status
+  transitions.
+- Added HFACS-MES 2024 codes while preserving legacy-code readability.
+- Removed the unsupported SDK 1.x `server.py` and the obsolete legacy adapter.
+
+### Quality - Repository Audit (2026-08-09)
+
+- 48 tests pass, including MCP transport workflows and full aggregate restart tests.
+- Branch-aware coverage gate passes at 80%.
+- Ruff passes for `src` and `tests`.
+- Strict mypy passes for 71 source files.
+- Bandit medium/high severity scan passes.
+- Vulture reports no findings at 80% confidence.
+
 ### 🎯 Major Release: v2.0.0-alpha (2026-08-09)
 
 **核心定位轉向**：從「通用 RCA 工具」→「醫學推理專用 MCP Harness」

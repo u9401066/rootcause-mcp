@@ -22,6 +22,9 @@
 | 2026-08-09 | **Evidence Quality Grading** | Oxford CEBM 啟發的 Strength×Reliability 二維品質矩陣 |
 | 2026-08-09 | **DB: JSON array 儲存 ID 關聯** | 不用外鍵 JOIN，SQLite 效能 + 彈性，Evidence↔Cause many-to-many |
 | 2026-08-09 | **🔴 深度審計發現 P0 缺陷** | server_v2 路由對 5 個舊 handlers 呼叫不存在的 `handle()` → 19/36 tools 運行時 AttributeError；Orchestrator 未整合；3 個新 repos 是死代碼。詳見審計報告 |
+| 2026-08-09 | **P0/P1 審計缺陷完成修復** | 36-tool registry、aggregate persistence、真實 ContractReport、保守因果驗證與品質閘門皆已完成 |
+| 2026-08-09 | **不宣稱醫療 production-ready** | 工程品質閘門通過，但 Why Tree persistence 與 deployment security/governance 尚未完成 |
+| 2026-08-09 | **MCP 僅保存外顯推理記錄** | Agent 才是推理主體；ThinkingStep 是 agent-authored rationale，不宣稱擷取模型隱藏 chain-of-thought |
 
 ---
 
