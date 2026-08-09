@@ -24,10 +24,14 @@ from rootcause_mcp.interface.handlers import (
 async def test_complete_clinical_reasoning_workflow():
     """Test complete end-to-end clinical reasoning workflow."""
     
-    # Initialize handlers
+    # Initialize shared state
+    from rootcause_mcp.application.server_state import ServerState
+    server_state = ServerState()
+    
+    # Initialize handlers with shared state
     thinking_handler = ThinkingHandlers()
-    evidence_handler = EvidenceHandlers()
-    dd_handler = DDHandlers()
+    evidence_handler = EvidenceHandlers(server_state)
+    dd_handler = DDHandlers(server_state)
     reasoning_handler = ReasoningHandlers()
     contract_handler = ContractHandlers()
     
@@ -94,8 +98,8 @@ async def test_complete_clinical_reasoning_workflow():
         "rationale": "Hypotension strongly supports cardiogenic shock in post-CABG patient",
     })
     assert link1["status"] == "success"
-    assert link1["posterior_probability"] > link1["prior_probability"]
-    
+    assert link1["posterior_probability"] > 0.3  # Prior was 0.3
+
     # Step 5: Get differential diagnosis
     ddx = await dd_handler.handle("rc_get_differential_diagnosis", {
         "session_id": session_id,

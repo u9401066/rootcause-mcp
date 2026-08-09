@@ -76,6 +76,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Global handler instances (initialized in lifespan)
+_server_state: Any = None  # ServerState
 _thinking_handlers: ThinkingHandlers | None = None
 _evidence_handlers: EvidenceHandlers | None = None
 _dd_handlers: DDHandlers | None = None
@@ -120,7 +121,7 @@ async def lifespan(server: Server):
 
     Initializes all handlers and repositories on startup.
     """
-    global _thinking_handlers, _evidence_handlers, _dd_handlers
+    global _server_state, _thinking_handlers, _evidence_handlers, _dd_handlers
     global _reasoning_handlers, _contract_handlers
     global _hfacs_handlers, _session_handlers, _fishbone_handlers
     global _why_tree_handlers, _verification_handlers, _database
@@ -149,14 +150,18 @@ async def lifespan(server: Server):
     # Initialize application layer
     progress_tracker = SessionProgressTracker()
 
+    # Initialize ServerState (shared across handlers)
+    from rootcause_mcp.application.server_state import ServerState
+    _server_state = ServerState()
+
     # Initialize handlers
-    # NEW in 2.0: Cognitive layer + Medical reasoning handlers
+    # NEW in 2.0: Cognitive layer + Medical reasoning handlers (use ServerState)
     _thinking_handlers = ThinkingHandlers()
-    _evidence_handlers = EvidenceHandlers()
-    _dd_handlers = DDHandlers()
+    _evidence_handlers = EvidenceHandlers(_server_state)
+    _dd_handlers = DDHandlers(_server_state)
     _reasoning_handlers = ReasoningHandlers()
     _contract_handlers = ContractHandlers()
-    
+
     # Existing RCA handlers
     _hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
     _session_handlers = SessionHandlers(session_repo, progress_tracker)

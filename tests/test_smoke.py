@@ -80,14 +80,18 @@ def test_tool_categories():
 
 def test_handlers_instantiable():
     """Test that all new handlers can be instantiated."""
+    from rootcause_mcp.application.server_state import ServerState
+    
     # New handlers (no dependencies)
     thinking = ThinkingHandlers()
     assert thinking is not None
     
-    evidence = EvidenceHandlers()
+    # Handlers with ServerState
+    state = ServerState()
+    evidence = EvidenceHandlers(state)
     assert evidence is not None
     
-    dd = DDHandlers()
+    dd = DDHandlers(state)
     assert dd is not None
     
     reasoning = ReasoningHandlers()
@@ -117,7 +121,8 @@ async def test_thinking_handler_basic():
 @pytest.mark.asyncio
 async def test_evidence_handler_basic():
     """Test basic evidence handler functionality."""
-    handler = EvidenceHandlers()
+    from rootcause_mcp.application.server_state import ServerState
+    handler = EvidenceHandlers(ServerState())
     
     result = await handler.handle("rc_add_evidence", {
         "session_id": "test_session",
@@ -131,7 +136,8 @@ async def test_evidence_handler_basic():
 @pytest.mark.asyncio
 async def test_dd_handler_basic():
     """Test basic DD handler functionality."""
-    handler = DDHandlers()
+    from rootcause_mcp.application.server_state import ServerState
+    handler = DDHandlers(ServerState())
     
     result = await handler.handle("rc_propose_hypothesis", {
         "session_id": "test_session",

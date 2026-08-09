@@ -13,12 +13,16 @@ from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept,
 
 
 class DDHandlers:
-    """Handlers for differential diagnosis tools."""
+    """Handlers for differential diagnosis tools (thin wrapper around Orchestrator)."""
 
-    def __init__(self) -> None:
-        """Initialize DD handlers with in-memory storage."""
-        # session_id → {hypothesis_id → Hypothesis}
-        self._hypothesis_store: dict[str, dict[str, Hypothesis]] = {}
+    def __init__(self, server_state: Any) -> None:
+        """
+        Initialize DD handlers with shared server state.
+
+        Args:
+            server_state: ServerState instance for accessing Orchestrators
+        """
+        self._state = server_state
 
     async def handle(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Route DD tool calls to appropriate methods."""
@@ -34,49 +38,22 @@ class DDHandlers:
             raise ValueError(f"Unknown DD tool: {tool_name}")
 
     async def handle_propose_hypothesis(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_propose_hypothesis tool call."""
+        """Handle rc_propose_hypothesis tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
 
-        # Get or create session hypothesis store
-        if session_id not in self._hypothesis_store:
-            self._hypothesis_store[session_id] = {}
+        # Get or create orchestrator
+        orch = self._state.get_or_create_orchestrator(session_id)
 
-        # Create clinical concept
-        if "icd10_code" in args and args["icd10_code"]:
-            concept = ClinicalConcept(
-                code=args["icd10_code"],
-                display=args["diagnosis"],
-                system=CodingSystem.ICD_10,
-                version=None,
-            )
-        elif "snomed_code" in args and args["snomed_code"]:
-            concept = ClinicalConcept(
-                code=args["snomed_code"],
-                display=args["diagnosis"],
-                system=CodingSystem.SNOMED_CT,
-                version=None,
-            )
-        else:
-            concept = ClinicalConcept(
-                code=f"CUSTOM-{hash(args['diagnosis']) % 100000:05d}",
-                display=args["diagnosis"],
-                system=CodingSystem.CUSTOM,
-                version=None,
-            )
-
-        # Create hypothesis
-        hypothesis = Hypothesis(
-            diagnosis=concept,
+        # Delegate to orchestrator
+        hypothesis = orch.propose_hypothesis(
+            diagnosis=args["diagnosis"],
+            icd10_code=args.get("icd10_code"),
+            snomed_code=args.get("snomed_code"),
             prior_probability=args.get("prior_probability", 0.1),
-            current_probability=args.get("prior_probability", 0.1),
-            inclusion_criteria=args.get("inclusion_criteria", []),
-            exclusion_criteria=args.get("exclusion_criteria", []),
-            created_by="agent",
-            clinical_rationale=args["clinical_reasoning"],
+            rationale=args["clinical_reasoning"],
+            inclusion_criteria=args.get("inclusion_criteria"),
+            exclusion_criteria=args.get("exclusion_criteria"),
         )
-
-        # Store hypothesis
-        self._hypothesis_store[session_id][hypothesis.id.value] = hypothesis
 
         return {
             "status": "success",
@@ -89,55 +66,52 @@ class DDHandlers:
         }
 
     async def handle_link_evidence(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_link_evidence_to_hypothesis tool call."""
+        """Handle rc_link_evidence_to_hypothesis tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
         evidence_id = args["evidence_id"]
         hypothesis_id = args["hypothesis_id"]
         likelihood_ratio = args.get("likelihood_ratio", 1.0)
         supports = args.get("supports", True)
 
-        if session_id not in self._hypothesis_store:
+        orch = self._state.get_orchestrator(session_id)
+        if not orch:
             return {
                 "status": "not_found",
-                "message": f"No hypotheses found for session {session_id}",
+                "message": f"No orchestrator found for session {session_id}",
             }
 
-        hypothesis = self._hypothesis_store[session_id].get(hypothesis_id)
-
-        if not hypothesis:
+        # Delegate to orchestrator (performs Bayesian update)
+        try:
+            updated_hypothesis = orch.link_evidence_to_hypothesis(
+                evidence_id=evidence_id,
+                hypothesis_id=hypothesis_id,
+                likelihood_ratio=likelihood_ratio,
+                supports=supports,
+                rationale=args.get("rationale", ""),
+            )
+        except KeyError as e:
             return {
                 "status": "not_found",
-                "message": f"Hypothesis {hypothesis_id} not found in session {session_id}",
+                "message": str(e),
             }
-
-        # Perform Bayesian update
-        updated_hypothesis = hypothesis.bayesian_update(
-            evidence_id=evidence_id,
-            likelihood_ratio=likelihood_ratio,
-            updated_by="agent",
-            supports=supports,
-        )
-
-        # Update store
-        self._hypothesis_store[session_id][hypothesis_id] = updated_hypothesis
 
         return {
             "status": "success",
             "hypothesis_id": hypothesis_id,
             "diagnosis": updated_hypothesis.diagnosis.display,
-            "prior_probability": hypothesis.current_probability,
             "posterior_probability": updated_hypothesis.current_probability,
             "likelihood_ratio": likelihood_ratio,
             "supports": supports,
         }
 
     async def handle_get_differential_diagnosis(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_get_differential_diagnosis tool call."""
+        """Handle rc_get_differential_diagnosis tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
         status_filter = args.get("status_filter", "ACTIVE")
         min_probability = args.get("min_probability", 0.01)
 
-        if session_id not in self._hypothesis_store:
+        orch = self._state.get_orchestrator(session_id)
+        if not orch:
             return {
                 "status": "success",
                 "session_id": session_id,
@@ -145,18 +119,13 @@ class DDHandlers:
                 "total": 0,
             }
 
-        hypotheses = list(self._hypothesis_store[session_id].values())
-
-        # Filter by status
-        if status_filter:
-            status_enum = HypothesisStatus(status_filter)
-            hypotheses = [h for h in hypotheses if h.status == status_enum]
-
-        # Filter by minimum probability
-        hypotheses = [h for h in hypotheses if h.current_probability >= min_probability]
-
-        # Sort by probability (descending)
-        hypotheses.sort(key=lambda h: h.current_probability, reverse=True)
+        # Delegate to orchestrator
+        from rootcause_mcp.domain.entities.hypothesis import HypothesisStatus
+        status_enum = HypothesisStatus(status_filter) if status_filter else None
+        hypotheses = orch.get_differential_diagnosis(
+            status_filter=status_enum,
+            min_probability=min_probability,
+        )
 
         return {
             "status": "success",
@@ -166,18 +135,18 @@ class DDHandlers:
         }
 
     async def handle_exclude_hypothesis(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_exclude_hypothesis tool call."""
+        """Handle rc_exclude_hypothesis tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
         hypothesis_id = args["hypothesis_id"]
 
-        if session_id not in self._hypothesis_store:
+        orch = self._state.get_orchestrator(session_id)
+        if not orch:
             return {
                 "status": "not_found",
-                "message": f"No hypotheses found for session {session_id}",
+                "message": f"No orchestrator found for session {session_id}",
             }
 
-        hypothesis = self._hypothesis_store[session_id].get(hypothesis_id)
-
+        hypothesis = orch.get_hypothesis(hypothesis_id)
         if not hypothesis:
             return {
                 "status": "not_found",
@@ -189,9 +158,7 @@ class DDHandlers:
             excluded_by=args["excluded_by"],
             reason=args["exclusion_reason"],
         )
-
-        # Update store
-        self._hypothesis_store[session_id][hypothesis_id] = excluded_hypothesis
+        orch.hypothesis_store[hypothesis_id] = excluded_hypothesis
 
         return {
             "status": "success",

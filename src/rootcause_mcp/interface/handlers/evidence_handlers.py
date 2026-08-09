@@ -17,12 +17,16 @@ from rootcause_mcp.domain.value_objects.evidence_quality import (
 
 
 class EvidenceHandlers:
-    """Handlers for evidence management tools."""
+    """Handlers for evidence management tools (thin wrapper around Orchestrator)."""
 
-    def __init__(self) -> None:
-        """Initialize evidence handlers with in-memory storage."""
-        # session_id → {evidence_id → Evidence}
-        self._evidence_store: dict[str, dict[str, Evidence]] = {}
+    def __init__(self, server_state: Any) -> None:
+        """
+        Initialize evidence handlers with shared server state.
+
+        Args:
+            server_state: ServerState instance for accessing Orchestrators
+        """
+        self._state = server_state
 
     async def handle(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Route evidence tool calls to appropriate methods."""
@@ -36,64 +40,45 @@ class EvidenceHandlers:
             raise ValueError(f"Unknown evidence tool: {tool_name}")
 
     async def handle_add_evidence(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_add_evidence tool call."""
+        """Handle rc_add_evidence tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
 
-        # Get or create session evidence store
-        if session_id not in self._evidence_store:
-            self._evidence_store[session_id] = {}
+        # Get or create orchestrator
+        orch = self._state.get_or_create_orchestrator(session_id)
 
-        # Create quality grading
-        quality = EvidenceQuality(
-            strength=EvidenceStrength(args.get("clinical_strength", "MODERATE")),
-            reliability=EvidenceReliability(args.get("source_reliability", "GRADE_B")),
-        )
-
-        # Create source provenance
-        source = EvidenceSource(
-            document_id=args.get("source_document"),
-            location=args.get("source_location"),
-            collected_by=args.get("collected_by", "agent"),
-            source_system=None,
-        )
-
-        # Create evidence
-        evidence = Evidence(
+        # Delegate to orchestrator
+        evidence = orch.add_evidence(
             content=args["content"],
-            evidence_type=EvidenceType(args.get("evidence_type", "DOCUMENT")),
+            evidence_type=args.get("evidence_type", "DOCUMENT"),
+            source_document=args.get("source_document"),
+            source_location=args.get("source_location"),
+            collected_by=args.get("collected_by", "agent"),
+            clinical_strength=args.get("clinical_strength", "MODERATE"),
+            source_reliability=args.get("source_reliability", "GRADE_B"),
             clinical_context=args.get("clinical_context"),
-            quality=quality,
-            source=source,
-            event_timestamp=None,
-            verified=False,
-            verifier=None,
-            verification_timestamp=None,
         )
-
-        # Store evidence
-        self._evidence_store[session_id][evidence.id.value] = evidence
 
         return {
             "status": "success",
             "evidence_id": evidence.id.value,
             "session_id": session_id,
-            "quality_score": quality.overall_score,
-            "total_evidence_in_session": len(self._evidence_store[session_id]),
+            "quality_score": evidence.quality.overall_score,
+            "total_evidence_in_session": len(orch.evidence_store),
         }
 
     async def handle_get_evidence(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_get_evidence tool call."""
+        """Handle rc_get_evidence tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
         evidence_id = args["evidence_id"]
 
-        if session_id not in self._evidence_store:
+        orch = self._state.get_orchestrator(session_id)
+        if not orch:
             return {
                 "status": "not_found",
-                "message": f"No evidence found for session {session_id}",
+                "message": f"No orchestrator found for session {session_id}",
             }
 
-        evidence = self._evidence_store[session_id].get(evidence_id)
-
+        evidence = orch.get_evidence(evidence_id)
         if not evidence:
             return {
                 "status": "not_found",
@@ -106,28 +91,28 @@ class EvidenceHandlers:
         }
 
     async def handle_verify_evidence(self, args: dict[str, Any]) -> dict[str, Any]:
-        """Handle rc_verify_evidence tool call."""
+        """Handle rc_verify_evidence tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
         evidence_id = args["evidence_id"]
         verified_by = args["verified_by"]
 
-        if session_id not in self._evidence_store:
+        orch = self._state.get_orchestrator(session_id)
+        if not orch:
             return {
                 "status": "not_found",
-                "message": f"No evidence found for session {session_id}",
+                "message": f"No orchestrator found for session {session_id}",
             }
 
-        evidence = self._evidence_store[session_id].get(evidence_id)
-
+        evidence = orch.get_evidence(evidence_id)
         if not evidence:
             return {
                 "status": "not_found",
                 "message": f"Evidence {evidence_id} not found in session {session_id}",
             }
 
-        # Mark as verified
+        # Mark as verified (via orchestrator)
         verified_evidence = evidence.mark_verified(verified_by)
-        self._evidence_store[session_id][evidence_id] = verified_evidence
+        orch.evidence_store[evidence_id] = verified_evidence
 
         return {
             "status": "success",
