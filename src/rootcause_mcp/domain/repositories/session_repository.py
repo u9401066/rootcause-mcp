@@ -7,8 +7,8 @@ Abstract repository for RCA Session persistence.
 from abc import ABC, abstractmethod
 
 from rootcause_mcp.domain.entities.session import RCASession
+from rootcause_mcp.domain.value_objects.enums import CaseType, SessionStatus
 from rootcause_mcp.domain.value_objects.identifiers import SessionId
-from rootcause_mcp.domain.value_objects.enums import SessionStatus, CaseType
 
 
 class SessionRepository(ABC):

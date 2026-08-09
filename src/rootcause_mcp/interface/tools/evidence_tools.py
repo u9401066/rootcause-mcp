@@ -6,8 +6,6 @@ Tools for adding, retrieving, and linking evidence in clinical reasoning.
 
 from __future__ import annotations
 
-from typing import Any
-
 from mcp.types import Tool
 
 

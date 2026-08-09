@@ -6,14 +6,14 @@ Following DDD, repositories are defined in the Domain layer
 but implemented in the Infrastructure layer.
 """
 
-from rootcause_mcp.domain.repositories.session_repository import SessionRepository
 from rootcause_mcp.domain.repositories.cause_repository import CauseRepository
 from rootcause_mcp.domain.repositories.fishbone_repository import FishboneRepository
+from rootcause_mcp.domain.repositories.session_repository import SessionRepository
 from rootcause_mcp.domain.repositories.why_tree_repository import WhyTreeRepository
 
 __all__ = [
-    "SessionRepository",
     "CauseRepository",
     "FishboneRepository",
+    "SessionRepository",
     "WhyTreeRepository",
 ]

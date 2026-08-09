@@ -11,7 +11,6 @@ from typing import TYPE_CHECKING
 from rootcause_mcp.domain.entities.why_node import WhyChain, WhyNode
 from rootcause_mcp.domain.repositories.why_tree_repository import WhyTreeRepository
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
-from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
 
 if TYPE_CHECKING:
     from rootcause_mcp.infrastructure.persistence.database import Database
@@ -25,7 +24,7 @@ class InMemoryWhyTreeRepository(WhyTreeRepository):
     For production, this could be replaced with SQLite persistence.
     """
 
-    def __init__(self, database: "Database | None" = None) -> None:
+    def __init__(self, database: Database | None = None) -> None:
         """Initialize the repository."""
         self._database = database
         self._chains: dict[str, WhyChain] = {}  # session_id -> WhyChain
@@ -86,9 +85,7 @@ class InMemoryWhyTreeRepository(WhyTreeRepository):
             return True
         return False
 
-    def create_chain(
-        self, session_id: SessionId, initial_problem: str
-    ) -> WhyChain:
+    def create_chain(self, session_id: SessionId, initial_problem: str) -> WhyChain:
         """Create a new WhyChain for a session."""
         chain = WhyChain(
             session_id=session_id,

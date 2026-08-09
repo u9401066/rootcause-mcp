@@ -6,22 +6,22 @@ Implements SessionRepository using SQLModel.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlmodel import Session as DBSession, select
+from sqlmodel import select
 
 from rootcause_mcp.domain.entities.session import RCASession, StageRecord
 from rootcause_mcp.domain.repositories.session_repository import SessionRepository
-from rootcause_mcp.domain.value_objects.identifiers import SessionId
 from rootcause_mcp.domain.value_objects.enums import (
     CaseType,
     SessionStatus,
     Stage,
     StageStatus,
 )
-from rootcause_mcp.infrastructure.persistence.models import SessionModel
+from rootcause_mcp.domain.value_objects.identifiers import SessionId
 from rootcause_mcp.infrastructure.persistence.database import Database
+from rootcause_mcp.infrastructure.persistence.models import SessionModel
 
 
 class SQLiteSessionRepository(SessionRepository):
@@ -52,7 +52,7 @@ class SQLiteSessionRepository(SessionRepository):
                 # Update existing
                 for key, value in model.model_dump().items():
                     setattr(existing, key, value)
-                existing.updated_at = datetime.now(timezone.utc)
+                existing.updated_at = datetime.now(UTC)
             else:
                 # Create new
                 db_session.add(model)
@@ -136,8 +136,12 @@ class SQLiteSessionRepository(SessionRepository):
             stage_data[stage.value] = {
                 "status": record.status.value,
                 "data": record.data,
-                "started_at": record.started_at.isoformat() if record.started_at else None,
-                "completed_at": record.completed_at.isoformat() if record.completed_at else None,
+                "started_at": record.started_at.isoformat()
+                if record.started_at
+                else None,
+                "completed_at": record.completed_at.isoformat()
+                if record.completed_at
+                else None,
                 "validation_errors": record.validation_errors,
                 "validation_warnings": record.validation_warnings,
             }

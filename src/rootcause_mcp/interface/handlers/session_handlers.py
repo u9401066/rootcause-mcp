@@ -44,7 +44,11 @@ class SessionHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_start_session tool call."""
         if self._repo is None:
-            return [TextContent(type="text", text="Error: SessionRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: SessionRepository not initialized"
+                )
+            ]
 
         case_type_str = arguments["case_type"]
         case_title = arguments["case_title"]
@@ -53,11 +57,13 @@ class SessionHandlers:
         try:
             case_type = CaseType(case_type_str)
         except ValueError:
-            return [TextContent(
-                type="text",
-                text=f"Error: Invalid case_type '{case_type_str}'. "
-                     f"Valid options: {[ct.value for ct in CaseType]}"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Error: Invalid case_type '{case_type_str}'. "
+                    f"Valid options: {[ct.value for ct in CaseType]}",
+                )
+            ]
 
         session = RCASession.create(
             case_type=case_type,
@@ -91,19 +97,27 @@ class SessionHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_get_session tool call."""
         if self._repo is None:
-            return [TextContent(type="text", text="Error: SessionRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: SessionRepository not initialized"
+                )
+            ]
 
         session_id = arguments["session_id"]
         session = self._repo.get_by_id(session_id)
 
         if session is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id}`",
+                )
+            ]
 
         progress = session.get_progress()
-        progress_lines = [f"  - {stage}: {status}" for stage, status in progress.items()]
+        progress_lines = [
+            f"  - {stage}: {status}" for stage, status in progress.items()
+        ]
 
         result = (
             f"# Session: {session.case_title}\n\n"
@@ -126,7 +140,11 @@ class SessionHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_list_sessions tool call."""
         if self._repo is None:
-            return [TextContent(type="text", text="Error: SessionRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: SessionRepository not initialized"
+                )
+            ]
 
         status_str = arguments.get("status")
         case_type_str = arguments.get("case_type")
@@ -142,7 +160,9 @@ class SessionHandlers:
         )
 
         if not sessions:
-            result = "📋 **No Sessions Found**\n\nNo sessions match the specified criteria."
+            result = (
+                "📋 **No Sessions Found**\n\nNo sessions match the specified criteria."
+            )
             if status_str or case_type_str:
                 result += f"\n\nFilters applied: status={status_str}, case_type={case_type_str}"
         else:
@@ -173,16 +193,22 @@ class SessionHandlers:
     ) -> Sequence[TextContent]:
         """Handle rc_archive_session tool call."""
         if self._repo is None:
-            return [TextContent(type="text", text="Error: SessionRepository not initialized")]
+            return [
+                TextContent(
+                    type="text", text="Error: SessionRepository not initialized"
+                )
+            ]
 
         session_id = arguments["session_id"]
         session = self._repo.get_by_id(session_id)
 
         if session is None:
-            return [TextContent(
-                type="text",
-                text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id}`"
-            )]
+            return [
+                TextContent(
+                    type="text",
+                    text=f"❌ **Session Not Found**\n\nNo session with ID: `{session_id}`",
+                )
+            ]
 
         session.archive()
         self._repo.save(session)

@@ -75,15 +75,21 @@ class SessionProgress:
 
         # Fishbone criteria
         if self.fishbone_categories_filled >= 4:
-            criteria.append(f"✅ Fishbone: {self.fishbone_categories_filled}/6 類別已填寫")
+            criteria.append(
+                f"✅ Fishbone: {self.fishbone_categories_filled}/6 類別已填寫"
+            )
         else:
-            criteria.append(f"❌ Fishbone: 至少填寫 4/6 類別 (目前: {self.fishbone_categories_filled})")
+            criteria.append(
+                f"❌ Fishbone: 至少填寫 4/6 類別 (目前: {self.fishbone_categories_filled})"
+            )
 
         # Why Tree criteria
         if self.why_tree_depth >= 3:
             criteria.append(f"✅ Why 分析: 深度 {self.why_tree_depth} (建議 ≥3)")
         else:
-            criteria.append(f"❌ Why 分析: 深度不足 (目前: {self.why_tree_depth}, 建議 ≥3)")
+            criteria.append(
+                f"❌ Why 分析: 深度不足 (目前: {self.why_tree_depth}, 建議 ≥3)"
+            )
 
         # Root cause criteria
         if self.root_causes_identified > 0:
@@ -112,7 +118,7 @@ class SessionProgress:
 class SessionProgressTracker:
     """
     Tracks and manages RCA session progress.
-    
+
     Provides:
     - Progress calculation across all analysis components
     - Completion criteria checking

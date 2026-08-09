@@ -8,12 +8,12 @@ Fishbone categories and HFACS codes.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
-from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.hfacs import HFACSCode, is_valid_hfacs_code
+from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
+from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
 
 
 @dataclass
@@ -47,8 +47,8 @@ class Cause:
     depth: int = 1  # Depth from problem statement (1-5)
 
     # Metadata
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         """Validate cause data."""
@@ -124,7 +124,7 @@ class Cause:
 
     def _touch(self) -> None:
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     # === Factory Methods ===
 
@@ -136,7 +136,7 @@ class Cause:
         category: FishboneCategoryType,
         parent_id: CauseId | None = None,
         depth: int = 1,
-    ) -> "Cause":
+    ) -> Cause:
         """Factory method to create a new Cause."""
         return cls(
             id=CauseId.generate(),

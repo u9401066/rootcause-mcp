@@ -183,7 +183,9 @@ class ReasoningStepId:
         if not self.value:
             raise ValueError("ReasoningStepId cannot be empty")
         if not self.value.startswith("RS-"):
-            raise ValueError(f"ReasoningStepId must start with 'RS-', got: {self.value}")
+            raise ValueError(
+                f"ReasoningStepId must start with 'RS-', got: {self.value}"
+            )
 
     @classmethod
     def generate(cls) -> Self:

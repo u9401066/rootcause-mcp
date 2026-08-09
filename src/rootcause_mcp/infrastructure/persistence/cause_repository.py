@@ -6,17 +6,17 @@ Implements CauseRepository using SQLModel.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
-from sqlmodel import Session as DBSession, select
+from sqlmodel import select
 
 from rootcause_mcp.domain.entities.cause import Cause
 from rootcause_mcp.domain.repositories.cause_repository import CauseRepository
-from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
+from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
-from rootcause_mcp.infrastructure.persistence.models import CauseModel
 from rootcause_mcp.infrastructure.persistence.database import Database
+from rootcause_mcp.infrastructure.persistence.models import CauseModel
 
 
 class SQLiteCauseRepository(CauseRepository):
@@ -44,7 +44,7 @@ class SQLiteCauseRepository(CauseRepository):
             if existing:
                 for key, value in model.model_dump().items():
                     setattr(existing, key, value)
-                existing.updated_at = datetime.now(timezone.utc)
+                existing.updated_at = datetime.now(UTC)
             else:
                 db_session.add(model)
 
@@ -70,9 +70,7 @@ class SQLiteCauseRepository(CauseRepository):
     ) -> list[Cause]:
         """List all causes for a session."""
         with self._db.get_session() as db_session:
-            query = select(CauseModel).where(
-                CauseModel.session_id == str(session_id)
-            )
+            query = select(CauseModel).where(CauseModel.session_id == str(session_id))
 
             if category:
                 query = query.where(CauseModel.category == category.value)
@@ -85,9 +83,7 @@ class SQLiteCauseRepository(CauseRepository):
     def list_by_parent(self, parent_id: CauseId) -> list[Cause]:
         """List all child causes of a parent."""
         with self._db.get_session() as db_session:
-            query = select(CauseModel).where(
-                CauseModel.parent_id == str(parent_id)
-            )
+            query = select(CauseModel).where(CauseModel.parent_id == str(parent_id))
             results = db_session.exec(query).all()
             return [self._to_entity(model) for model in results]
 
@@ -112,9 +108,7 @@ class SQLiteCauseRepository(CauseRepository):
     def delete_by_session(self, session_id: SessionId) -> int:
         """Delete all causes for a session."""
         with self._db.get_session() as db_session:
-            query = select(CauseModel).where(
-                CauseModel.session_id == str(session_id)
-            )
+            query = select(CauseModel).where(CauseModel.session_id == str(session_id))
             results = db_session.exec(query).all()
             count = len(results)
 
@@ -131,9 +125,7 @@ class SQLiteCauseRepository(CauseRepository):
     ) -> int:
         """Count causes for a session."""
         with self._db.get_session() as db_session:
-            query = select(CauseModel).where(
-                CauseModel.session_id == str(session_id)
-            )
+            query = select(CauseModel).where(CauseModel.session_id == str(session_id))
 
             if category:
                 query = query.where(CauseModel.category == category.value)
@@ -151,7 +143,9 @@ class SQLiteCauseRepository(CauseRepository):
             description=entity.description,
             category=entity.category.value,
             hfacs_code=entity.hfacs_code,
-            hfacs_confidence=float(entity.hfacs_confidence) if entity.hfacs_confidence else None,
+            hfacs_confidence=float(entity.hfacs_confidence)
+            if entity.hfacs_confidence
+            else None,
             evidence=entity.evidence,
             verified=entity.verified,
             confidence=float(entity.confidence) if entity.confidence else None,
@@ -169,7 +163,9 @@ class SQLiteCauseRepository(CauseRepository):
             description=model.description,
             category=FishboneCategoryType(model.category),
             hfacs_code=model.hfacs_code,
-            hfacs_confidence=ConfidenceScore(model.hfacs_confidence) if model.hfacs_confidence else None,
+            hfacs_confidence=ConfidenceScore(model.hfacs_confidence)
+            if model.hfacs_confidence
+            else None,
             evidence=model.evidence,
             verified=model.verified,
             confidence=ConfidenceScore(model.confidence) if model.confidence else None,

@@ -102,7 +102,9 @@ class ThinkingStep(BaseModel):
     )
 
     # Confidence & Uncertainty
-    confidence: float = Field(..., ge=0, le=1, description="Confidence in this thinking step")
+    confidence: float = Field(
+        ..., ge=0, le=1, description="Confidence in this thinking step"
+    )
     uncertainty_factors: list[str] = Field(
         default_factory=list, description="Factors contributing to uncertainty"
     )
@@ -120,7 +122,8 @@ class ThinkingStep(BaseModel):
         default_factory=list, description="Assumptions underlying this thinking"
     )
     potential_biases: list[str] = Field(
-        default_factory=list, description="Cognitive biases that might affect this thinking"
+        default_factory=list,
+        description="Cognitive biases that might affect this thinking",
     )
 
     # Structured data (for machine processing)
@@ -138,36 +141,36 @@ class ThinkingStep(BaseModel):
         lines = [
             f"💭 {self.thinking_type.value}",
             f"   {self.content}",
-            f"",
+            "",
             f"   Reasoning: {self.internal_reasoning}",
         ]
 
         if self.alternatives:
-            lines.append(f"")
-            lines.append(f"   Alternatives Considered:")
+            lines.append("")
+            lines.append("   Alternatives Considered:")
             for alt in self.alternatives:
                 lines.append(f"     - {alt.alternative}")
                 lines.append(f"       Rejected because: {alt.reason_rejected}")
 
         if self.uncertainty_factors:
-            lines.append(f"")
-            lines.append(f"   Uncertainty Factors:")
+            lines.append("")
+            lines.append("   Uncertainty Factors:")
             for factor in self.uncertainty_factors:
                 lines.append(f"     - {factor}")
 
         if self.assumptions_made:
-            lines.append(f"")
-            lines.append(f"   Assumptions:")
+            lines.append("")
+            lines.append("   Assumptions:")
             for assumption in self.assumptions_made:
                 lines.append(f"     - {assumption}")
 
         if self.potential_biases:
-            lines.append(f"")
-            lines.append(f"   ⚠️  Potential Biases:")
+            lines.append("")
+            lines.append("   ⚠️  Potential Biases:")
             for bias in self.potential_biases:
                 lines.append(f"     - {bias}")
 
-        lines.append(f"")
+        lines.append("")
         lines.append(f"   Confidence: {self.confidence:.0%}")
 
         return "\n".join(lines)

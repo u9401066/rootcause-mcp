@@ -10,7 +10,7 @@ Builds structured responses that guide the Agent through RCA process:
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, ClassVar
 
 from rootcause_mcp.application.session_progress import SessionProgress
 
@@ -18,12 +18,12 @@ from rootcause_mcp.application.session_progress import SessionProgress
 @dataclass
 class NextAction:
     """Describes the next recommended action."""
-    
+
     required: bool = False
     tool: str = ""
     question: str = ""  # 逼問 - push question to deepen analysis
     hint: str = ""
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary."""
         return {
@@ -34,26 +34,26 @@ class NextAction:
         }
 
 
-@dataclass 
+@dataclass
 class GuidedResponse:
     """Structured response with guidance for the Agent."""
-    
+
     # Original result
     result: dict[str, Any] = field(default_factory=dict)
-    
+
     # Session progress
     session_progress: dict[str, Any] = field(default_factory=dict)
-    
+
     # Current analysis state
     current_state: dict[str, Any] = field(default_factory=dict)
-    
+
     # Next recommended action
     next_action: NextAction = field(default_factory=NextAction)
-    
+
     # Completion status
     is_complete: bool = False
     completion_criteria: list[str] = field(default_factory=list)
-    
+
     def to_dict(self) -> dict[str, Any]:
         """Convert to dictionary for JSON serialization."""
         return {
@@ -69,38 +69,38 @@ class GuidedResponse:
 class GuidedResponseBuilder:
     """
     Builds guided responses that help Agent navigate RCA process.
-    
+
     Key Features:
     - Progress tracking (how far along is the analysis?)
     - State summarization (what do we know so far?)
     - Next action suggestion (what should we do next?)
     - Push questions (逼問 - questions that deepen analysis)
     """
-    
+
     # Tool categories for next action suggestions (rc_* naming)
-    FISHBONE_TOOLS = {
+    FISHBONE_TOOLS: ClassVar[set[str]] = {
         "rc_init_fishbone",
         "rc_add_cause",
         "rc_get_fishbone",
         "rc_export_fishbone",
     }
-    
-    WHY_TREE_TOOLS = {
+
+    WHY_TREE_TOOLS: ClassVar[set[str]] = {
         "rc_ask_why",
         "rc_get_why_tree",
         "rc_mark_root_cause",
         "rc_export_why_tree",
     }
-    
-    VERIFICATION_TOOLS = {
+
+    VERIFICATION_TOOLS: ClassVar[set[str]] = {
         "rc_verify_causation",
     }
-    
+
     # Push questions for each stage (逼問)
-    PUSH_QUESTIONS = {
+    PUSH_QUESTIONS: ClassVar[dict[str, list[str]]] = {
         "fishbone_empty": [
             "這個問題發生時，現場的人員狀況如何？(Man)",
-            "使用的設備、儀器有什麼異常嗎？(Machine)", 
+            "使用的設備、儀器有什麼異常嗎？(Machine)",
             "操作方法或流程有哪些步驟可能出錯？(Method)",
             "使用的材料、藥品有什麼問題嗎？(Material)",
             "測量或監控有什麼遺漏嗎？(Measurement)",
@@ -133,11 +133,11 @@ class GuidedResponseBuilder:
             "證據的強度足夠嗎？",
         ],
     }
-    
+
     def __init__(self) -> None:
         """Initialize builder."""
         pass
-    
+
     def build(
         self,
         result: dict[str, Any],
@@ -146,12 +146,12 @@ class GuidedResponseBuilder:
     ) -> GuidedResponse:
         """
         Build a guided response.
-        
+
         Args:
             result: The original tool result
             progress: Current session progress
             tool_name: The tool that was just called
-            
+
         Returns:
             GuidedResponse with progress and next action
         """
@@ -162,12 +162,12 @@ class GuidedResponseBuilder:
             is_complete=progress.is_complete,
             completion_criteria=progress.completion_criteria,
         )
-        
+
         # Determine next action based on current state
         response.next_action = self._suggest_next_action(progress, tool_name)
-        
+
         return response
-    
+
     def _build_progress_dict(self, progress: SessionProgress) -> dict[str, Any]:
         """Build progress summary dictionary."""
         return {
@@ -177,7 +177,7 @@ class GuidedResponseBuilder:
             "total_expected": 10,  # Approximate total steps
             "completion_rate": f"{progress.completion_rate * 100:.0f}%",
         }
-    
+
     def _build_state_dict(self, progress: SessionProgress) -> dict[str, Any]:
         """Build current state summary dictionary."""
         return {
@@ -199,7 +199,7 @@ class GuidedResponseBuilder:
                 "causes_tagged": progress.causes_with_hfacs,
             },
         }
-    
+
     def _determine_stage(self, progress: SessionProgress) -> str:
         """Determine current analysis stage."""
         if not progress.fishbone_initialized:
@@ -216,11 +216,11 @@ class GuidedResponseBuilder:
             return "VERIFY"
         else:
             return "COMPLETE"
-    
+
     def _count_completed_steps(self, progress: SessionProgress) -> int:
         """Count completed analysis steps."""
         steps = 0
-        
+
         if progress.fishbone_initialized:
             steps += 1
         if progress.fishbone_categories_filled >= 3:
@@ -241,16 +241,16 @@ class GuidedResponseBuilder:
             steps += 1
         if progress.is_complete:
             steps += 1
-        
+
         return steps
-    
+
     def _suggest_next_action(
         self,
         progress: SessionProgress,
-        tool_name: str,
+        _tool_name: str,
     ) -> NextAction:
         """Suggest the next action based on current progress."""
-        
+
         # Stage 1: Fishbone not started
         if not progress.fishbone_initialized:
             return NextAction(
@@ -259,13 +259,15 @@ class GuidedResponseBuilder:
                 question="請先建立分析 Session，並描述要分析的問題是什麼？",
                 hint="使用 rc_start_session 工具開始新的 RCA 分析",
             )
-        
+
         # Stage 2: Fishbone incomplete
         if progress.fishbone_categories_filled < 4:
             # Suggest filling more categories
             unfilled = 6 - progress.fishbone_categories_filled
             push_q = self._get_push_question(
-                "fishbone_empty" if progress.fishbone_categories_filled < 2 else "fishbone_partial"
+                "fishbone_empty"
+                if progress.fishbone_categories_filled < 2
+                else "fishbone_partial"
             )
             return NextAction(
                 required=True,
@@ -273,7 +275,7 @@ class GuidedResponseBuilder:
                 question=push_q,
                 hint=f"還有 {unfilled} 個類別未填寫，建議至少完成 4 個類別",
             )
-        
+
         # Stage 3: Why Tree not started
         if not progress.why_tree_started:
             return NextAction(
@@ -282,7 +284,7 @@ class GuidedResponseBuilder:
                 question="從魚骨圖中最可疑的原因開始，問「為什麼會發生？」",
                 hint="選擇一個原因作為起點，開始 5-Why 分析",
             )
-        
+
         # Stage 4: Why Tree too shallow
         if progress.why_tree_depth < 3:
             push_q = self._get_push_question("why_shallow")
@@ -292,7 +294,7 @@ class GuidedResponseBuilder:
                 question=push_q,
                 hint=f"目前 Why 深度為 {progress.why_tree_depth}，建議追問到至少 3 層",
             )
-        
+
         # Stage 5: No root cause identified
         if progress.root_causes_identified == 0:
             push_q = self._get_push_question("why_deep")
@@ -302,7 +304,7 @@ class GuidedResponseBuilder:
                 question=push_q,
                 hint="如果已找到根本原因，請標記它",
             )
-        
+
         # Stage 6: Root cause not verified
         if progress.root_causes_verified == 0:
             push_q = self._get_push_question("verification_needed")
@@ -312,7 +314,7 @@ class GuidedResponseBuilder:
                 question=push_q,
                 hint="建議驗證因果關係的強度",
             )
-        
+
         # Stage 7: Analysis complete
         return NextAction(
             required=False,
@@ -320,10 +322,11 @@ class GuidedResponseBuilder:
             question="分析已達到基本完成標準，是否需要檢視完整摘要？",
             hint="可以匯出報告或繼續深入分析其他分支",
         )
-    
+
     def _get_push_question(self, category: str) -> str:
         """Get a push question from the category."""
         import random
+
         questions = self.PUSH_QUESTIONS.get(category, ["請繼續分析"])
         return random.choice(questions)
 
@@ -335,28 +338,28 @@ def format_guided_response(
 ) -> str:
     """
     Format a tool response with progress tracking and next action guidance.
-    
+
     This is the main integration function that wraps tool results with:
     - Session progress status
     - Completion criteria checklist
     - Next action suggestions (逼問)
-    
+
     Args:
         original_text: The original tool response text
         progress: Current session progress
         tool_name: The tool that was just called
-        
+
     Returns:
         Enhanced text with progress and guidance
     """
     builder = GuidedResponseBuilder()
     next_action = builder._suggest_next_action(progress, tool_name)
-    
+
     # Build progress bar
     completion_pct = int(progress.completion_rate * 100)
     filled = completion_pct // 10
     bar = "█" * filled + "░" * (10 - filled)
-    
+
     # Build the enhanced response
     sections = [
         original_text,
@@ -366,29 +369,33 @@ def format_guided_response(
         f"## 📊 分析進度 [{bar}] {completion_pct}%",
         "",
     ]
-    
+
     # Add completion criteria
     for criterion in progress.completion_criteria:
         sections.append(f"- {criterion}")
-    
+
     sections.append("")
-    
+
     # Add next action suggestion (逼問)
     if not progress.is_complete:
         required_mark = "⚠️ **必要**" if next_action.required else "💡 建議"
-        sections.extend([
-            f"## 🎯 下一步 {required_mark}",
-            "",
-            f"**工具:** `{next_action.tool}`",
-            f"**逼問:** {next_action.question}",
-            f"**提示:** {next_action.hint}",
-        ])
+        sections.extend(
+            [
+                f"## 🎯 下一步 {required_mark}",
+                "",
+                f"**工具:** `{next_action.tool}`",
+                f"**逼問:** {next_action.question}",
+                f"**提示:** {next_action.hint}",
+            ]
+        )
     else:
-        sections.extend([
-            "## ✅ 分析已完成基本標準",
-            "",
-            "可以使用 `rc_export_fishbone` 或 `rc_export_why_tree` 匯出報告",
-            "或繼續深入分析其他分支",
-        ])
-    
+        sections.extend(
+            [
+                "## ✅ 分析已完成基本標準",
+                "",
+                "可以使用 `rc_export_fishbone` 或 `rc_export_why_tree` 匯出報告",
+                "或繼續深入分析其他分支",
+            ]
+        )
+
     return "\n".join(sections)

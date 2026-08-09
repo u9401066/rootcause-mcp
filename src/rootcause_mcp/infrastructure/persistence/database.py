@@ -9,7 +9,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from sqlmodel import SQLModel, Session, create_engine
+from sqlmodel import Session, SQLModel, create_engine
 
 if TYPE_CHECKING:
     from sqlalchemy import Engine
@@ -43,7 +43,7 @@ class Database:
         self._engine: Engine | None = None
 
     @property
-    def engine(self) -> "Engine":
+    def engine(self) -> Engine:
         """Get or create the database engine."""
         if self._engine is None:
             self._engine = create_engine(

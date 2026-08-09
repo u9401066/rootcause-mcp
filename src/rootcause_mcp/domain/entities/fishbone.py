@@ -7,14 +7,14 @@ Represents the Fishbone (Ishikawa) diagram structure with 6M categories.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
+from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.identifiers import (
+    CauseId,
     FishboneId,
     SessionId,
-    CauseId,
 )
-from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
 
 
@@ -47,8 +47,8 @@ class FishboneCause:
     depth: int = 1
 
     # Metadata
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
 
 @dataclass
@@ -111,8 +111,8 @@ class Fishbone:
     )
 
     # Metadata
-    created_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
     def __post_init__(self) -> None:
         """Initialize all 6M categories."""
@@ -156,19 +156,13 @@ class Fishbone:
     @property
     def populated_categories(self) -> list[FishboneCategoryType]:
         """Get list of categories that have causes."""
-        return [
-            cat_type
-            for cat_type, cat in self.categories.items()
-            if cat.has_causes
-        ]
+        return [cat_type for cat_type, cat in self.categories.items() if cat.has_causes]
 
     @property
     def empty_categories(self) -> list[FishboneCategoryType]:
         """Get list of categories without causes."""
         return [
-            cat_type
-            for cat_type, cat in self.categories.items()
-            if not cat.has_causes
+            cat_type for cat_type, cat in self.categories.items() if not cat.has_causes
         ]
 
     @property
@@ -199,7 +193,7 @@ class Fishbone:
 
     def _touch(self) -> None:
         """Update the updated_at timestamp."""
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
 
     # === Factory Methods ===
 
@@ -208,7 +202,7 @@ class Fishbone:
         cls,
         session_id: SessionId,
         problem_statement: str,
-    ) -> "Fishbone":
+    ) -> Fishbone:
         """Factory method to create a new Fishbone diagram."""
         return cls(
             id=FishboneId.generate(),

@@ -5,38 +5,35 @@ This layer handles:
 - Tool definitions (schemas)
 - Tool handlers (request processing)
 
-Note: server.py is now at rootcause_mcp.server (not in interface/)
+The production MCP SDK 2.0 entry point is ``rootcause_mcp.server_v2``.
 """
 
-from rootcause_mcp.interface.tools import (
-    get_hfacs_tools,
-    get_session_tools,
-    get_fishbone_tools,
-    get_why_tree_tools,
-    get_verification_tools,
-    get_all_tools,
-)
-
 from rootcause_mcp.interface.handlers import (
+    FishboneHandlers,
     HFACSHandlers,
     SessionHandlers,
-    FishboneHandlers,
-    WhyTreeHandlers,
     VerificationHandlers,
+    WhyTreeHandlers,
+)
+from rootcause_mcp.interface.tools import (
+    get_all_tools,
+    get_fishbone_tools,
+    get_hfacs_tools,
+    get_session_tools,
+    get_verification_tools,
+    get_why_tree_tools,
 )
 
 __all__ = [
-    # Tools
-    "get_hfacs_tools",
-    "get_session_tools",
-    "get_fishbone_tools",
-    "get_why_tree_tools",
-    "get_verification_tools",
-    "get_all_tools",
-    # Handlers
+    "FishboneHandlers",
     "HFACSHandlers",
     "SessionHandlers",
-    "FishboneHandlers",
-    "WhyTreeHandlers",
     "VerificationHandlers",
+    "WhyTreeHandlers",
+    "get_all_tools",
+    "get_fishbone_tools",
+    "get_hfacs_tools",
+    "get_session_tools",
+    "get_verification_tools",
+    "get_why_tree_tools",
 ]

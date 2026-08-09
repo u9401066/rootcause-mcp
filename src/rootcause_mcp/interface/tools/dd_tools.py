@@ -190,7 +190,12 @@ def get_dd_tools() -> list[Tool]:
                         "description": "Who excluded this hypothesis",
                     },
                 },
-                "required": ["session_id", "hypothesis_id", "exclusion_reason", "excluded_by"],
+                "required": [
+                    "session_id",
+                    "hypothesis_id",
+                    "exclusion_reason",
+                    "excluded_by",
+                ],
             },
         ),
     ]

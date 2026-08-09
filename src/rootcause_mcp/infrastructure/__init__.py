@@ -9,14 +9,14 @@ This layer provides implementations for:
 
 from rootcause_mcp.infrastructure.persistence import (
     Database,
-    SQLiteSessionRepository,
     SQLiteCauseRepository,
     SQLiteFishboneRepository,
+    SQLiteSessionRepository,
 )
 
 __all__ = [
     "Database",
-    "SQLiteSessionRepository",
     "SQLiteCauseRepository",
     "SQLiteFishboneRepository",
+    "SQLiteSessionRepository",
 ]

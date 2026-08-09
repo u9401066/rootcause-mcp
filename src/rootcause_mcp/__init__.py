@@ -14,8 +14,8 @@ from rootcause_mcp.domain.services import (
 )
 
 __all__ = [
-    "__version__",
     "CausationValidator",
     "HFACSSuggester",
     "LearnedRulesService",
+    "__version__",
 ]

@@ -6,10 +6,10 @@ Implements FishboneRepository using SQLModel.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 
-from sqlmodel import Session as DBSession, select
+from sqlmodel import select
 
 from rootcause_mcp.domain.entities.fishbone import (
     Fishbone,
@@ -17,15 +17,15 @@ from rootcause_mcp.domain.entities.fishbone import (
     FishboneCause,
 )
 from rootcause_mcp.domain.repositories.fishbone_repository import FishboneRepository
+from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.identifiers import (
+    CauseId,
     FishboneId,
     SessionId,
-    CauseId,
 )
-from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
-from rootcause_mcp.infrastructure.persistence.models import FishboneModel
 from rootcause_mcp.infrastructure.persistence.database import Database
+from rootcause_mcp.infrastructure.persistence.models import FishboneModel
 
 
 class SQLiteFishboneRepository(FishboneRepository):
@@ -53,7 +53,7 @@ class SQLiteFishboneRepository(FishboneRepository):
             if existing:
                 for key, value in model.model_dump().items():
                     setattr(existing, key, value)
-                existing.updated_at = datetime.now(timezone.utc)
+                existing.updated_at = datetime.now(UTC)
             else:
                 db_session.add(model)
 
@@ -110,17 +110,23 @@ class SQLiteFishboneRepository(FishboneRepository):
         for cat_type, category in entity.categories.items():
             causes_list: list[dict[str, Any]] = []
             for cause in category.causes:
-                causes_list.append({
-                    "cause_id": str(cause.cause_id),
-                    "description": cause.description,
-                    "sub_causes": cause.sub_causes,
-                    "hfacs_code": cause.hfacs_code,
-                    "hfacs_confidence": float(cause.hfacs_confidence) if cause.hfacs_confidence else None,
-                    "evidence": cause.evidence,
-                    "confidence": float(cause.confidence) if cause.confidence else None,
-                    "verified": cause.verified,
-                    "depth": cause.depth,
-                })
+                causes_list.append(
+                    {
+                        "cause_id": str(cause.cause_id),
+                        "description": cause.description,
+                        "sub_causes": cause.sub_causes,
+                        "hfacs_code": cause.hfacs_code,
+                        "hfacs_confidence": float(cause.hfacs_confidence)
+                        if cause.hfacs_confidence
+                        else None,
+                        "evidence": cause.evidence,
+                        "confidence": float(cause.confidence)
+                        if cause.confidence
+                        else None,
+                        "verified": cause.verified,
+                        "depth": cause.depth,
+                    }
+                )
             categories_data[cat_type.value] = causes_list
 
         return FishboneModel(

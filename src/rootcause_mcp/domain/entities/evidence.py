@@ -50,7 +50,9 @@ class EvidenceSource(BaseModel):
         None,
         description="Specific location within document (e.g., 'Line 42', 'Page 3, Para 2')",
     )
-    collected_by: str = Field(..., description="Person/system that collected this evidence")
+    collected_by: str = Field(
+        ..., description="Person/system that collected this evidence"
+    )
     collection_timestamp: datetime = Field(
         default_factory=lambda: datetime.now(UTC),
         description="When evidence was collected (UTC)",
@@ -116,11 +118,15 @@ class Evidence(BaseModel):
     )
 
     # Metadata
-    verified: bool = Field(False, description="Has this evidence been independently verified?")
+    verified: bool = Field(
+        False, description="Has this evidence been independently verified?"
+    )
     verifier: str | None = Field(None, description="Who verified this evidence")
     verification_timestamp: datetime | None = Field(None)
 
-    tags: list[str] = Field(default_factory=list, description="Custom tags for categorization")
+    tags: list[str] = Field(
+        default_factory=list, description="Custom tags for categorization"
+    )
 
     @field_validator("content")
     @classmethod
@@ -160,10 +166,9 @@ class Evidence(BaseModel):
             if hypothesis_id not in self.supports_hypothesis_ids:
                 updated_ids = [*self.supports_hypothesis_ids, hypothesis_id]
                 return self.model_copy(update={"supports_hypothesis_ids": updated_ids})
-        else:
-            if hypothesis_id not in self.contradicts_hypothesis_ids:
-                updated_ids = [*self.contradicts_hypothesis_ids, hypothesis_id]
-                return self.model_copy(update={"contradicts_hypothesis_ids": updated_ids})
+        elif hypothesis_id not in self.contradicts_hypothesis_ids:
+            updated_ids = [*self.contradicts_hypothesis_ids, hypothesis_id]
+            return self.model_copy(update={"contradicts_hypothesis_ids": updated_ids})
         return self
 
     def mark_verified(self, verifier: str) -> Self:

@@ -52,10 +52,14 @@ class ReasoningStep(BaseModel):
     """
 
     # Identity
-    id: ReasoningStepId = Field(default_factory=lambda: ReasoningStepId(f"RS-{uuid4().hex[:8]}"))
+    id: ReasoningStepId = Field(
+        default_factory=lambda: ReasoningStepId(f"RS-{uuid4().hex[:8]}")
+    )
 
     # Temporal ordering
-    sequence_number: int = Field(..., ge=1, description="Order in reasoning chain (1-based)")
+    sequence_number: int = Field(
+        ..., ge=1, description="Order in reasoning chain (1-based)"
+    )
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Content
@@ -76,7 +80,9 @@ class ReasoningStep(BaseModel):
 
     # Actor
     agent_id: str = Field(..., description="ID of the AI agent performing reasoning")
-    agent_model: str | None = Field(None, description="Model version (e.g., 'claude-sonnet-4.5')")
+    agent_model: str | None = Field(
+        None, description="Model version (e.g., 'claude-sonnet-4.5')"
+    )
 
     # Metadata
     confidence: float | None = Field(
@@ -220,7 +226,9 @@ class ReasoningChain(BaseModel):
             "total_steps": len(self.steps),
             "unique_hypotheses": len(all_hypotheses),
             "unique_evidence": len(all_evidence),
-            "avg_confidence": sum(confidences) / len(confidences) if confidences else None,
+            "avg_confidence": sum(confidences) / len(confidences)
+            if confidences
+            else None,
             "hypothesis_coverage": steps_with_hypotheses / len(self.steps),
             "evidence_coverage": steps_with_evidence / len(self.steps),
             "duration_seconds": self.get_reasoning_duration_seconds(),

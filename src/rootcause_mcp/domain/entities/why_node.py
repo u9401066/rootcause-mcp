@@ -333,9 +333,7 @@ class WhyChain:
         discovered: dict[tuple[str, ...], FeedbackLoop] = {}
 
         def canonicalize(cycle: list[str]) -> tuple[str, ...]:
-            rotations = [
-                tuple(cycle[idx:] + cycle[:idx]) for idx in range(len(cycle))
-            ]
+            rotations = [tuple(cycle[idx:] + cycle[:idx]) for idx in range(len(cycle))]
             reverse = list(reversed(cycle))
             rotations.extend(
                 tuple(reverse[idx:] + reverse[:idx]) for idx in range(len(reverse))
@@ -374,9 +372,9 @@ class WhyChain:
         if not self.nodes:
             raise ValueError("Cannot build teaching case from an empty WhyChain")
 
-        proximate_nodes = [
-            node for node in self.nodes if node.level == 1
-        ] or [self.nodes[0]]
+        proximate_nodes = [node for node in self.nodes if node.level == 1] or [
+            self.nodes[0]
+        ]
         root_nodes = self.root_causes or [
             node for node in self.nodes if node.level == self.depth
         ]
@@ -401,8 +399,7 @@ class WhyChain:
         learning_objectives = (
             f"{learner_focus}個案中的近端原因, 系統根因與中間機制.",
             (
-                f"{learner_focus}造成事件惡化的回饋迴圈: "
-                f"{feedback_loops[0].summary}."
+                f"{learner_focus}造成事件惡化的回饋迴圈: {feedback_loops[0].summary}."
                 if feedback_loops
                 else f"{learner_focus}哪些節點可能形成尚未明說的雙向因果循環."
             ),
@@ -431,9 +428,7 @@ class WhyChain:
         ) or (first_root,)
         common_pitfalls = (
             f"只停留在表象原因: {first_proximate}",
-            *(
-                f"忽略回饋迴圈: {loop.summary}" for loop in feedback_loops[:2]
-            ),
+            *(f"忽略回饋迴圈: {loop.summary}" for loop in feedback_loops[:2]),
             "沒有把根因轉譯成可觀察的臨床徵象, 決策點與復盤問題.",
         )
 

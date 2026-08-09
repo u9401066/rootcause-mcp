@@ -7,8 +7,8 @@ Abstract repository for Cause persistence.
 from abc import ABC, abstractmethod
 
 from rootcause_mcp.domain.entities.cause import Cause
-from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
+from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 
 
 class CauseRepository(ABC):

@@ -105,9 +105,25 @@ select = [
     "RUF",    # Ruff-specific
 ]
 ignore = [
+    "E501",     # Ruff formatter does not wrap long strings/docstrings
     "PLR0913",  # Too many arguments (RCA tools need many params)
     "PLR2004",  # Magic value comparison
+    "PLC0415",  # Local imports intentionally avoid circular/optional dependencies
+    "RUF001",   # Traditional Chinese punctuation is intentional
+    "RUF002",   # Traditional Chinese punctuation in docstrings is intentional
+    "RUF003",   # Traditional Chinese punctuation in comments is intentional
+    "TC001",    # Runtime imports are retained for Pydantic/dataclass evaluation
+    "TC003",    # Runtime standard-library types are retained for readability
 ]
+
+[tool.ruff.lint.per-file-ignores]
+"src/rootcause_mcp/application/guided_response.py" = ["PLR0911"]
+"src/rootcause_mcp/domain/services/causation_validator.py" = ["PLR0912"]
+"src/rootcause_mcp/domain/services/hfacs_suggester.py" = ["PLR0912", "PLR0915"]
+"src/rootcause_mcp/domain/value_objects/hfacs.py" = ["ERA001"]
+"src/rootcause_mcp/infrastructure/persistence/database.py" = ["PLW0603"]
+"src/rootcause_mcp/interface/handlers/why_tree_handlers.py" = ["PLR0912", "PLR0915"]
+"tests/**/*.py" = ["ERA001"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["rootcause_mcp"]
@@ -167,3 +183,9 @@ exclude_lines = [
 [tool.bandit]
 exclude_dirs = ["tests"]
 skips = ["B101"]  # assert used in tests
+
+[dependency-groups]
+dev = [
+    "types-pyyaml>=6.0.12.20260724",
+    "vulture>=2.16",
+]
