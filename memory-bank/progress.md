@@ -11,18 +11,23 @@
 - 實作 Evidence Entity (first-class, 含 provenance tracking)
 - 實作 Hypothesis Entity (Bayesian DDx, LR updating)
 - 新增 EvidenceId, HypothesisId, ReasoningStepId 強型別 ID
+- 實作 ReasoningStep Entity (Chain of Thought)
+- 建立 docs/research/existing_solutions.md 研究文件
+- 建立 server_v2.py (SDK 2.0 callback API)
+- Merge feat/sdk-2-contract-level-dd → master
+- 實作 ClinicalReasoningOrchestrator (Agent-friendly API)
+- 新增 10 個 MCP Tools (Evidence/DD/Reasoning/CONTRACT)
+- 修復 SDK 2.0 inputSchema → input_schema 參數名
 
 ## Doing
 
-- 重新定位：從通用 RCA 工具 → 醫學推理專用 Harness
-- 設計 Agent-friendly API（簡化複雜度，隱藏醫學專業細節）
-- 準備更新 README 加入 Mermaid/SVG 架構圖
+- 實作 CONTRACT Report Generator
+- 更新 README.zh-TW.md（對齊英文版）
+- 修復測試（test_mcp_tools.py 遷移到 server_v2）
 
 ## Next
 
-- 實作 ReasoningStep entity (Chain of Thought)
-- 遷移現有 19 個 MCP tools 到 SDK 2.0
-- 設計新的 8 個 Evidence/DD/Reasoning tools
-- 建立 Application Layer Orchestrator (Agent-friendly)
-- 實作 CONTRACT-level report generator
+- 實作 ContractReport value object
 - 整合 FHIR resources (選配)
+- 建立完整的 end-to-end 測試
+- 發布 v2.0.0-alpha release
