@@ -14,7 +14,7 @@ def get_dd_tools() -> list[Tool]:
     return [
         Tool(
             name="rc_propose_hypothesis",
-            description="Propose a differential diagnosis hypothesis with Bayesian prior",
+            description="Propose a differential diagnosis hypothesis with Bayesian prior. REQUIRES detailed clinical reasoning to ensure transparency.",
             input_schema={
                 "type": "object",
                 "properties": {
@@ -41,9 +41,44 @@ def get_dd_tools() -> list[Tool]:
                         "description": "Prior probability P(H) before evidence (0-1)",
                         "default": 0.1,
                     },
-                    "rationale": {
+                    "clinical_reasoning": {
                         "type": "string",
-                        "description": "Why this hypothesis is being considered",
+                        "description": "REQUIRED: Detailed clinical reasoning for why this diagnosis is being considered (e.g., 'Patient has chest pain + elevated troponin + ECG changes')",
+                    },
+                    "differential_diagnoses_considered": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "diagnosis": {"type": "string"},
+                                "reason_rejected": {"type": "string"},
+                                "likelihood_if_not_rejected": {
+                                    "type": "string",
+                                    "enum": ["high", "moderate", "low"],
+                                },
+                            },
+                            "required": ["diagnosis", "reason_rejected"],
+                        },
+                        "description": "REQUIRED: Other diagnoses considered but rejected, with reasons",
+                    },
+                    "evidence_supporting": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "REQUIRED: Evidence IDs supporting this hypothesis",
+                    },
+                    "evidence_contradicting": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Evidence IDs that contradict this hypothesis (if any)",
+                    },
+                    "uncertainty_factors": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "REQUIRED: Factors contributing to diagnostic uncertainty (e.g., 'Troponin trend pending')",
+                    },
+                    "confidence_rationale": {
+                        "type": "string",
+                        "description": "REQUIRED: Explanation of why you assigned this prior probability",
                     },
                     "inclusion_criteria": {
                         "type": "array",
@@ -53,10 +88,18 @@ def get_dd_tools() -> list[Tool]:
                     "exclusion_criteria": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Criteria that rule out this diagnosis",
+                        "description": "Criteria that would rule out this diagnosis",
                     },
                 },
-                "required": ["session_id", "diagnosis"],
+                "required": [
+                    "session_id",
+                    "diagnosis",
+                    "clinical_reasoning",
+                    "differential_diagnoses_considered",
+                    "evidence_supporting",
+                    "uncertainty_factors",
+                    "confidence_rationale",
+                ],
             },
         ),
         Tool(
