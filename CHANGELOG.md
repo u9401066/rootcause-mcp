@@ -11,6 +11,21 @@
 
 **核心定位轉向**：從「通用 RCA 工具」→「醫學推理專用 MCP Harness」
 
+#### Added - Application Layer (2026-08-09)
+- **ClinicalReasoningOrchestrator** 🆕
+  - Agent-friendly API hiding medical complexity
+  - Automatic Bayesian updating with likelihood ratios
+  - Evidence quality auto-grading (Oxford CEBM)
+  - Complete reasoning chain tracking
+  - Summary statistics and quality metrics
+
+#### Added - MCP Tools (2026-08-09)
+- **10 New MCP Tools** for medical reasoning:
+  - Evidence Management (3): `rc_add_evidence`, `rc_get_evidence`, `rc_verify_evidence`
+  - Differential Diagnosis (4): `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`, `rc_get_differential_diagnosis`, `rc_exclude_hypothesis`
+  - Reasoning Chain (2): `rc_get_reasoning_chain`, `rc_export_reasoning_chain`
+  - CONTRACT Report (1): `rc_generate_contract_report`
+
 #### Added - Core Architecture
 - **MCP SDK 2.0 遷移** - 完全重寫，不相容 1.x
   - Typed input/output with Pydantic BaseModel
