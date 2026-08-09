@@ -12,8 +12,152 @@
 | 2026-01-15 | 多框架支援 (HFACS-MES, Fishbone, WHO ICPS) | 讓 Agent 根據場景選擇適合框架 |
 | 2026-01-15 | YAML-based Keyword Rules System | 規則可維護、可學習、可擴展 |
 | 2026-01-15 | **「推論式」RCA 取代「填表式」** | 避免流於形式，引導真正根因探索 |
-| 2026-01-15 | Counterfactual Testing Framework | 因果驗證 4 準則：時序、必要性、機轉、充分性 |
+| 2026-01-15 | Counterfactual Testing Framework | 因果驗證 4 準則:時序、必要性、機轉、充分性 |
+| 2026-01-16 | **重新定位專案價值主張** | AI能秒答≠不需要工具。重點是將AI洞察轉化為可稽核、可協作、可累積的組織智慧 |
+| 2026-08-09 | **MCP SDK 1.x → 2.0 升級** | 不考慮 1.x 相容；typed BaseModel input/output；McpError 統一錯誤處理 |
+| 2026-08-09 | **Evidence as First-Class Entity** | `list[str]` 改為結構化 Evidence（來源、品質、雙向連結），法律稽核需求 |
+| 2026-08-09 | **Differential Diagnosis Tree** | 新增 Hypothesis entity + Bayesian LR 更新機制，取代 0/1 確認 |
+| 2026-08-09 | **Chain of Thought Persistence** | ReasoningStep entity 持久化，提供完整推理 audit trail |
+| 2026-08-09 | **CONTRACT-level Report** | 不可變的 ContractReport（finalized 後禁止修改），符合 FHIR-like 標準 |
+| 2026-08-09 | **Evidence Quality Grading** | Oxford CEBM 啟發的 Strength×Reliability 二維品質矩陣 |
+| 2026-08-09 | **DB: JSON array 儲存 ID 關聯** | 不用外鍵 JOIN，SQLite 效能 + 彈性，Evidence↔Cause many-to-many |
 
+---
+
+## [2026-08-09] Contract-Level DD 架構設計
+
+### 背景
+
+現有 Evidence 機制為自由文字串列（`list[str]`），無來源追蹤、無品質評估、無雙向連結。
+MCP SDK 將從 1.x 升至 2.0，需要同步進行架構升級。
+
+### 新增核心 Domain 物件
+
+| Entity/VO | 類型 | 職責 |
+|-----------|------|------|
+| `Evidence` | Entity | 結構化證據（來源、品質、連結） |
+| `Hypothesis` | Entity | DD 假說（Bayesian 機率、inclusion/exclusion criteria） |
+| `ReasoningStep` | Entity | 推理鏈步驟（chain of thought 持久化） |
+| `EvidenceQuality` | Value Object | Strength × Reliability 品質矩陣 |
+| `ClinicalConcept` | Value Object | SNOMED/ICD-10 概念封裝 |
+| `ContractReport` | Value Object | 不可變 CONTRACT 報告 |
+
+### SDK 2.0 遷移策略
+
+1. 所有 tool input 換成 typed `BaseModel`（SDK 2.0 原生支援）
+2. 所有 tool output 換成 typed `BaseModel`（CONTRACT enforcement）
+3. `raise ValueError` → `raise McpError(INVALID_PARAMS, msg)`
+4. 新增 8 個 Evidence/DD/Reasoning tools（總計 27 tools）
+5. 舊 `Cause.evidence: list[str]` 保留但 deprecate，漸進遷移
+
+### 遷移分支策略
+
+- 分支：`feat/sdk-2-contract-level-dd`
+- Phase 1-2（環境+Tool遷移）：Day 1-4
+- Phase 3-5（新Domain層）：Day 3-8
+- Phase 6-8（新Tools+測試+文件）：Day 7-13
+
+---
+
+## [2026-01-16] 專案價值主張重新定位
+
+### 問題背景
+
+使用者質疑：**「AI agent已經能瞬間推理出根本原因，那這個RCA工具還有什麼價值？」**
+
+這是一個核心存在性問題。如果AI（如Claude Sonnet 4.5）可以在30秒內找出根因，為何還需要結構化工具？
+
+### 初始回應的盲點
+
+原本的價值主張聚焦在「AI輔助分析」，但這暗示了：
+- AI 本身不夠好，需要輔助
+- 工具主要是提升AI能力
+
+這是**錯誤的**。現代LLM的推理能力已經超越許多人類專家。
+
+### 關鍵洞察
+
+使用者的挫折感揭示了真相：
+
+> "人類專家都要想一下的都被秒解答，這樣RCA淪為AI的文書作業"
+
+**問題不在於「找到答案」，而在於「如何防禦答案」。**
+
+### 重新定位
+
+| 舊定位 | 新定位 |
+|--------|--------|
+| AI-guided structured RCA | Transform AI insights into auditable organizational intelligence |
+| 提升AI分析能力 | 讓AI洞察變得可稽核、可協作、可累積 |
+| 輔助找根因 | 建立可防禦30年的證據鏈 |
+
+### 核心價值重構
+
+RootCause MCP 的真正價值在於：
+
+1. **🔒 法律盔甲 (Legal Armor)**
+   - AI說「這是根因」→ 法庭不認可
+   - 結構化報告+方法論證明 → 符合標準
+
+2. **👥 協作基板 (Collaboration Substrate)**
+   - 個人AI對話 → 各說各話
+   - 共享Fishbone → 多科別共識
+
+3. **📚 知識圖譜 (Knowledge Graph)**
+   - AI對話結束 → 知識消失
+   - learned_rules.yaml → 組織記憶
+
+4. **🎓 教育框架 (Educational Scaffold)**
+   - AI給答案 → 左耳進右耳出
+   - 引導式5-Why → 批判性思考內化
+
+5. **🧪 驗證層 (Verification Layer)**
+   - AI推理 → 黑盒
+   - Counterfactual testing → 可檢驗
+
+### 類比說明
+
+| 領域 | AI能力 | 但仍需工具 |
+|------|--------|-----------|
+| 法律 | Claude可寫法律意見書 | 但要用Case Management System |
+| 會計 | Claude可做財務分析 | 但要用QuickBooks產生正式報表 |
+| **RCA** | **Claude可找根本原因** | **但要用Fishbone產生稽核報告** |
+
+### 新的Slogan
+
+```
+"AI can find the answer in 30 seconds. 
+ We help you defend it for 30 years."
+```
+
+### README重寫策略
+
+將README重構為三部分：
+
+1. **Why This Matters** (前置)
+   - 直接回答「AI都能秒答了為何還需要工具」
+   - 對比表：AI推理 vs RCA工具
+   - 真實情境：法庭、M&M會議、組織學習
+
+2. **What We Do** (功能)
+   - 5大價值主張
+   - 技術特性
+
+3. **When to Use** (適用情境)
+   - ❌ 不適用：個人學習、非監管環境
+   - ✅ 適用：稽核、團隊、訴訟、教學
+
+### 影響
+
+- README.md 完全重寫
+- README.zh-TW.md 同步更新
+- 未來溝通都以「可防禦性」為核心訴求
+
+### 結論
+
+**這個專案的價值不在於「找到答案」，而在於「證明答案」。**
+
+AI是推理引擎，RCA工具是證據鏈建構器。兩者互補，缺一不可。
 ---
 
 ## [2026-01-15] 漸進式輸入設計
@@ -429,3 +573,8 @@ Why Tree 使用 **InMemory 儲存**（而非 SQLite），因為：
 - ✅ 教育意義，提升分析品質
 - ✅ 區分「相關」與「因果」
 
+| 2026-08-09 | 核心定位轉向：從「通用 RCA 工具」→「醫學推理專用 MCP Harness」 | 1. **獨特性**：市場上沒有同時整合 DDx + RCA 的工具
+2. **核心價值**：讓任意通用 AI Agent 都能執行專業級醫學推理分析
+3. **技術路線**：MCP Server + Harness = 醫學推理「賦能層」，不是另一個診斷引擎
+4. **設計原則**：Agent-friendly API（隱藏 Bayesian/FHIR/HFACS 複雜度）
+5. **參考架構**：MEDDxAgent (DDxDriver) + ClinClaw (Harness pattern) + fastmcp (SDK 2.0) |
