@@ -57,3 +57,13 @@ CONSTITUTION.md (最高原則)
 
 ---
 *Last updated: 2025-12-15*
+
+## 認知層 MCP (Cognitive Layer MCP)
+
+透過 ThinkingStep entity 和 5 個 thinking tools (rc_think_aloud, rc_reflect, rc_identify_gaps, rc_challenge_assumption, rc_get_thinking_chain) 記錄 Agent 的思考過程，不只是結果。強制 Agent 暴露「為什麼」而非僅「是什麼」。核心設計：rc_propose_hypothesis 有 7 個 required fields（clinical_reasoning, differential_diagnoses_considered, uncertainty_factors, confidence_rationale），Agent 不填就無法呼叫。
+
+### Examples
+
+- rc_propose_hypothesis 強制填寫 7 個思考欄位
+- ThinkingStep 記錄 alternatives_considered（被拒絕的選項）
+- rc_reflect 讓 Agent 識別自己的認知偏差

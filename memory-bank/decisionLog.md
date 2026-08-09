@@ -603,3 +603,31 @@ server = Server(
 ```
 
 影響範圍：server.py 完全重寫，所有 19 個現有 tools 需遷移。 |
+| 2026-08-09 | 深度推理追蹤架構：從「薄 MCP」到「認知層 MCP」 | 問題：目前 MCP 只記錄結果，不記錄 Agent 的複雜思考過程
+
+解決方案：建立「認知層 MCP」，透過以下機制捕捉 Agent 內部推理：
+
+1. **Structured Thinking Protocol**
+   - Agent 必須用特定格式輸出思考過程
+   - 每個思考步驟都對應一個 MCP tool call
+   - 例如：rc_think_aloud(thought_type, content, alternatives_considered)
+
+2. **Hypothesis Space Exploration Tracking**
+   - 記錄 Agent 考慮過哪些 hypotheses
+   - 記錄為什麼排除某些 hypotheses
+   - 記錄 decision points（關鍵決策點）
+
+3. **Evidence Weighting Transparency**
+   - 記錄 Agent 如何評估每個 evidence 的重要性
+   - 記錄 conflicting evidence 如何被處理
+   - 記錄 uncertainty quantification
+
+4. **Meta-Cognitive Layer**
+   - rc_reflect() - Agent 反思自己的推理
+   - rc_identify_gaps() - Agent 主動發現知識缺口
+   - rc_challenge_assumption() - Agent 質疑自己的假設
+
+5. **Human-Readable Translation Layer**
+   - 將 Agent 的 token-level 推理轉譯為醫學框架
+   - 例如：Agent 的 attention weights → Bayesian LR
+   - Agent 的 token probabilities → confidence scores |

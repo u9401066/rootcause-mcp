@@ -91,3 +91,38 @@ bandit>=1.7
 
 ---
 *Last updated: 2026-01-15*
+
+## Project Description
+
+RootCause MCP v2.0.0-alpha: 醫學推理專用 MCP Harness，讓任意通用 AI Agent 都能執行專業級醫學推理分析與鑑別診斷。核心創新是「認知層 MCP」，透過 ThinkingStep 記錄 Agent 的思考過程，不只是結果。36 個 MCP tools 涵蓋：認知層(5)、Evidence(3)、DDx(4)、Reasoning(2)、CONTRACT(1)、HFACS(6)、Session(4)、Fishbone(4)、WhyTree(6)、Verification(1)。完整實作包含 Domain/Application/Infrastructure/Interface 四層 DDD 架構。
+
+
+
+## Architecture
+
+DDD 四層架構：Domain (Entities: Evidence, Hypothesis, ReasoningStep, ThinkingStep; VOs: EvidenceQuality, ClinicalConcept, ContractReport) → Application (ClinicalReasoningOrchestrator) → Infrastructure (SQLite Repositories) → Interface (36 MCP Tools, 10 Handlers)
+
+
+
+## Technologies
+
+- Python 3.12+
+- MCP SDK 2.0
+- Pydantic v2
+- SQLModel
+- SQLite
+- NetworkX
+- pytest
+- uv
+
+
+
+## Libraries and Dependencies
+
+- mcp>=2.0.0
+- pydantic>=2.0
+- sqlmodel>=0.0.22
+- aiosqlite>=0.20.0
+- networkx>=3.0
+- structlog>=24.0
+
