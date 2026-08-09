@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rootcause-mcp"
-version = "0.1.0"
+version = "2.0.0a1"
 description = "Clinical Root Cause Analysis MCP Server - 臨床根因分析工具"
 readme = "README.md"
 license = "MIT"
@@ -22,8 +22,8 @@ classifiers = [
 ]
 
 dependencies = [
-    # MCP Framework
-    "mcp[cli]>=1.10.1",
+    # MCP Framework (SDK 2.0 - no 1.x compatibility)
+    "mcp[cli]>=2.0.0",
     # Data & Validation
     "pydantic>=2.0",
     "pydantic-settings>=2.0",
