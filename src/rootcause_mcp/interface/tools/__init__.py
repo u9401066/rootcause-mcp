@@ -24,13 +24,16 @@ from rootcause_mcp.interface.tools.fishbone_tools import get_fishbone_tools
 from rootcause_mcp.interface.tools.hfacs_tools import get_hfacs_tools
 from rootcause_mcp.interface.tools.reasoning_tools import get_reasoning_tools
 from rootcause_mcp.interface.tools.session_tools import get_session_tools
+from rootcause_mcp.interface.tools.thinking_tools import get_thinking_tools
 from rootcause_mcp.interface.tools.verification_tools import get_verification_tools
 from rootcause_mcp.interface.tools.why_tree_tools import get_why_tree_tools
 
 
 def get_all_tools() -> list[Tool]:
-    """Get all 29 MCP tool definitions."""
+    """Get all 36 MCP tool definitions."""
     tools = []
+    # NEW in 2.0: Cognitive Layer (Deep Reasoning)
+    tools.extend(get_thinking_tools())      # 5 tools - rc_think_aloud, rc_reflect, etc.
     # NEW in 2.0: Medical Reasoning Tools
     tools.extend(get_evidence_tools())      # 3 tools
     tools.extend(get_dd_tools())            # 4 tools
@@ -40,12 +43,13 @@ def get_all_tools() -> list[Tool]:
     tools.extend(get_hfacs_tools())         # 5 tools
     tools.extend(get_session_tools())       # 4 tools
     tools.extend(get_fishbone_tools())      # 4 tools
-    tools.extend(get_why_tree_tools())      # 4 tools (actually 6 in why_tree_tools.py)
+    tools.extend(get_why_tree_tools())      # 6 tools
     tools.extend(get_verification_tools())  # 1 tool
     return tools
 
 
 __all__ = [
+    "get_thinking_tools",
     "get_evidence_tools",
     "get_dd_tools",
     "get_reasoning_tools",

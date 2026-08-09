@@ -26,9 +26,14 @@ from mcp.types import (
 
 # Tool definitions
 from rootcause_mcp.interface.tools import (
+    get_contract_tools,
+    get_dd_tools,
+    get_evidence_tools,
     get_fishbone_tools,
     get_hfacs_tools,
+    get_reasoning_tools,
     get_session_tools,
+    get_thinking_tools,
     get_verification_tools,
     get_why_tree_tools,
 )
@@ -156,6 +161,14 @@ async def on_list_tools(
         ListToolsResult with all tool definitions
     """
     tools: list[Tool] = []
+    # NEW in 2.0: Cognitive Layer
+    tools.extend(get_thinking_tools())
+    # NEW in 2.0: Medical Reasoning
+    tools.extend(get_evidence_tools())
+    tools.extend(get_dd_tools())
+    tools.extend(get_reasoning_tools())
+    tools.extend(get_contract_tools())
+    # Existing RCA Tools
     tools.extend(get_hfacs_tools())
     tools.extend(get_session_tools())
     tools.extend(get_fishbone_tools())
