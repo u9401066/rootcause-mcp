@@ -85,6 +85,17 @@ Inspired by data integration and ETL lineage architectures (such as Airbyte's st
 - **Tamper & Hallucination Prevention**: If an agent hallucinates a quote or references a non-existent file, the server marks the evidence as unverified and generates audit diagnostics.
 - **Clean Architecture Boundary**: RootCause MCP focuses strictly on medical reasoning and provenance verification; it does not duplicate document parsing or OCR chunking (the role of Asset-Aware MCP).
 
+## Customizable Protocols, Templates & 4-Tier Anesthesia M&M Reasoning
+
+To ensure clinical reproducibility and allow departments to update guidelines without modifying code:
+
+- **Configurable SOP & Domain Playbooks (`config/protocols/`, `config/domains/`)**:
+  - `anesthesia_mm_rca_protocol.yaml`: 4-Tier backward causal framework (Tier 0 Terminal Rhythm → Tier 1 ACLS 5H5T → Tier 2 Tri-stream Triggers [Patient baseline vs Surgical insult vs Anesthesia pharmacology] → Tier 3 HFACS Latent System Gaps).
+  - `perioperative_shock.yaml` & `toxicology_sedation.yaml`: Domain criteria for Dynamic LVOT Obstruction (SAM) and Propofol Infusion Syndrome (PRIS).
+- **Customizable Markdown Templates (`config/templates/`)**:
+  - `anesthesia_mm_rca_report_template.md`: Specialized departmental M&M conference review format with deterministic slot filling.
+  - `clinical_reasoning_report_template.md`: General clinical reasoning and patient safety action report.
+
 ## Architecture
 
 ```mermaid
@@ -138,7 +149,40 @@ rehydrated after process restart. Authentication, encryption-at-rest, tenant
 isolation, database migrations, and regulated deployment controls must be supplied
 by the deployment environment before clinical production use.
 
-## Quick Start
+## Quick Start & Automated Installation
+
+### 🚀 One-Click Automated Setup
+
+You can automatically detect `uv`, synchronize virtual environments, configure client MCP harnesses (`.vscode/mcp.json`, Claude Desktop, Cline), and run self-diagnostic checks with a single command:
+
+**Windows PowerShell:**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
+```
+
+**Linux / macOS / WSL:**
+
+```bash
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+```
+
+**Universal Python CLI:**
+
+```powershell
+uv run python scripts/install.py --profile all --target all
+```
+
+### 🔬 Clinical Case Reasoning Trial Run
+
+Execute end-to-end multi-loop diagnostic trials across realistic multi-file cases (`dynamic_lvot_obstruction_sam` and `pris_status_epilepticus`):
+
+```powershell
+uv run python scripts/run_case_trial.py --case all
+```
+
+### 🛠️ Manual Installation & Server Launch
 
 ```powershell
 # Install the locked environment

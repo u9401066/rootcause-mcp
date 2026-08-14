@@ -77,6 +77,17 @@ RootCause MCP 透過**確定性推理狀態機 (Reasoning State Machine)** 來�
 - **防竄改與防幻覺**：若 Agent 捏造不存在的引文或指向不存在的文件，伺服器立即標記為未驗證並產出診斷報告。
 - **清晰架構邊界**：RootCause MCP 專注於醫學推理與血緣約束，不重疊 Asset-Aware MCP 的多模態 OCR、表格分割與 PDF 排版工作。
 
+## 臨床可自訂範本、推論 SOP 與麻醉專科 4-Tier 倒推因果
+
+為保證臨床可重現性並允許科部在不修改代碼的前提下更新指引：
+
+- **可編輯 SOP 與次專科手冊 (`config/protocols/`, `config/domains/`)**：
+  - `anesthesia_mm_rca_protocol.yaml`：麻醉專科 4-Tier 倒推因果架構（Tier 0 終末心律 → Tier 1 ACLS 5H5T → Tier 2 術中三方觸發流 [病人初始狀況 vs 外科處置干擾 vs 麻醉用藥通氣] → Tier 3 系統潛在漏洞）。
+  - `perioperative_shock.yaml` 與 `toxicology_sedation.yaml`：針對動態 LVOT 阻塞 (SAM) 與 Propofol 輸注症候群 (PRIS) 的專科鑑別標準。
+- **純文字可覆寫 Markdown 報告範本 (`config/templates/`)**：
+  - `anesthesia_mm_rca_report_template.md`：麻醉部 M&M 併發症與死亡病例討會專用結構化報告。
+  - `clinical_reasoning_report_template.md`：通用臨床決策輔助與病安行動計畫報告。
+
 ## 架構
 
 ```mermaid
@@ -129,7 +140,40 @@ SDK 2.0 Server 會將醫學推理 Aggregate 寫入 SQLite：
 Authentication、靜態加密、多租戶隔離、資料庫 migration 與法規部署控制，仍須由部署
 環境補齊，才能用於臨床 production。
 
-## 快速開始
+## 快速開始與自動化安裝
+
+### 🚀 一鍵快速自動安裝
+
+你可以透過一鍵腳本自動偵測 `uv`、同步虛擬環境、註冊客戶端 MCP harness 設定（`.vscode/mcp.json`、Claude Desktop、Cline），並自動執行自檢診斷：
+
+**Windows PowerShell：**
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/setup.ps1
+```
+
+**Linux / macOS / WSL：**
+
+```bash
+chmod +x scripts/setup.sh
+./scripts/setup.sh
+```
+
+**通用 Python CLI 安裝器：**
+
+```powershell
+uv run python scripts/install.py --profile all --target all
+```
+
+### 🔬 臨床真實案例推理試跑 (Trial Run)
+
+對包含多個非結構化原始數據檔的臨床案例（`dynamic_lvot_obstruction_sam` 與 `pris_status_epilepticus`）進行端到端多迴圈推理試跑：
+
+```powershell
+uv run python scripts/run_case_trial.py --case all
+```
+
+### 🛠️ 手動安裝與啟動
 
 ```powershell
 # 安裝 lockfile 定義的環境

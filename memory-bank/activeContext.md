@@ -4,50 +4,32 @@
 
 ## Current Focus
 
-Hard-coded provenance verification and multi-loop clinical guidance engine are complete.
+Automated 1-click installation suite, multi-case clinical trial benchmark, resilient agent alias normalization, and strict 92-file typing verification are complete.
 
-Verified provenance and guidance outcomes:
+Verified Trial Run & Benchmark Outcomes:
 
-- `ProvenanceVerifier` scans raw physical files (TXT, CSV, HL7, XML) for verbatim snippets, line indexing, and SHA-256 cryptographic digests without LLM calls.
-- `ClinicalGuidanceService` drives multi-loop reasoning state machine for lightweight (Flash/mini) models with stage progression, readiness checklists, missing prerequisites, next prompt directives, and Socratic push questions.
-- `rc_audit_reasoning_state` MCP tool added (bringing total tools to 37: 17 clinical, 21 RCA, 37 all).
-- Tool profiles frozen per server lifespan; compact text responses include `stage`, `completeness`, and `next_prompt`.
-- Automated completeness checks in Markdown reports catch premature closure (<3 differential hypotheses) and unverified evidence.
-
-Verified token-efficiency outcomes:
-
-- Clinical/RCA/all profiles are frozen per server lifespan and constrain list/dispatch.
-- Clinical schema context: 40,557 -> 20,937 UTF-8 bytes (48.4% reduction).
-- Synthetic 50-record duplicate text: 51,743 -> 174 bytes (99.7% reduction).
-- Compact text points unsupported hosts to `ROOTCAUSE_RESPONSE_MODE=verbose`.
-- Brief/standard/full Markdown reports use zero server-side LLM tokens.
-- Reports automate DD ranking, evidence matrix, cognitive safety, structural checks,
-  quality metrics, reasoning audit, and Evidence Graph generation.
-
-Generated-artifact and visualization audit remains complete.
-
-Verified state:
-
-- 37 total MCP tools with exact dispatch; profiles expose 17 clinical, 21 RCA, or all
-- Shared `ServerState` plus `ClinicalReasoningOrchestrator` case aggregate
-- SQLite persistence and restart rehydration for Evidence, Hypothesis,
-  ThinkingChain, and ReasoningChain
-- CONTRACT reports populated from real aggregate data
-- Conservative causation validation through one Domain Service
-- HFACS-MES 2024 codes accepted while legacy codes remain readable
-- SDK 1.x entry point removed; `rootcause_mcp.server_v2:main` is the sole entry
-- Safe exports under `ROOTCAUSE_DATA_DIR/exports`
+- `scripts/run_case_trial.py` executes end-to-end multi-loop diagnostic trials across 2 god-level multi-file clinical cases:
+  1. `dynamic_lvot_obstruction_sam`: Intraoperative shock worsening with Epinephrine across 5 raw files (TXT, CSV, XML). 100% provenance verification, top hypothesis P=1.000.
+  2. `pris_status_epilepticus`: Propofol Infusion Syndrome misdiagnosed as sepsis/pancreatitis across 5 raw files. 100% provenance verification, top hypothesis P=1.000.
+- `scripts/setup.ps1` (Windows PowerShell), `scripts/setup.sh` (Linux/macOS), and `scripts/install.py` (Universal Python CLI) configure:
+  - `.vscode/mcp.json` (VS Code MCP Client)
+  - `claude_desktop_config.json` (Claude Desktop)
+  - `cline_mcp_settings.json` (Cline)
+  - Self-check tests and automated trial validation in a single command.
+- Resilient clinical alias normalization for `EvidenceStrength` (`PATHOGNOMONIC`, `CRITICAL`, `HIGH`, `STRONG`), `EvidenceReliability` (`GRADE_A`, `PRIMARY`, `DIRECT`), and `EvidenceType` (`LAB`, `IMAGING`, `DEVICE_LOG`, `MEDICATION`).
+- Flexible agent parameters in `rc_propose_hypothesis` (`rationale` / `clinical_reasoning`) and `rc_link_evidence_to_hypothesis` (`direction` / `weight` / `likelihood_ratio`).
 
 ## Quality Baseline
 
 | Gate | Result |
 | --- | --- |
 | Tests | 66 passed |
-| Coverage | 81.56% branch-aware |
-| Ruff | Passed for `src` and `tests` |
-| Mypy | Strict mode passed for 79 source files |
+| Coverage | 81.33% branch-aware |
+| Ruff | Passed for `src`, `tests`, `scripts` |
+| Mypy | Strict mode passed for all 92 source files |
 | Bandit | Medium/high severity scan passed |
 | Vulture | No findings at 80% confidence |
+| Trials | Both SAM and PRIS cases passed (0.016s combined) |
 
 ## Deployment Status
 

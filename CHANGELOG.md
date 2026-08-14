@@ -7,6 +7,29 @@
 
 ## [Unreleased]
 
+### Added - Automated Installer & Clinical Trial Harness (2026-08-14)
+
+- Added cross-platform automated setup scripts:
+  - `scripts/setup.ps1` (PowerShell for Windows)
+  - `scripts/setup.sh` (Bash for Linux / macOS / WSL)
+  - `scripts/install.py` (Universal Python CLI configurator)
+- Added automatic registration across client hosts: VS Code (`.vscode/mcp.json`),
+  Claude Desktop (`claude_desktop_config.json`), and Cline (`cline_mcp_settings.json`).
+- Added end-to-end clinical trial runner `scripts/run_case_trial.py` supporting
+  realistic multi-file benchmark cases (`dynamic_lvot_obstruction_sam` and
+  `pris_status_epilepticus`) with 100% physical provenance verification.
+- Added resilient alias normalization for `EvidenceStrength` (`PATHOGNOMONIC`, `CRITICAL`,
+  `HIGH`, `STRONG`), `EvidenceReliability` (`GRADE_A`, `PRIMARY`, `DIRECT`),
+  and `EvidenceType` (`LAB`, `IMAGING`, `DEVICE_LOG`, `MEDICATION`).
+- Enhanced `rc_propose_hypothesis` and `rc_link_evidence_to_hypothesis` to support
+  flexible agent rationale and direction/weight parameter aliases.
+- Added customizable Markdown report templates (`config/templates/anesthesia_mm_rca_report_template.md`
+  and `config/templates/clinical_reasoning_report_template.md`) with deterministic slot-filling
+  via `template_file` parameter in `rc_generate_contract_report`.
+- Added 4-Tier Anesthesiology backward causal protocol (`config/protocols/anesthesia_mm_rca_protocol.yaml`)
+  and subspecialty playbooks (`config/domains/anesthesia_perioperative_arrest.yaml`,
+  `perioperative_shock.yaml`, `toxicology_sedation.yaml`, `pediatric_opioid.yaml`).
+
 ### Added - Hard-Coded Provenance & Multi-Loop Guidance (2026-08-14)
 
 - Added `ProvenanceVerifier` domain service for deterministic, zero-hallucination

@@ -30,6 +30,8 @@
 | 2026-08-09 | **Token efficiency 是核心產品契約** | 使用 tool profiles、compact structured transport、persisted state 與 deterministic report automation，避免 Agent 重複載入/重算/重寫；不宣稱省去 raw 病歷閱讀與臨床判斷 |
 | 2026-08-14 | **硬性證據溯源 (Hard-Coded Provenance)** | 借鑑 ETL/Airbyte lineage 架構，Evidence 必須綁定 raw_snippet 與 SHA-256 密碼學摘要，由 ProvenanceVerifier 直接比對磁碟實體文件，實現零幻覺硬性溯源；明確不重疊 Asset-Aware 的 PDF OCR/表格分割角色 |
 | 2026-08-14 | **Flash 模型多輪導引狀態機** | 輕量模型易提早收斂與漏項；ClinicalGuidanceService 在每次工具回傳中注入 stage、checklist、missing prerequisites 與 next prompt，引導 Flash 模型在多輪對話中循序完成完整臨床思考鏈 |
+| 2026-08-14 | **臨床可自訂範本與 Playbook 體系** | 解耦確定性資料聚合引擎與純文字臨床規格；支援自訂 Markdown 報告範本 (`config/templates/`)、5 階段推論 SOP (`config/protocols/`) 與次專科臨床手冊 (`config/domains/`)，實現高可重現性與免寫代碼維護 |
+| 2026-08-14 | **麻醉專科 4-Tier 倒推因果框架** | 針對術中死亡/重症案例，禁止停留在終末停跳表面，強制執行 4-Tier 逆推：Tier 0 (終末心律) → Tier 1 (ACLS 5H5T) → Tier 2 (術中三方觸發流：病人體質 vs 外科機械 vs 麻醉藥理) → Tier 3 (HFACS 系統漏洞) |
 
 ---
 

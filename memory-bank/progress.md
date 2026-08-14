@@ -34,6 +34,10 @@
 - 實作 `ProvenanceVerifier` 領域服務（raw snippet 逐字引文、行號比對、SHA-256 密碼學錨定）
 - 實作 `ClinicalGuidanceService` 狀態機（階段推進、完備度清單、下一步 Prompt 指令、蘇格拉底式詰問）
 - 新增 `rc_audit_reasoning_state` MCP 工具（總計 37 tools）
+- 實作跨平台一鍵自動安裝與註冊腳本 (`scripts/setup.ps1`, `scripts/setup.sh`, `scripts/install.py`)
+- 實作真實案例端到端臨床試跑器 `scripts/run_case_trial.py` (包含 SAM 與 PRIS 雙 god-level 案例，100% 原始文件驗證)
+- 強化臨床參數別名容錯 (`EvidenceStrength`, `EvidenceReliability`, `EvidenceType`, `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`)
+- 通過 92 個檔案的嚴格 mypy 型別檢查與 66 項單元/整合測試 (81.33% 覆蓋率)
 
 ## Doing
 
