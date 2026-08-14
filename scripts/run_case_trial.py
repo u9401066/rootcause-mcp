@@ -711,6 +711,650 @@ async def run_pris_case() -> dict[str, Any]:
 
 
 # ============================================================================
+# Case 3: Massive Transfusion Hyperkalemia Arrest (Trauma ICU)
+# ============================================================================
+
+
+async def _run_trauma_evidence(
+    evidence_handlers: EvidenceHandlers,
+    session_id: str,
+    results: dict[str, Any],
+) -> list[str]:
+    fixtures = [
+        {
+            "content": "Trauma MTP activated with 6 PRBC and 4 FFP rapid infuser resuscitation for Grade IV liver laceration",
+            "source_doc": "examples/trauma_hyperkalemia_arrest/DATA_SOURCE_01_TRAUMA_LOG.txt",
+            "snippet": "Massive Transfusion Protocol (MTP) ACTIVATED.",
+            "strength": "STRONG",
+            "reliability": "GRADE_A",
+        },
+        {
+            "content": "ICU flowsheet documents Hanging Unit #7 PRBC (older stock, exp 2 days) with decreasing BP and widening QRS",
+            "source_doc": "examples/trauma_hyperkalemia_arrest/DATA_SOURCE_02_ICU_FLOWSHEET.csv",
+            "snippet": '"01:45","90/50","110","Sinus Tach","14","99%","AC/VC","MTP Cooler #2 arrived from blood bank. Hanging Unit #7 PRBC (older stock, exp 2 days)."',
+            "strength": "STRONG",
+            "reliability": "GRADE_A",
+        },
+        {
+            "content": "LIS database scheduled downtime delayed reporting of STAT potassium lab specimen held in queue",
+            "source_doc": "examples/trauma_hyperkalemia_arrest/DATA_SOURCE_03_LIS_MAINTENANCE.txt",
+            "snippet": "Sample ID [T-24-505-004] (Trauma ICU): Received at Central Lab 02:05. Status: HELD_IN_QUEUE.",
+            "strength": "STRONG",
+            "reliability": "GRADE_B",
+        },
+        {
+            "content": "ICU monitor audit log shows ignored HI_T_WAVE alarm and ARRHYTHMIA_V_EVENT prior to asystole",
+            "source_doc": "examples/trauma_hyperkalemia_arrest/DATA_SOURCE_04_ALARM_AUDIT.xml",
+            "snippet": '<Event Time="02:12:30" Type="ALARM_PHYS" Msg="HI_T_WAVE" Action="IGNORED" User="--"/>',
+            "strength": "PATHOGNOMONIC",
+            "reliability": "GRADE_A",
+        },
+        {
+            "content": "Autopsy confirms non-exsanguination with vitreous potassium > 8.5 mmol/L and dilated flaccid heart",
+            "source_doc": "examples/trauma_hyperkalemia_arrest/DATA_SOURCE_05_AUTOPSY.txt",
+            "snippet": "4. BIOCHEMISTRY (Vitreous Humor analysis post-mortem): **Potassium > 8.5 mmol/L**.",
+            "strength": "PATHOGNOMONIC",
+            "reliability": "GRADE_A",
+        },
+    ]
+
+    ev_ids: list[str] = []
+    for idx, ef in enumerate(fixtures, 1):
+        res = await evidence_handlers.handle(
+            "rc_add_evidence",
+            {
+                "session_id": session_id,
+                "content": ef["content"],
+                "source_document": ef["source_doc"],
+                "raw_snippet": ef["snippet"],
+                "clinical_strength": ef["strength"],
+                "source_reliability": ef["reliability"],
+                "auto_verify": True,
+            },
+        )
+        ev_ids.append(res["evidence_id"])
+        status_icon = "✅" if res["verified"] else "❌"
+        print(
+            f" -> Ev#{idx} [{status_icon} {res['verification_method']}] "
+            f"Doc: {Path(ef['source_doc']).name} Lines: {res['matched_lines']}"
+        )
+        if not res["verified"]:
+            results["warnings"].append(
+                f"Evidence #{idx} failed verification: {ef['source_doc']}"
+            )
+    return ev_ids
+
+
+async def _run_trauma_hypotheses(
+    dd_handlers: DDHandlers, session_id: str
+) -> dict[str, str]:
+    h_hyperk = await dd_handlers.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Severe Hyperkalemic Cardiac Arrest (5H: H4_Hyperkalemia)",
+            "prior_probability": 0.20,
+            "rationale": "Older stock MTP blood transfusion + acute oliguric renal failure + ignored peaked T-wave and sine wave arrest",
+            "icd10_code": "E87.5",
+        },
+    )
+    h_hypovol = await dd_handlers.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Recurrent Exsanguinating Hemorrhagic Shock (5H: H1_Hypovolemia)",
+            "prior_probability": 0.50,
+            "rationale": "High-velocity trauma with grade IV liver laceration and progressive widening hypotension",
+            "icd10_code": "R57.1",
+        },
+    )
+    h_pneumo = await dd_handlers.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Tension Pneumothorax (5T: T1_Tension_Pneumothorax)",
+            "prior_probability": 0.30,
+            "rationale": "Chest trauma with chest tube and progressive hypotension under positive pressure ventilation",
+            "icd10_code": "J93.0",
+        },
+    )
+    return {
+        "hyperk": h_hyperk["hypothesis_id"],
+        "hypovol": h_hypovol["hypothesis_id"],
+        "pneumo": h_pneumo["hypothesis_id"],
+    }
+
+
+async def _run_trauma_bayesian(
+    dd_handlers: DDHandlers,
+    session_id: str,
+    h_ids: dict[str, str],
+    ev_ids: list[str],
+) -> None:
+    # Rule out Hypovolemia & Tension Pneumothorax
+    await dd_handlers.handle(
+        "rc_link_evidence_to_hypothesis",
+        {
+            "session_id": session_id,
+            "hypothesis_id": h_ids["hypovol"],
+            "evidence_id": ev_ids[4],  # Autopsy intact liver, minimal blood
+            "direction": "REFUTES",
+            "weight": 0.95,
+            "reasoning": "Autopsy confirmed liver packing intact with only 200ml blood, ruling out exsanguination",
+        },
+    )
+    await dd_handlers.handle(
+        "rc_link_evidence_to_hypothesis",
+        {
+            "session_id": session_id,
+            "hypothesis_id": h_ids["pneumo"],
+            "evidence_id": ev_ids[4],  # Resuscitation needle decompression neg
+            "direction": "REFUTES",
+            "weight": 0.90,
+            "reasoning": "Needle decompression during arrest showed negative rush of air",
+        },
+    )
+    # Confirm Hyperkalemia
+    for ev_idx, wt, reason in [
+        (
+            0,
+            0.75,
+            "Massive transfusion protocol (6+ units PRBC) delivers massive potassium load",
+        ),
+        (1, 0.88, "Older stock PRBC Unit #7 has high extracellular potassium efflux"),
+        (2, 0.80, "LIS downtime blocked early warning of critical hyperkalemia"),
+        (
+            3,
+            0.95,
+            "Ignored HI_T_WAVE and widening QRS represents pathognomonic potassium cardiac toxicity",
+        ),
+        (
+            4,
+            0.99,
+            "Post-mortem vitreous biochemistry confirmed lethal potassium > 8.5 mmol/L",
+        ),
+    ]:
+        await dd_handlers.handle(
+            "rc_link_evidence_to_hypothesis",
+            {
+                "session_id": session_id,
+                "hypothesis_id": h_ids["hyperk"],
+                "evidence_id": ev_ids[ev_idx],
+                "direction": "SUPPORTS",
+                "weight": wt,
+                "reasoning": reason,
+            },
+        )
+
+
+async def _run_trauma_cognitive(
+    thinking_handlers: ThinkingHandlers, session_id: str
+) -> None:
+    await thinking_handlers.handle(
+        "rc_reflect",
+        {
+            "session_id": session_id,
+            "reflection_content": "Clinical team anchored on trauma hemorrhagic shock and ordered more fluids/FFP instead of calcium/insulin",
+            "identified_biases": [
+                "ANCHORING: Presuming shock was recurrent liver hemorrhage",
+                "ALARM_FATIGUE: Dismissing monitor peaked T-wave alarm as technical artifact/shivering",
+            ],
+            "identified_gaps": [
+                "Scheduled LIS system maintenance created 2-hour communication blackout for critical lab alerts",
+            ],
+        },
+    )
+    await thinking_handlers.handle(
+        "rc_challenge_assumption",
+        {
+            "session_id": session_id,
+            "assumption": "Rapidly infusing more blood and FFP is the primary treatment for widening QRS in post-trauma shock",
+            "challenge_reasoning": "In massive transfusion with oliguria, hyperkalemic cardiotoxicity causes widening QRS; continuing blood without calcium/dialysis is fatal",
+            "potential_impact": "FATAL asystolic cardiac arrest",
+            "alternative_explanations": [
+                "Give IV Calcium Gluconate/Chloride, Insulin+D50, and prepare STAT emergency hemodialysis/CRRT"
+            ],
+        },
+    )
+    await thinking_handlers.handle(
+        "rc_identify_gaps",
+        {
+            "session_id": session_id,
+            "gap_description": "Blood gas electrolyte (potassium/calcium) monitoring during MTP resuscitation",
+            "gap_type": "PROCESS_GAP",
+            "impact_on_diagnosis": "CRITICAL: Point-of-Care ABG should bypass LIS downtime during active MTP",
+            "suggested_actions": [
+                "Implement bedside POC ABG protocol every 4 units of blood in trauma ICU"
+            ],
+        },
+    )
+
+
+async def run_trauma_case() -> dict[str, Any]:
+    """Execute complete Trauma MTP Hyperkalemia case simulation."""
+    start_time = time.perf_counter()
+    results: dict[str, Any] = {
+        "case": "trauma_hyperkalemia_arrest",
+        "steps": [],
+        "errors": [],
+        "warnings": [],
+    }
+    print("\n" + "=" * 75)
+    print("🚀 [Case 3] Massive Transfusion Hyperkalemic Cardiac Arrest (Trauma ICU)")
+    print("=" * 75)
+
+    server_state = ServerState()
+    evidence_handlers = EvidenceHandlers(server_state)
+    dd_handlers = DDHandlers(server_state)
+    thinking_handlers = ThinkingHandlers(server_state)
+    contract_handlers = ContractHandlers(server_state)
+
+    session_id = "trial_trauma_case_003"
+    orch = await server_state.get_or_create_orchestrator(session_id)
+    g1 = orch.get_guidance()
+    results["steps"].append({"step": "init", "stage": g1.current_stage.value})
+
+    # Step 2: Evidence
+    print("\n[Step 2] Grounding Evidence against 5 Raw Data Files...")
+    ev_ids = await _run_trauma_evidence(evidence_handlers, session_id, results)
+    g2 = orch.get_guidance()
+    results["steps"].append(
+        {"step": "evidence", "stage": g2.current_stage.value, "verified": 5}
+    )
+
+    # Step 3: Hypotheses
+    print("\n[Step 3] Proposing Differential Hypotheses (Broad Differential)...")
+    h_ids = await _run_trauma_hypotheses(dd_handlers, session_id)
+    g3 = orch.get_guidance()
+    results["steps"].append(
+        {
+            "step": "hypotheses",
+            "stage": g3.current_stage.value,
+            "count": len(orch.hypothesis_store),
+        }
+    )
+
+    # Step 4: Bayesian
+    print("\n[Step 4] Applying Bayesian Updates & Rule-Out Tests...")
+    await _run_trauma_bayesian(dd_handlers, session_id, h_ids, ev_ids)
+    g4 = orch.get_guidance()
+    results["steps"].append({"step": "bayesian", "stage": g4.current_stage.value})
+
+    # Step 5: Cognitive Audit
+    print("\n[Step 5] Logging Cognitive Biases and Uncertainties...")
+    await _run_trauma_cognitive(thinking_handlers, session_id)
+    g5 = orch.get_guidance()
+    results["steps"].append(
+        {
+            "step": "audit",
+            "stage": g5.current_stage.value,
+            "completeness": g5.completeness_score,
+        }
+    )
+
+    # Step 6 & 7: Synthesis
+    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Report...")
+    report_res = await contract_handlers.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "full",
+            "finalize": True,
+        },
+    )
+    report_md = str(report_res["content"])
+    print(
+        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+    )
+
+    print("\n[Step 7] Generating Verified Mermaid Presenters...")
+    reasoning_mermaid = render_reasoning_chain_mermaid(orch.reasoning_chain)
+    evidence_mermaid = str(
+        build_evidence_graph(
+            orch.evidence_store.values(), orch.hypothesis_store.values()
+        )["mermaid"]
+    )
+    print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
+    print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
+
+    elapsed = time.perf_counter() - start_time
+    top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
+    print(
+        f"\n✅ TRAUMA CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
+    )
+    results["elapsed_seconds"] = elapsed
+    results["success"] = True
+    return results
+
+
+# ============================================================================
+# Case 4: Post-op Pulmonary Embolism PEA Arrest (Orthopedic Surgery)
+# ============================================================================
+
+
+async def _run_pe_evidence(
+    evidence_handlers: EvidenceHandlers,
+    session_id: str,
+    results: dict[str, Any],
+) -> list[str]:
+    fixtures = [
+        {
+            "content": "Post-op order held Clexane (Enoxaparin) for 24 hours following left Total Hip Arthroplasty",
+            "source_doc": "examples/postop_pe_death/DATA_SOURCE_01_OP_NOTE.txt",
+            "snippet": "DVT Prophylaxis: **HOLD Clexane (Enoxaparin)** for 24hrs due to oozing from drain (>100ml in PACU). Re-evaluate tomorrow.",
+            "strength": "STRONG",
+            "reliability": "GRADE_A",
+        },
+        {
+            "content": "Nursing flowsheet documents patient complained of bilateral calf pain and leg swelling on POD 1",
+            "source_doc": "examples/postop_pe_death/DATA_SOURCE_02_NURSING_FLOWSHEET.csv",
+            "snippet": '"2024-04-11 16:00","1","37.8","95","20","105/65","94%","RA","6/10","10ml","Pt c/o calf pain bilaterally? (Note: Pt has history of chronic back pain/sciatica). Homan\'s sign equivocal. Leg swelling (+)."',
+            "strength": "STRONG",
+            "reliability": "GRADE_A",
+        },
+        {
+            "content": "Progress note misdiagnosed patient with Sepsis (UTI vs Pneumonia) and started fluid resuscitation",
+            "source_doc": "examples/postop_pe_death/DATA_SOURCE_03_PROGRESS_NOTE.txt",
+            "snippet": "ASSESSMENT:\n1. Sepsis, suspected source:\n   a. UTI (Foley removed yesterday, UA pos).\n   b. HAP (Hospital Acquired Pneumonia)",
+            "strength": "STRONG",
+            "reliability": "GRADE_B",
+        },
+        {
+            "content": "Nursing observation documents sudden severe chest tightness, dyspnea, and PEA Code Blue arrest",
+            "source_doc": "examples/postop_pe_death/DATA_SOURCE_04_NURSING_OBSERVATION.txt",
+            "snippet": "[12:10] CODE BLUE ACTIVATED. Pt unresponsive. PEA (Pulseless Electrical Activity). CPR started.",
+            "strength": "PATHOGNOMONIC",
+            "reliability": "GRADE_A",
+        },
+        {
+            "content": "Medication administration record shows Clexane NOT GIVEN due to order expiration without renewal",
+            "source_doc": "examples/postop_pe_death/DATA_SOURCE_05_MAR.csv",
+            "snippet": '"2024-04-11 09:00","Clexane (Enoxaparin)","40mg","SC","NOT_GIVEN","Reason: Order Expired/Not Renewed"',
+            "strength": "PATHOGNOMONIC",
+            "reliability": "GRADE_A",
+        },
+    ]
+
+    ev_ids: list[str] = []
+    for idx, ef in enumerate(fixtures, 1):
+        res = await evidence_handlers.handle(
+            "rc_add_evidence",
+            {
+                "session_id": session_id,
+                "content": ef["content"],
+                "source_document": ef["source_doc"],
+                "raw_snippet": ef["snippet"],
+                "clinical_strength": ef["strength"],
+                "source_reliability": ef["reliability"],
+                "auto_verify": True,
+            },
+        )
+        ev_ids.append(res["evidence_id"])
+        status_icon = "✅" if res["verified"] else "❌"
+        print(
+            f" -> Ev#{idx} [{status_icon} {res['verification_method']}] "
+            f"Doc: {Path(ef['source_doc']).name} Lines: {res['matched_lines']}"
+        )
+        if not res["verified"]:
+            results["warnings"].append(
+                f"Evidence #{idx} failed verification: {ef['source_doc']}"
+            )
+    return ev_ids
+
+
+async def _run_pe_hypotheses(
+    dd_handlers: DDHandlers, session_id: str
+) -> dict[str, str]:
+    h_pe = await dd_handlers.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Massive Pulmonary Embolism with PEA Arrest (5T: T4_Thrombosis_Pulmonary)",
+            "prior_probability": 0.20,
+            "rationale": "High-risk THA surgery with omitted DVT prophylaxis + calf swelling + sudden acute dyspnea and PEA collapse",
+            "icd10_code": "I26.0",
+        },
+    )
+    h_sepsis = await dd_handlers.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Severe Septic Shock (5H: H3_Acidosis / Sepsis)",
+            "prior_probability": 0.50,
+            "rationale": "Post-op fever 38.5, leukocytosis, positive UA, and hypotension",
+            "icd10_code": "R65.21",
+        },
+    )
+    h_mi = await dd_handlers.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Acute Myocardial Infarction (5T: T5_Thrombosis_Coronary)",
+            "prior_probability": 0.30,
+            "rationale": "Post-op chest tightness, tachycardia, and sudden hemodynamic collapse",
+            "icd10_code": "I21.9",
+        },
+    )
+    return {
+        "pe": h_pe["hypothesis_id"],
+        "sepsis": h_sepsis["hypothesis_id"],
+        "mi": h_mi["hypothesis_id"],
+    }
+
+
+async def _run_pe_bayesian(
+    dd_handlers: DDHandlers,
+    session_id: str,
+    h_ids: dict[str, str],
+    ev_ids: list[str],
+) -> None:
+    # Rule out Sepsis & MI
+    await dd_handlers.handle(
+        "rc_link_evidence_to_hypothesis",
+        {
+            "session_id": session_id,
+            "hypothesis_id": h_ids["sepsis"],
+            "evidence_id": ev_ids[3],  # Sudden chest tightness and desaturation to 85%
+            "direction": "REFUTES",
+            "weight": 0.90,
+            "reasoning": "Sudden refractory desaturation and PEA collapse within minutes is characteristic of mechanical pulmonary vascular occlusion, not sepsis",
+        },
+    )
+    await dd_handlers.handle(
+        "rc_link_evidence_to_hypothesis",
+        {
+            "session_id": session_id,
+            "hypothesis_id": h_ids["mi"],
+            "evidence_id": ev_ids[3],  # EKG shows incomplete RBBB without ST elevation
+            "direction": "REFUTES",
+            "weight": 0.85,
+            "reasoning": "Bedside EKG showed incomplete RBBB with right heart strain rather than acute transmural infarction",
+        },
+    )
+    # Confirm Massive PE
+    for ev_idx, wt, reason in [
+        (
+            0,
+            0.80,
+            "Initial 24h hold of anticoagulant removed chemical thromboprophylaxis protection",
+        ),
+        (
+            1,
+            0.90,
+            "Calf swelling and pain represented acute deep vein thrombosis (DVT)",
+        ),
+        (
+            2,
+            0.75,
+            "Diagnostic anchoring on sepsis delayed bedside vascular ultrasound / CTA",
+        ),
+        (
+            3,
+            0.98,
+            "Sudden dyspnea, non-rebreather desaturation to 85%, and PEA arrest confirmed massive pulmonary embolus",
+        ),
+        (
+            4,
+            0.95,
+            "Lapse in MAR where Clexane expired and was not reordered left patient completely unprotected",
+        ),
+    ]:
+        await dd_handlers.handle(
+            "rc_link_evidence_to_hypothesis",
+            {
+                "session_id": session_id,
+                "hypothesis_id": h_ids["pe"],
+                "evidence_id": ev_ids[ev_idx],
+                "direction": "SUPPORTS",
+                "weight": wt,
+                "reasoning": reason,
+            },
+        )
+
+
+async def _run_pe_cognitive(
+    thinking_handlers: ThinkingHandlers, session_id: str
+) -> None:
+    await thinking_handlers.handle(
+        "rc_reflect",
+        {
+            "session_id": session_id,
+            "reflection_content": "Surgical resident anchored on UTI/Pneumonia sepsis and initiated sepsis bundle while missing DVT/PE",
+            "identified_biases": [
+                "DIAGNOSTIC_MOMENTUM: Uncritically continuing sepsis diagnosis without re-evaluating unilateral leg swelling",
+                "CONFIRMATION_BIAS: Assuming fluid non-responsiveness was septic shock rather than acute RV failure",
+            ],
+            "identified_gaps": [
+                "EMR order expiration did not trigger an automatic notification to the covering surgical team",
+            ],
+        },
+    )
+    await thinking_handlers.handle(
+        "rc_challenge_assumption",
+        {
+            "session_id": session_id,
+            "assumption": "Post-op fever and low urine output is best managed by aggressive saline boluses and broad-spectrum antibiotics",
+            "challenge_reasoning": "In acute PE, RV is dilated and failing; aggressive fluid boluses cause RV overdistension and worsen left ventricular filling (interventricular dependence)",
+            "potential_impact": "Accelerates PEA arrest",
+            "alternative_explanations": [
+                "Obtain urgent bedside Echo/POCUS for RV strain, D-dimer/CTA, and initiate thrombolysis/embolectomy"
+            ],
+        },
+    )
+    await thinking_handlers.handle(
+        "rc_identify_gaps",
+        {
+            "session_id": session_id,
+            "gap_description": "Electronic DVT Prophylaxis Safety Net",
+            "gap_type": "SYSTEM_SAFETY_GAP",
+            "impact_on_diagnosis": "HIGH: Preventable omission of chemical thromboprophylaxis",
+            "suggested_actions": [
+                "Implement mandatory electronic alert when post-op anticoagulants are held >24 hours"
+            ],
+        },
+    )
+
+
+async def run_pe_case() -> dict[str, Any]:
+    """Execute complete Post-op PE Death case simulation."""
+    start_time = time.perf_counter()
+    results: dict[str, Any] = {
+        "case": "postop_pe_death",
+        "steps": [],
+        "errors": [],
+        "warnings": [],
+    }
+    print("\n" + "=" * 75)
+    print("🚀 [Case 4] Post-operative Pulmonary Embolism PEA Arrest (Orthopedic THA)")
+    print("=" * 75)
+
+    server_state = ServerState()
+    evidence_handlers = EvidenceHandlers(server_state)
+    dd_handlers = DDHandlers(server_state)
+    thinking_handlers = ThinkingHandlers(server_state)
+    contract_handlers = ContractHandlers(server_state)
+
+    session_id = "trial_pe_case_004"
+    orch = await server_state.get_or_create_orchestrator(session_id)
+    g1 = orch.get_guidance()
+    results["steps"].append({"step": "init", "stage": g1.current_stage.value})
+
+    # Step 2: Evidence
+    print("\n[Step 2] Grounding Evidence against 5 Raw Data Files...")
+    ev_ids = await _run_pe_evidence(evidence_handlers, session_id, results)
+    g2 = orch.get_guidance()
+    results["steps"].append(
+        {"step": "evidence", "stage": g2.current_stage.value, "verified": 5}
+    )
+
+    # Step 3: Hypotheses
+    print("\n[Step 3] Proposing Differential Hypotheses (Broad Differential)...")
+    h_ids = await _run_pe_hypotheses(dd_handlers, session_id)
+    g3 = orch.get_guidance()
+    results["steps"].append(
+        {
+            "step": "hypotheses",
+            "stage": g3.current_stage.value,
+            "count": len(orch.hypothesis_store),
+        }
+    )
+
+    # Step 4: Bayesian
+    print("\n[Step 4] Applying Bayesian Updates & Rule-Out Tests...")
+    await _run_pe_bayesian(dd_handlers, session_id, h_ids, ev_ids)
+    g4 = orch.get_guidance()
+    results["steps"].append({"step": "bayesian", "stage": g4.current_stage.value})
+
+    # Step 5: Cognitive Audit
+    print("\n[Step 5] Logging Cognitive Biases and Uncertainties...")
+    await _run_pe_cognitive(thinking_handlers, session_id)
+    g5 = orch.get_guidance()
+    results["steps"].append(
+        {
+            "step": "audit",
+            "stage": g5.current_stage.value,
+            "completeness": g5.completeness_score,
+        }
+    )
+
+    # Step 6 & 7: Synthesis
+    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Report...")
+    report_res = await contract_handlers.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "full",
+            "finalize": True,
+        },
+    )
+    report_md = str(report_res["content"])
+    print(
+        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+    )
+
+    print("\n[Step 7] Generating Verified Mermaid Presenters...")
+    reasoning_mermaid = render_reasoning_chain_mermaid(orch.reasoning_chain)
+    evidence_mermaid = str(
+        build_evidence_graph(
+            orch.evidence_store.values(), orch.hypothesis_store.values()
+        )["mermaid"]
+    )
+    print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
+    print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
+
+    elapsed = time.perf_counter() - start_time
+    top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
+    print(
+        f"\n✅ PE CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
+    )
+    results["elapsed_seconds"] = elapsed
+    results["success"] = True
+    return results
+
+
+# ============================================================================
 # Main Entry Point
 # ============================================================================
 
@@ -719,7 +1363,7 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="RootCause MCP Clinical Trial Runner")
     parser.add_argument(
         "--case",
-        choices=["sam", "pris", "all"],
+        choices=["sam", "pris", "trauma", "pe", "all"],
         default="all",
         help="Case to simulate (default: all)",
     )
@@ -734,6 +1378,14 @@ async def main() -> None:
     if args.case in {"pris", "all"}:
         r_pris = await run_pris_case()
         overall_results.append(r_pris)
+
+    if args.case in {"trauma", "all"}:
+        r_trauma = await run_trauma_case()
+        overall_results.append(r_trauma)
+
+    if args.case in {"pe", "all"}:
+        r_pe = await run_pe_case()
+        overall_results.append(r_pe)
 
     print("\n" + "=" * 75)
     print(f"🏁 ALL {len(overall_results)} CLINICAL TRIALS EXECUTED SUCCESSFULLY")

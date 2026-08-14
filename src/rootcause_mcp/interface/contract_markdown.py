@@ -61,6 +61,20 @@ def _render_custom_template(
     if report.evidence_graph and report.evidence_graph.get("mermaid"):
         evidence_mermaid = str(report.evidence_graph["mermaid"])
 
+    timeline_mermaid = ""
+    timeline_table = ""
+    if evidence:
+        from rootcause_mcp.domain.entities.evidence import Evidence
+        from rootcause_mcp.interface.mermaid import build_timeline
+
+        try:
+            ev_entities = [Evidence.model_validate(e) for e in report.evidence]
+            tl_res = build_timeline(ev_entities)
+            timeline_mermaid = tl_res["mermaid"]
+            timeline_table = tl_res["table"]
+        except Exception:
+            pass
+
     placeholders: dict[str, str] = {
         "report_title": "Clinical Reasoning & Root Cause Report",
         "session_id": _cell(report.session_id),
@@ -77,12 +91,18 @@ def _render_custom_template(
         "rule_out_summary": rule_out_summary,
         "must_not_miss_evaluated": f"{len(hypotheses)} emergency differential conditions modeled",
         "evidence_table": "\n".join(_evidence_table(evidence, evidence_limit)),
-        "cognitive_safety_section": "\n".join(_cognitive_safety(report.thinking_chain)),
+        "timeline_diagram": timeline_mermaid
+        or "_No timeline diagram generated._",
+        "timeline_table": timeline_table or "_No timeline table generated._",
+        "cognitive_safety_section": "\n".join(
+            _cognitive_safety(report.thinking_chain)
+        ),
         "automated_checks_section": "\n".join(_automated_findings(report)),
         "quality_metrics_section": "\n".join(_quality_metrics(report)),
         "reasoning_chain_diagram": reasoning_mermaid
         or "_No diagram generated for brief mode._",
-        "evidence_graph_diagram": evidence_mermaid or "_No evidence graph generated._",
+        "evidence_graph_diagram": evidence_mermaid
+        or "_No evidence graph generated._",
         "generated_by": _cell(report.generated_by),
         "report_version": _cell(report.report_version),
         "total_evidence_count": str(len(report.evidence)),
@@ -149,6 +169,20 @@ def render_contract_report_markdown(
     lines.extend(_hypothesis_table(hypotheses))
     lines.extend(["", "## Evidence Matrix", ""])
     lines.extend(_evidence_table(evidence, evidence_limit))
+
+    if detail_level in {"standard", "full"} and evidence:
+        from rootcause_mcp.domain.entities.evidence import Evidence
+        from rootcause_mcp.interface.mermaid import build_timeline
+
+        try:
+            ev_entities = [Evidence.model_validate(e) for e in report.evidence]
+            tl_res = build_timeline(ev_entities)
+            lines.extend(["", "## Chronological Timeline", ""])
+            lines.append(tl_res["table"])
+            lines.extend(["", tl_res["mermaid"]])
+        except Exception:
+            pass
+
     lines.extend(["", "## Uncertainty and Cognitive Safety", ""])
     lines.extend(_cognitive_safety(report.thinking_chain))
     lines.extend(["", "## Automated Completeness Checks", ""])

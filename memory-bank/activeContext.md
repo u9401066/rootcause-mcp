@@ -4,32 +4,31 @@
 
 ## Current Focus
 
-Automated 1-click installation suite, multi-case clinical trial benchmark, resilient agent alias normalization, and strict 92-file typing verification are complete.
+Automated 1-click installation suite, 4 god-level anesthesia/ICU benchmark trials, deterministic chronological event timeline generation, and 4-tier M&M backward causal reasoning are complete and verified.
 
 Verified Trial Run & Benchmark Outcomes:
 
-- `scripts/run_case_trial.py` executes end-to-end multi-loop diagnostic trials across 2 god-level multi-file clinical cases:
-  1. `dynamic_lvot_obstruction_sam`: Intraoperative shock worsening with Epinephrine across 5 raw files (TXT, CSV, XML). 100% provenance verification, top hypothesis P=1.000.
+- `scripts/run_case_trial.py` executes end-to-end multi-loop diagnostic trials across 4 god-level multi-file clinical cases:
+  1. `dynamic_lvot_obstruction_sam`: Intraoperative shock worsening with Epinephrine (SAM) across 5 raw files (TXT, CSV, XML). 100% provenance verification, top hypothesis P=1.000.
   2. `pris_status_epilepticus`: Propofol Infusion Syndrome misdiagnosed as sepsis/pancreatitis across 5 raw files. 100% provenance verification, top hypothesis P=1.000.
-- `scripts/setup.ps1` (Windows PowerShell), `scripts/setup.sh` (Linux/macOS), and `scripts/install.py` (Universal Python CLI) configure:
-  - `.vscode/mcp.json` (VS Code MCP Client)
-  - `claude_desktop_config.json` (Claude Desktop)
-  - `cline_mcp_settings.json` (Cline)
-  - Self-check tests and automated trial validation in a single command.
-- Resilient clinical alias normalization for `EvidenceStrength` (`PATHOGNOMONIC`, `CRITICAL`, `HIGH`, `STRONG`), `EvidenceReliability` (`GRADE_A`, `PRIMARY`, `DIRECT`), and `EvidenceType` (`LAB`, `IMAGING`, `DEVICE_LOG`, `MEDICATION`).
-- Flexible agent parameters in `rc_propose_hypothesis` (`rationale` / `clinical_reasoning`) and `rc_link_evidence_to_hypothesis` (`direction` / `weight` / `likelihood_ratio`).
+  3. `trauma_hyperkalemia_arrest`: Massive transfusion (MTP) older blood hyperkalemic cardiac arrest across 5 raw files (TXT, CSV, XML). 100% provenance verification, top hypothesis P=1.000.
+  4. `postop_pe_death`: Post-THA pulmonary embolism PEA arrest due to expired/held DVT prophylaxis across 5 raw files. 100% provenance verification, top hypothesis P=1.000.
+  - All 4 cases executed in **0.027s combined** with 100% exact line provenance matching across 21 heterogeneous raw files.
+- Deterministic Chronological Event Timeline (`build_timeline`, `render_timeline_mermaid`, `render_timeline_table`) with clinical phase clustering (Baseline, Induction, Crisis, Diagnostics, Collapse) integrated into contract report templates.
+- 4-Tier Anesthesiology backward causal protocol (`config/protocols/anesthesia_mm_rca_protocol.yaml`), domain playbooks (`config/domains/`), and customizable M&M conference report templates (`config/templates/`).
+- `scripts/setup.ps1` (Windows PowerShell), `scripts/setup.sh` (Linux/macOS), and `scripts/install.py` (Universal Python CLI) configure VS Code, Claude Desktop, and Cline with self-check tests and automated trial validation.
 
 ## Quality Baseline
 
 | Gate | Result |
 | --- | --- |
-| Tests | 66 passed |
-| Coverage | 81.33% branch-aware |
+| Tests | 69 passed |
+| Coverage | 81.59% branch-aware |
 | Ruff | Passed for `src`, `tests`, `scripts` |
-| Mypy | Strict mode passed for all 92 source files |
+| Mypy | Strict mode passed for all 94 source files |
 | Bandit | Medium/high severity scan passed |
 | Vulture | No findings at 80% confidence |
-| Trials | Both SAM and PRIS cases passed (0.016s combined) |
+| Trials | 4/4 anesthesia benchmark cases passed (0.027s total) |
 
 ## Deployment Status
 

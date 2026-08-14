@@ -16,6 +16,14 @@
 
 {{executive_summary}}
 
+### ⏱️ Clinical Chronology Timeline (Mermaid)
+
+{{timeline_diagram}}
+
+### 📋 Chronological Events Matrix
+
+{{timeline_table}}
+
 ---
 
 ## 2. Ranked Differential Diagnosis (Bayesian Posterior)

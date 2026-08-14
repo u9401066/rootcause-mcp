@@ -176,7 +176,7 @@ uv run python scripts/install.py --profile all --target all
 
 ### 🔬 Clinical Case Reasoning Trial Run
 
-Execute end-to-end multi-loop diagnostic trials across realistic multi-file cases (`dynamic_lvot_obstruction_sam` and `pris_status_epilepticus`):
+Execute end-to-end multi-loop diagnostic trials across 4 realistic multi-file cases (`dynamic_lvot_obstruction_sam`, `pris_status_epilepticus`, `trauma_hyperkalemia_arrest`, and `postop_pe_death`):
 
 ```powershell
 uv run python scripts/run_case_trial.py --case all
@@ -268,6 +268,7 @@ human-readable text and also expose it through structured content.
 | Why Tree | JSON | Mermaid hierarchy with root causes and cross-causal links |
 | Reasoning Chain | JSON | Mermaid ordered audit trail with evidence/hypothesis references |
 | Evidence Graph | CONTRACT JSON `nodes` / `edges` | Embedded Mermaid support/contradiction graph |
+| Event Timeline | JSON `events` / Markdown table | Mermaid `timeline` with clinical phases & timestamps |
 
 Mermaid exports are Markdown-fenced source that can be previewed by GitHub, VS Code,
 or Mermaid-compatible clients. Diagram labels are normalized and escaped before

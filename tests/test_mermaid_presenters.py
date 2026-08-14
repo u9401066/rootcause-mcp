@@ -17,9 +17,12 @@ from rootcause_mcp.domain.value_objects.enums import (
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 from rootcause_mcp.interface.mermaid import (
     build_evidence_graph,
+    build_timeline,
     escape_mermaid_label,
     render_fishbone_mermaid,
     render_reasoning_chain_mermaid,
+    render_timeline_mermaid,
+    render_timeline_table,
     render_why_tree_mermaid,
 )
 
@@ -196,3 +199,46 @@ def test_reasoning_mermaid_handles_empty_chain_and_zero_confidence() -> None:
     assert "&quot;anchor&quot; &amp; threshold &lt; target" in diagram
     assert 'E1["Evidence<br/>EVD-1"]' in diagram
     assert 'H1["Hypothesis<br/>HYP-1"]' in diagram
+
+
+def test_timeline_mermaid_renders_phases_and_timestamps() -> None:
+    orchestrator = ClinicalReasoningOrchestrator("timeline-case")
+    orchestrator.add_evidence(
+        content="08:00 Baseline BP 165/90, HR 85, Grade 2/6 murmur",
+        source_document="preop.txt",
+    )
+    orchestrator.add_evidence(
+        content="08:05 Induction with Propofol 80mg, Fentanyl 100mcg",
+        source_document="anesthesia.csv",
+    )
+    orchestrator.add_evidence(
+        content="08:18 CRASH BP 35/15, HR 160 following Epinephrine bolus",
+        source_document="anesthesia.csv",
+    )
+    orchestrator.add_evidence(
+        content="08:20 Emergency TEE shows Dagger-shaped Doppler >80mmHg",
+        source_document="tee.txt",
+    )
+
+    tl_data = build_timeline(orchestrator.evidence_store.values())
+
+    assert len(tl_data["events"]) == 4
+    diagram = tl_data["mermaid"]
+    assert diagram.startswith("```mermaid\ntimeline")
+    assert "section 1. Baseline &amp; Pre-Op" in diagram
+    assert "section 2. Induction &amp; Surgical Events" in diagram
+    assert "section 3. Crisis Progression &amp; Deterioration" in diagram
+    assert "section 4. Diagnostic Findings &amp; Rule-Outs" in diagram
+    assert "08:00 : 08 -00 Baseline BP 165/90, HR 85, Grade 2/6 murmur" in diagram
+    assert "08:18 : 08 -18 CRASH BP 35/15, HR 160 following Epinephrine bolus" in diagram
+
+    table = tl_data["table"]
+    assert "| `08:00` | **1. Baseline & Pre-Op** |" in table
+    assert "| `08:20` | **4. Diagnostic Findings & Rule-Outs** |" in table
+
+
+def test_timeline_mermaid_handles_empty_evidence() -> None:
+    tl_data = build_timeline([])
+    assert len(tl_data["events"]) == 0
+    assert "No timeline events recorded" in tl_data["mermaid"]
+    assert "No timeline events recorded" in tl_data["table"]

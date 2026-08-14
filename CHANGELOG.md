@@ -16,8 +16,12 @@
 - Added automatic registration across client hosts: VS Code (`.vscode/mcp.json`),
   Claude Desktop (`claude_desktop_config.json`), and Cline (`cline_mcp_settings.json`).
 - Added end-to-end clinical trial runner `scripts/run_case_trial.py` supporting
-  realistic multi-file benchmark cases (`dynamic_lvot_obstruction_sam` and
-  `pris_status_epilepticus`) with 100% physical provenance verification.
+  4 realistic multi-file benchmark cases (`dynamic_lvot_obstruction_sam`,
+  `pris_status_epilepticus`, `trauma_hyperkalemia_arrest`, and `postop_pe_death`)
+  with 100% physical provenance verification and 0.027s total execution.
+- Added deterministic Chronological Event Timeline & Mermaid timeline generation
+  (`build_timeline`, `render_timeline_mermaid`, `render_timeline_table`) with clinical phase
+  clustering and Markdown contract report integration (`{{timeline_diagram}}`, `{{timeline_table}}`).
 - Added resilient alias normalization for `EvidenceStrength` (`PATHOGNOMONIC`, `CRITICAL`,
   `HIGH`, `STRONG`), `EvidenceReliability` (`GRADE_A`, `PRIMARY`, `DIRECT`),
   and `EvidenceType` (`LAB`, `IMAGING`, `DEVICE_LOG`, `MEDICATION`).

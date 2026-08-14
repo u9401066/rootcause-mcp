@@ -15,6 +15,14 @@
 
 {{executive_summary}}
 
+### ⏱️ 病程演變時序圖 (Mermaid Chronology Timeline)
+
+{{timeline_diagram}}
+
+### 📋 關鍵時序事件清單
+
+{{timeline_table}}
+
 ---
 
 ## 2. Tier 0 & Tier 1: 終末心律與 ACLS 5H5T 可逆機轉鑑別

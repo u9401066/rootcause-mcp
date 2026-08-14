@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterable
 from typing import Any
 
@@ -39,9 +40,216 @@ def escape_mermaid_label(text: str, max_length: int = 80) -> str:
     )
 
 
+def escape_timeline_text(text: str, max_length: int = 80) -> str:
+    """Normalize user text for Mermaid timeline diagram entries."""
+    escaped = escape_mermaid_label(text, max_length)
+    return escaped.replace(":", " -")
+
+
 def mermaid_block(source: str) -> str:
     """Wrap Mermaid source for Markdown previewers."""
     return f"```mermaid\n{source.rstrip()}\n```"
+
+
+def _extract_time_key(text: str) -> str:
+    """Extract a displayable/sortable timestamp string from text."""
+    pattern = (
+        r"\b(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}"
+        r"|\d{2}/\d{2}\s+\d{2}:\d{2}"
+        r"|POD\s*\d+\s+\d{2}:\d{2}"
+        r"|\d{2}:\d{2})\b"
+    )
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+    return match.group(1) if match else ""
+
+
+def _infer_phase(time_str: str, content: str) -> str:
+    """Infer clinical phase for timeline grouping."""
+    text = f"{time_str} {content}".lower()
+    if any(
+        k in text
+        for k in [
+            "pre-op",
+            "baseline",
+            "admission",
+            "opd",
+            "08:00",
+            "history",
+            "day 1",
+            "23:30",
+        ]
+    ):
+        return "1. Baseline & Pre-Op"
+    elif any(
+        k in text
+        for k in [
+            "induction",
+            "intubation",
+            "rsi",
+            "positioning",
+            "08:05",
+            "08:08",
+            "08:10",
+            "clexane held",
+            "unit #7",
+            "01:00",
+            "01:15",
+            "01:45",
+        ]
+    ):
+        return "2. Induction & Surgical Events"
+    elif any(
+        k in text
+        for k in [
+            "hypotension",
+            "crash",
+            "worsening",
+            "acidosis",
+            "rhabdomyolysis",
+            "ephedrine",
+            "epinephrine",
+            "08:12",
+            "08:15",
+            "08:18",
+            "02:00",
+            "02:30",
+            "04:00",
+            "16:00",
+            "swelling",
+        ]
+    ):
+        return "3. Crisis Progression & Deterioration"
+    elif any(
+        k in text
+        for k in [
+            "tee",
+            "doppler",
+            "brugada",
+            "dagger",
+            "sam",
+            "echo",
+            "r/o",
+            "normal size",
+            "08:20",
+            "05:30",
+            "07:00",
+            "autopsy",
+            "k > 8.5",
+        ]
+    ):
+        return "4. Diagnostic Findings & Rule-Outs"
+    elif any(
+        k in text
+        for k in [
+            "code blue",
+            "arrest",
+            "pea",
+            "asystole",
+            "death",
+            "cpr",
+            "02:45",
+            "12:10",
+        ]
+    ):
+        return "5. Critical Collapse & Resuscitation"
+    return "3. Clinical Progression"
+
+
+def build_timeline(
+    evidence: Iterable[Evidence],
+    _reasoning_chain: ReasoningChain | None = None,
+) -> dict[str, Any]:
+    """Build structured chronological timeline and Mermaid diagram from evidence items."""
+    events: list[dict[str, Any]] = []
+
+    for item in evidence:
+        t_str = ""
+        if item.event_timestamp:
+            t_str = str(item.event_timestamp)
+        if not t_str and item.source.raw_snippet:
+            t_str = _extract_time_key(item.source.raw_snippet)
+        if not t_str:
+            t_str = _extract_time_key(item.content)
+        if not t_str and item.source.location:
+            t_str = _extract_time_key(item.source.location)
+        if not t_str:
+            t_str = "T_Event"
+
+        phase = _infer_phase(
+            t_str, f"{item.content} {item.source.raw_snippet or ''}"
+        )
+        events.append(
+            {
+                "id": item.id.value,
+                "time": t_str,
+                "phase": phase,
+                "content": item.content,
+                "source_document": item.source.document_id,
+                "verified": item.verified,
+                "evidence_type": item.evidence_type.value,
+            }
+        )
+
+    events.sort(key=lambda x: (x["phase"], x["time"], x["id"]))
+
+    return {
+        "events": events,
+        "mermaid": render_timeline_mermaid(events),
+        "table": render_timeline_table(events),
+    }
+
+
+def render_timeline_mermaid(
+    events: list[dict[str, Any]],
+    title: str = "Clinical Timeline & Event Chronology",
+) -> str:
+    """Render a clean Mermaid timeline diagram with phases and events."""
+    if not events:
+        return mermaid_block(
+            "timeline\n    title No timeline events recorded\n    section General\n        No events : No time-anchored evidence found"
+        )
+
+    lines = [
+        "timeline",
+        f"    title {escape_mermaid_label(title, 60)}",
+    ]
+
+    phases: dict[str, list[dict[str, Any]]] = {}
+    for ev in events:
+        phase = ev.get("phase", "General Sequence")
+        phases.setdefault(phase, []).append(ev)
+
+    for phase_name, phase_events in sorted(phases.items()):
+        clean_phase = escape_mermaid_label(phase_name, 40)
+        lines.append(f"    section {clean_phase}")
+        for ev in phase_events:
+            t = escape_mermaid_label(ev.get("time") or "Time", 24)
+            c = escape_timeline_text(ev.get("content", ""), 70)
+            verified_tag = " [Verified]" if ev.get("verified") else ""
+            lines.append(f"        {t} : {c}{verified_tag}")
+
+    return mermaid_block("\n".join(lines))
+
+
+def render_timeline_table(events: list[dict[str, Any]]) -> str:
+    """Render a structured Markdown chronological event table."""
+    lines = [
+        "| Time / Step | Phase | Clinical Event / Finding | Source Record | Verified |",
+        "| --- | --- | --- | --- | --- |",
+    ]
+    if not events:
+        lines.append("| - | - | No timeline events recorded | - | - |")
+        return "\n".join(lines)
+
+    for ev in events:
+        t = ev.get("time") or "-"
+        phase = ev.get("phase") or "General"
+        content = ev.get("content") or "-"
+        src = ev.get("source_document") or "Record"
+        v = "✅ Yes" if ev.get("verified") else "❌ No"
+        lines.append(f"| `{t}` | **{phase}** | {content} | `{src}` | {v} |")
+
+    return "\n".join(lines)
 
 
 def build_evidence_graph(

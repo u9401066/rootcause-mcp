@@ -167,7 +167,7 @@ uv run python scripts/install.py --profile all --target all
 
 ### 🔬 臨床真實案例推理試跑 (Trial Run)
 
-對包含多個非結構化原始數據檔的臨床案例（`dynamic_lvot_obstruction_sam` 與 `pris_status_epilepticus`）進行端到端多迴圈推理試跑：
+對包含多個非結構化原始數據檔的臨床案例（`dynamic_lvot_obstruction_sam`、`pris_status_epilepticus`、`trauma_hyperkalemia_arrest` 與 `postop_pe_death`）進行端到端多迴圈推理試跑：
 
 ```powershell
 uv run python scripts/run_case_trial.py --case all
@@ -256,6 +256,7 @@ content。
 | Why Tree | JSON | Mermaid 階層圖，包含根因與跨因果連結 |
 | Reasoning Chain | JSON | Mermaid 有序稽核鏈，包含 evidence/hypothesis 參照 |
 | Evidence Graph | CONTRACT JSON `nodes` / `edges` | 內嵌 Mermaid 支持／反對關係圖 |
+| Event Timeline | JSON `events` / Markdown 表格 | 內嵌 Mermaid `timeline` 時序圖（臨床分期與時間標記） |
 
 Mermaid 匯出是 Markdown fenced source，可由 GitHub、VS Code 或相容 Mermaid 的
 client 預覽。產生前會正規化並逸出圖表標籤。目前 server **沒有**內建瀏覽器 renderer，
