@@ -98,6 +98,17 @@ class FishboneModel(SQLModel, table=True):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
+class WhyChainModel(SQLModel, table=True):
+    """SQLModel for 5-Why Analysis Chain."""
+
+    __tablename__ = "why_chains"
+
+    session_id: str = Field(primary_key=True)  # SessionId string value
+    initial_problem: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
 class WhyNodeModel(SQLModel, table=True):
     """SQLModel for 5-Why Node."""
 
@@ -122,10 +133,28 @@ class WhyNodeModel(SQLModel, table=True):
     # Status
     is_root_cause: bool = False
     needs_further_analysis: bool = True
+    is_proximate: bool = False
 
     # Metadata
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+
+
+class CausalLinkModel(SQLModel, table=True):
+    """SQLModel for Causal Link in Why Tree."""
+
+    __tablename__ = "causal_links"
+
+    id: str = Field(primary_key=True)  # UUID or composite key
+    session_id: str = Field(index=True)
+    source_id: str = Field(index=True)
+    target_id: str = Field(index=True)
+    relationship: str
+    strength: float = 0.5
+    evidence: list[str] = Field(default_factory=list, sa_column=Column(JSON))
+    note: str = ""
+    bidirectional: bool = False
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
 
 # ============================================================================

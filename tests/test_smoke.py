@@ -23,9 +23,9 @@ from rootcause_mcp.interface.tools import get_all_tools
 
 
 def test_all_tools_loadable() -> None:
-    """Test that all 39 tools can be loaded."""
+    """Test that all 43 tools can be loaded."""
     tools = get_all_tools()
-    assert len(tools) == 39, f"Expected 39 tools, got {len(tools)}"
+    assert len(tools) == 43, f"Expected 43 tools, got {len(tools)}"
 
 
 def test_tool_profiles_reduce_advertised_schema_context() -> None:
@@ -34,7 +34,7 @@ def test_tool_profiles_reduce_advertised_schema_context() -> None:
     clinical_tools = get_all_tools("clinical")
     rca_tools = get_all_tools("rca")
 
-    assert len(clinical_tools) == 19
+    assert len(clinical_tools) == 23
     assert len(rca_tools) == 23
     assert {tool.name for tool in clinical_tools} & {
         tool.name for tool in rca_tools

@@ -27,13 +27,17 @@ async def test_sdk2_lifespan_exposes_complete_tool_catalog(
         dispatch = server_v2._build_tool_dispatch()
 
     tool_names = {tool.name for tool in result.tools}
-    assert len(tool_names) == 39
+    assert len(tool_names) == 43
     assert set(dispatch) == tool_names
     assert {
         "rc_add_evidence",
         "rc_propose_hypothesis",
         "rc_think_aloud",
         "rc_audit_reasoning_state",
+        "rc_detect_conflicts",
+        "rc_create_checkpoint",
+        "rc_restore_checkpoint",
+        "rc_list_checkpoints",
         "rc_generate_contract_report",
         "rc_verify_causation",
         "rc_validate_diagram",
@@ -59,7 +63,7 @@ async def test_sdk2_clinical_profile_matches_dispatch_surface(
         frozen_result = await on_list_tools(context, None)
 
     tool_names = {tool.name for tool in result.tools}
-    assert len(tool_names) == 19
+    assert len(tool_names) == 23
     assert set(dispatch) == tool_names
     assert {tool.name for tool in frozen_result.tools} == tool_names
     assert "rc_add_evidence" in tool_names

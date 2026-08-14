@@ -10,6 +10,12 @@ from pathlib import Path
 _SAFE_COMPONENT = re.compile(r"^[A-Za-z0-9_.-]+$")
 
 
+def get_export_root() -> Path:
+    """Get root directory for all generated exports."""
+    data_root = Path(os.environ.get("ROOTCAUSE_DATA_DIR", "data")).resolve()
+    return (data_root / "exports").resolve()
+
+
 def build_export_path(
     *,
     session_id: str,
@@ -26,8 +32,7 @@ def build_export_path(
         if not _SAFE_COMPONENT.fullmatch(value):
             raise ValueError(f"Invalid {name}: {value!r}")
 
-    data_root = Path(os.environ.get("ROOTCAUSE_DATA_DIR", "data")).resolve()
-    export_root = (data_root / "exports").resolve()
+    export_root = get_export_root()
 
     if requested_path:
         output_path = Path(requested_path).resolve()

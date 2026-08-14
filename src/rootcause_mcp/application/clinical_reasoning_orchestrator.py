@@ -61,14 +61,17 @@ class ClinicalReasoningOrchestrator:
     def __init__(
         self,
         session_id: str,
+        initial_problem: str | None = None,
     ) -> None:
         """
         Initialize orchestrator for a clinical session.
 
         Args:
             session_id: RCA session ID
+            initial_problem: Optional initial chief complaint or clinical event summary
         """
         self.session_id = session_id
+        self.initial_problem = initial_problem
         self.reasoning_chain = ReasoningChain(
             session_id=session_id,
             finalized_at=None,

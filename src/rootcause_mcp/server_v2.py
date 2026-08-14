@@ -53,7 +53,7 @@ from rootcause_mcp.infrastructure.persistence.thinking_chain_repository import (
     SQLiteThinkingChainRepository,
 )
 from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
-    InMemoryWhyTreeRepository,
+    SQLiteWhyTreeRepository,
 )
 
 # Handlers
@@ -187,7 +187,7 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     # Initialize repositories
     session_repo = SQLiteSessionRepository(database)
     fishbone_repo = SQLiteFishboneRepository(database)
-    why_tree_repo = InMemoryWhyTreeRepository()
+    why_tree_repo = SQLiteWhyTreeRepository(database)
     evidence_repo = SQLiteEvidenceRepository(database)
     hypothesis_repo = SQLiteHypothesisRepository(database)
     thinking_repo = SQLiteThinkingChainRepository(database)
@@ -354,6 +354,10 @@ def _build_tool_dispatch(profile: str | None = None) -> dict[str, ToolHandler]:
                 "rc_get_reasoning_chain",
                 "rc_export_reasoning_chain",
                 "rc_audit_reasoning_state",
+                "rc_detect_conflicts",
+                "rc_create_checkpoint",
+                "rc_restore_checkpoint",
+                "rc_list_checkpoints",
             )
         }
     )

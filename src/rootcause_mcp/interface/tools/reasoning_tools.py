@@ -69,4 +69,89 @@ def get_reasoning_tools() -> list[Tool]:
                 "required": ["session_id"],
             },
         ),
+        Tool(
+            name="rc_detect_conflicts",
+            description=(
+                "Automatically detect clinical contradictions, paradoxical treatment reactions, "
+                "guideline monitoring gaps (e.g. MTP without K+/ABG, high Propofol without lipids), "
+                "and cognitive anchoring pitfalls across all evidence and hypotheses."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID",
+                    },
+                },
+                "required": ["session_id"],
+            },
+        ),
+        Tool(
+            name="rc_create_checkpoint",
+            description=(
+                "Create an immutable, timestamped snapshot of active clinical reasoning state "
+                "(evidence, hypotheses, Bayesian history, thinking steps, reasoning chain) "
+                "to prevent context loss or enable branching investigation."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID",
+                    },
+                    "tag": {
+                        "type": "string",
+                        "description": "Optional human-readable tag (e.g., 'post_tee_evaluation', 'pre_cpr_baseline')",
+                    },
+                    "notes": {
+                        "type": "string",
+                        "description": "Optional notes describing the reason for this snapshot",
+                    },
+                    "created_by": {
+                        "type": "string",
+                        "description": "Agent or reviewer creating the checkpoint",
+                        "default": "agent",
+                    },
+                },
+                "required": ["session_id"],
+            },
+        ),
+        Tool(
+            name="rc_restore_checkpoint",
+            description="Restore clinical reasoning aggregate and database state from a saved checkpoint.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID",
+                    },
+                    "checkpoint_id": {
+                        "type": "string",
+                        "description": "Checkpoint ID (e.g. 'CP-abc12345-20260814_120000-baseline')",
+                    },
+                    "checkpoint_file": {
+                        "type": "string",
+                        "description": "Path to checkpoint JSON file (optional)",
+                    },
+                },
+                "required": ["session_id"],
+            },
+        ),
+        Tool(
+            name="rc_list_checkpoints",
+            description="List all available case checkpoints and snapshot metadata for a session.",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID",
+                    },
+                },
+                "required": ["session_id"],
+            },
+        ),
     ]

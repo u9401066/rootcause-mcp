@@ -1,7 +1,7 @@
 """
-Reasoning Chain Handlers.
+Reasoning Chain, Gap Analysis & Checkpoint Handlers.
 
-Handles all reasoning chain-related MCP tool calls.
+Handles all reasoning chain, conflict detection, and checkpoint MCP tool calls.
 """
 
 from __future__ import annotations
@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
+from rootcause_mcp.application.checkpoint_service import CaseCheckpointService
+from rootcause_mcp.domain.services.gap_analyzer import ClinicalGapAnalyzer
 from rootcause_mcp.infrastructure.export_paths import build_export_path
 from rootcause_mcp.interface.mermaid import render_reasoning_chain_mermaid
 
@@ -17,22 +19,80 @@ if TYPE_CHECKING:
 
 
 class ReasoningHandlers:
-    """Handlers for reasoning chain tools."""
+    """Handlers for reasoning chain, conflict detection, and checkpoint tools."""
 
     def __init__(self, server_state: ServerState) -> None:
         """Initialize reasoning handlers with shared persisted state."""
         self._state = server_state
+        self._checkpoint_service = CaseCheckpointService(server_state)
 
     async def handle(self, tool_name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         """Route reasoning tool calls to appropriate methods."""
-        if tool_name == "rc_get_reasoning_chain":
-            return await self.handle_get_reasoning_chain(arguments)
-        elif tool_name == "rc_export_reasoning_chain":
-            return await self.handle_export_reasoning_chain(arguments)
-        elif tool_name == "rc_audit_reasoning_state":
-            return await self.handle_audit_reasoning_state(arguments)
-        else:
+        dispatchers = {
+            "rc_get_reasoning_chain": self.handle_get_reasoning_chain,
+            "rc_export_reasoning_chain": self.handle_export_reasoning_chain,
+            "rc_audit_reasoning_state": self.handle_audit_reasoning_state,
+            "rc_detect_conflicts": self.handle_detect_conflicts,
+            "rc_create_checkpoint": self.handle_create_checkpoint,
+            "rc_restore_checkpoint": self.handle_restore_checkpoint,
+            "rc_list_checkpoints": self.handle_list_checkpoints,
+        }
+        handler = dispatchers.get(tool_name)
+        if handler is None:
             raise ValueError(f"Unknown reasoning tool: {tool_name}")
+        return await handler(arguments)
+
+    async def handle_detect_conflicts(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Handle rc_detect_conflicts tool call for diagnostic contradictions and guideline gaps."""
+        session_id = args["session_id"]
+        orch = await self._state.get_orchestrator(session_id)
+        if orch is None:
+            return {
+                "status": "not_found",
+                "message": f"No clinical session found for {session_id}",
+                "session_id": session_id,
+            }
+
+        report = ClinicalGapAnalyzer.analyze(
+            session_id=session_id,
+            evidence_store=orch.evidence_store,
+            hypothesis_store=orch.hypothesis_store,
+            thinking_chain=orch.thinking_chain,
+            reasoning_chain=orch.reasoning_chain,
+        )
+        return {
+            "status": "success",
+            **report.to_dict(),
+        }
+
+    async def handle_create_checkpoint(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Handle rc_create_checkpoint tool call."""
+        session_id = args["session_id"]
+        tag = args.get("tag")
+        created_by = args.get("created_by", "agent")
+        notes = args.get("notes", "")
+        return await self._checkpoint_service.create_checkpoint(
+            session_id=session_id,
+            tag=tag,
+            created_by=created_by,
+            notes=notes,
+        )
+
+    async def handle_restore_checkpoint(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Handle rc_restore_checkpoint tool call."""
+        session_id = args["session_id"]
+        checkpoint_id = args.get("checkpoint_id")
+        checkpoint_file = args.get("checkpoint_file")
+        return await self._checkpoint_service.restore_checkpoint(
+            session_id=session_id,
+            checkpoint_id=checkpoint_id,
+            checkpoint_file=checkpoint_file,
+        )
+
+    async def handle_list_checkpoints(self, args: dict[str, Any]) -> dict[str, Any]:
+        """Handle rc_list_checkpoints tool call."""
+        session_id = args["session_id"]
+        return await self._checkpoint_service.list_checkpoints(session_id=session_id)
 
     async def handle_audit_reasoning_state(
         self, args: dict[str, Any]
@@ -49,6 +109,14 @@ class ReasoningHandlers:
             }
 
         guidance = orchestrator.get_guidance()
+        gap_report = ClinicalGapAnalyzer.analyze(
+            session_id=session_id,
+            evidence_store=orchestrator.evidence_store,
+            hypothesis_store=orchestrator.hypothesis_store,
+            thinking_chain=orchestrator.thinking_chain,
+            reasoning_chain=orchestrator.reasoning_chain,
+        )
+
         return {
             "status": "success",
             "session_id": session_id,
@@ -60,6 +128,9 @@ class ReasoningHandlers:
             "next_recommended_actions": guidance.next_recommended_actions,
             "push_questions": guidance.push_questions,
             "checklist": guidance.checklist,
+            "conflicts_detected": gap_report.total_conflicts,
+            "critical_conflicts": gap_report.critical_count,
+            "guideline_alerts": gap_report.guideline_alerts,
         }
 
     async def handle_get_reasoning_chain(self, args: dict[str, Any]) -> dict[str, Any]:

@@ -4,7 +4,7 @@ MCP Tool definitions package.
 Contains tool schema definitions organized by domain:
 - Evidence management tools (3 tools) - NEW in 2.0
 - Differential diagnosis tools (4 tools) - NEW in 2.0
-- Reasoning chain tools (3 tools) - NEW in 2.0
+- Reasoning chain, conflict detection & checkpoint tools (7 tools) - NEW in 2.0
 - CONTRACT report tools (1 tool) - NEW in 2.0
 - Cognitive transparency tools (5 tools)
 - HFACS classification tools (6 tools)
@@ -13,7 +13,7 @@ Contains tool schema definitions organized by domain:
 - Why Tree analysis tools (6 tools)
 - Verification & diagram tools (3 tools)
 
-Total: 39 MCP tools (19 in the clinical profile, 23 in the RCA profile, 39 in the all profile)
+Total: 43 MCP tools (23 in the clinical profile, 23 in the RCA profile, 43 in the all profile)
 """
 
 from mcp.types import Tool
