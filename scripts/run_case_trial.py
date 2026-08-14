@@ -29,6 +29,7 @@ from rootcause_mcp.application.server_state import ServerState
 from rootcause_mcp.interface.handlers.contract_handlers import ContractHandlers
 from rootcause_mcp.interface.handlers.dd_handlers import DDHandlers
 from rootcause_mcp.interface.handlers.evidence_handlers import EvidenceHandlers
+from rootcause_mcp.interface.handlers.reasoning_handlers import ReasoningHandlers
 from rootcause_mcp.interface.handlers.thinking_handlers import ThinkingHandlers
 from rootcause_mcp.interface.mermaid import (
     build_evidence_graph,
@@ -305,6 +306,7 @@ async def run_sam_case() -> dict[str, Any]:
     evidence_handlers = EvidenceHandlers(server_state)
     dd_handlers = DDHandlers(server_state)
     thinking_handlers = ThinkingHandlers(server_state)
+    reasoning_handlers = ReasoningHandlers(server_state)
     contract_handlers = ContractHandlers(server_state)
 
     session_id = "trial_sam_case_001"
@@ -338,15 +340,37 @@ async def run_sam_case() -> dict[str, Any]:
     g4 = orch.get_guidance()
     results["steps"].append({"step": "bayesian", "stage": g4.current_stage.value})
 
-    # Step 5: Cognitive Audit
-    print("\n[Step 5] Logging Cognitive Biases and Uncertainties...")
+    # Step 5: Cognitive Audit & Automated Conflict Detection
+    print(
+        "\n[Step 5] Logging Cognitive Biases & Running Automated Conflict Detection..."
+    )
     await _run_sam_cognitive(thinking_handlers, session_id)
+    conf_res = await reasoning_handlers.handle(
+        "rc_detect_conflicts",
+        {"session_id": session_id},
+    )
+    print(
+        f" -> Conflict Audit: {conf_res['total_conflicts']} conflicts, {len(conf_res['guideline_alerts'])} guideline alerts"
+    )
+
+    # Step 5b: Create and verify Case Checkpoint
+    cp_res = await reasoning_handlers.handle(
+        "rc_create_checkpoint",
+        {
+            "session_id": session_id,
+            "tag": "sam_post_bayesian",
+            "notes": "Snapshot of SAM case after full Bayesian updates",
+        },
+    )
+    print(f" -> Created Case Checkpoint: {cp_res['checkpoint_id']}")
+
     g5 = orch.get_guidance()
     results["steps"].append(
         {
             "step": "audit",
             "stage": g5.current_stage.value,
             "completeness": g5.completeness_score,
+            "checkpoint_id": cp_res["checkpoint_id"],
         }
     )
 

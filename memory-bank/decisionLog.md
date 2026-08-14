@@ -32,6 +32,9 @@
 | 2026-08-14 | **Flash 模型多輪導引狀態機** | 輕量模型易提早收斂與漏項；ClinicalGuidanceService 在每次工具回傳中注入 stage、checklist、missing prerequisites 與 next prompt，引導 Flash 模型在多輪對話中循序完成完整臨床思考鏈 |
 | 2026-08-14 | **臨床可自訂範本與 Playbook 體系** | 解耦確定性資料聚合引擎與純文字臨床規格；支援自訂 Markdown 報告範本 (`config/templates/`)、5 階段推論 SOP (`config/protocols/`) 與次專科臨床手冊 (`config/domains/`)，實現高可重現性與免寫代碼維護 |
 | 2026-08-14 | **麻醉專科 4-Tier 倒推因果框架** | 針對術中死亡/重症案例，禁止停留在終末停跳表面，強制執行 4-Tier 逆推：Tier 0 (終末心律) → Tier 1 (ACLS 5H5T) → Tier 2 (術中三方觸發流：病人體質 vs 外科機械 vs 麻醉藥理) → Tier 3 (HFACS 系統漏洞) |
+| 2026-08-14 | **WhyTree 持久化升級 (SQLiteWhyTreeRepository)** | 解決 WhyTree 僅存於記憶體的已知限制；實作 SQLModel `WhyChainModel` 與 `CausalLinkModel`，達到 100% 重啟還原 |
+| 2026-08-14 | **自動化衝突與指引缺口偵測 (ClinicalGapAnalyzer)** | 實作 `ClinicalGapAnalyzer` 領域服務與 `rc_detect_conflicts` 工具，自動偵測診斷矛盾、反常藥物反應與危急值監測遺漏 |
+| 2026-08-14 | **個案快照與分支恢復 (CaseCheckpointService)** | 實作 `CaseCheckpointService` 與快照工具 (`rc_create_checkpoint`, `rc_restore_checkpoint`)，支援不可變密碼學快照存檔與無損跨輪分支恢復 |
 
 ---
 

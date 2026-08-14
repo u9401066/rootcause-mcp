@@ -9,6 +9,18 @@
 
 ### Added - Automated Installer & Clinical Trial Harness (2026-08-14)
 
+- Added persistent `SQLiteWhyTreeRepository` with `WhyChainModel` and `CausalLinkModel`
+  SQLModel tables, eliminating in-memory loss and enabling 100% restart rehydration
+  for 5-Why analysis trees and causal feedback links.
+- Added `ClinicalGapAnalyzer` domain service and `rc_detect_conflicts` MCP tool for
+  automated detection of diagnostic contradictions, paradoxical drug reactions,
+  and guideline monitoring omissions (e.g., MTP without K+/ABG, high-dose Propofol without lipids).
+- Added `CaseCheckpointService` and snapshotting MCP tools (`rc_create_checkpoint`,
+  `rc_restore_checkpoint`, `rc_list_checkpoints`) enabling agents to preserve immutable
+  state snapshots and resume/branch cases without context loss.
+- Expanded tool catalog to 43 tools (23 clinical profile, 23 RCA profile, 43 all profile).
+- Added subspecialty perioperative crisis playbooks: `anaphylaxis_crisis.yaml` (Anaphylaxis shock),
+  `local_anesthetic_toxicity.yaml` (LAST Lipid rescue), and `difficult_airway_crisis.yaml` (CICO eFONA).
 - Added cross-platform automated setup scripts:
   - `scripts/setup.ps1` (PowerShell for Windows)
   - `scripts/setup.sh` (Bash for Linux / macOS / WSL)
