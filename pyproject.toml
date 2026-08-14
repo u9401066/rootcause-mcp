@@ -122,8 +122,10 @@ ignore = [
 "src/rootcause_mcp/domain/services/hfacs_suggester.py" = ["PLR0912", "PLR0915"]
 "src/rootcause_mcp/domain/value_objects/hfacs.py" = ["ERA001"]
 "src/rootcause_mcp/infrastructure/persistence/database.py" = ["PLW0603"]
+"src/rootcause_mcp/interface/handlers/facade_handlers.py" = ["PLR0911", "PLR0912"]
 "src/rootcause_mcp/interface/handlers/why_tree_handlers.py" = ["PLR0912", "PLR0915"]
-"tests/**/*.py" = ["ERA001"]
+"src/rootcause_mcp/interface/resources.py" = ["PLR0911", "PLR0912"]
+"tests/**/*.py" = ["ERA001", "PLR0915"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["rootcause_mcp"]

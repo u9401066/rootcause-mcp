@@ -7,6 +7,27 @@
 
 ## [Unreleased]
 
+### Added - MCP SDK 2.0 Advanced Harness & Tool Condensation (2026-08-14)
+
+- Added **Tool Condensation Profile** (`condensed` / `facade`) consolidating 43 discrete tools
+  into **8 polymorphic facade tools** (`rc_evidence`, `rc_hypothesis`, `rc_thinking`, `rc_audit`,
+  `rc_report`, `rc_diagram`, `rc_checkpoint`, `rc_rca`), reducing tool schema context consumption
+  by **>80%** while preserving 100% discrete functionality via action-based dispatch.
+- Added **MCP Static Resources** exposing clinical protocols, playbooks, and report templates
+  under standard URIs (`clinical://protocols/*`, `clinical://domains/*`, `clinical://templates/*`)
+  for zero-tool-call inspection by AI agents.
+- Added **MCP Dynamic Session Resource Templates** (`clinical://sessions/{session_id}/report`,
+  `clinical://sessions/{session_id}/timeline`, `clinical://sessions/{session_id}/guidance`,
+  `clinical://sessions/{session_id}/conflicts`) for polling and inspecting case state without generating tool calls.
+- Added **MCP Pre-Configured Clinical Prompts** (`anesthesia_mm_investigation`,
+  `perioperative_crisis_differential`, `near_miss_barrier_analysis`, `delayed_diagnosis_investigation`)
+  enabling one-click clinical RCA workflows in Claude Desktop, VS Code, and Cline.
+- Injected **MCP Server-Level Instructions & Meta-Prompt** during connection handshake to anchor
+  AI agents to rigorous source grounding, 4-tier backward causal reasoning, disconfirming hypothesis testing,
+  and cognitive bias transparency.
+- Expanded automated integration test suite (`tests/test_sdk_advanced_features.py`) verifying
+  full MCP SDK 2.0 lifespan, tool profiling, resource reading, and prompt resolution.
+
 ### Added - Automated Installer & Clinical Trial Harness (2026-08-14)
 
 - Added persistent `SQLiteWhyTreeRepository` with `WhyChainModel` and `CausalLinkModel`

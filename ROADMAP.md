@@ -105,8 +105,24 @@
 - [x] `ClinicalGuidanceService` 推理狀態機：自動評估階段、完備度評分、檢查清單、下一步 Prompt 指令與蘇格拉底式詰問
 - [x] `rc_audit_reasoning_state` 工具上線（總計 37 tools）
 - [x] 報告自動完整性警告：防範過早診斷收斂 (premature closure)、無來源引文與未驗證證據
-- [ ] 跨病歷時序對齊與生理趨勢衝突偵測
-- [ ] Guideline-linked Likelihood Ratio 知識檢索庫
+
+### Phase 2.9: Persistence, Timeline & Conflict Detection (2026-08-14)
+
+- [x] `SQLiteWhyTreeRepository` 持久化儲存庫：消除記憶體遺失，支援 5-Why 樹狀與因果反饋網絡 100% 重啟還原
+- [x] `ClinicalGapAnalyzer` 領域服務與 `rc_detect_conflicts` 工具：自動偵測診斷矛盾、藥物反常惡化反應與指引監測遺漏
+- [x] `CaseCheckpointService` 快照服務與快照工具 (`rc_create_checkpoint`, `rc_restore_checkpoint`, `rc_list_checkpoints`)：不可變 JSON 狀態快照與分支實驗
+- [x] 確定性臨床事件時序圖 `build_timeline` 與渲染工具 `rc_render_timeline`（支援 5 種臨床時間軸模式）
+- [x] 通用 Mermaid 語法稽核與修復工具 `rc_validate_diagram`
+- [x] 跨平台自動化安裝套件 (`scripts/setup.ps1`, `scripts/setup.sh`, `scripts/install.py`)，自動註冊 VS Code, Claude Desktop, Cline
+- [x] 6 大真實多檔案臨床案例測試基準 (`scripts/run_case_trial.py`)，0.039 秒完成 100% 物理引文驗證
+
+### Phase 2.10: MCP SDK 2.0 Advanced Harness & Tool Condensation (2026-08-14)
+
+- [x] **Tool Condensation Profile (`condensed`)**：將 43 個離散工具濃縮為 **8 個多型 Facade 工具** (`rc_evidence`, `rc_hypothesis`, `rc_thinking`, `rc_audit`, `rc_report`, `rc_diagram`, `rc_checkpoint`, `rc_rca`)，大幅節省 >80% Tool Schema Token 消耗
+- [x] **MCP Static Resources**：支援零 Tool Call 讀取臨床協議、範本與專科 Playbooks (`clinical://protocols/*`, `clinical://domains/*`, `clinical://templates/*`)
+- [x] **MCP Dynamic Session Resource Templates** (`clinical://sessions/{session_id}/report|timeline|guidance|conflicts`)
+- [x] **MCP Pre-Configured Prompts** (`anesthesia_mm_investigation`, `perioperative_crisis_differential`, `near_miss_barrier_analysis`, `delayed_diagnosis_investigation`)
+- [x] **MCP Server-Level Instructions**：在握手時自動注入系統級臨床推理 Meta-Prompt
 
 ---
 

@@ -29,14 +29,52 @@ Use `ROOTCAUSE_TOOL_PROFILE` to reduce the schema catalog placed in Agent contex
 
 | Profile | Advertised tools | Intended workflow |
 | --- | ---: | --- |
-| `clinical` | 17 | Evidence, DDx, cognitive audit, reasoning, guidance, report, causation |
-| `rca` | 21 | Session, HFACS, Fishbone, Why Tree, causation |
-| `all` | 37 | Complete catalog; default for compatibility |
+| `condensed` | 8 | Unified polymorphic facades (`rc_evidence`, `rc_hypothesis`, `rc_thinking`, `rc_audit`, `rc_report`, `rc_diagram`, `rc_checkpoint`, `rc_rca`) for >80% context reduction |
+| `clinical` | 23 | Evidence, DDx, cognitive audit, conflict detection, checkpoints, reasoning, guidance, report, causation |
+| `rca` | 23 | Session, HFACS, Fishbone, Why Tree, checkpoints, diagrams, causation |
+| `all` | 43 | Complete catalog; default for full compatibility |
 
 Hidden profile tools are not dispatchable. This prevents accidental calls and makes
 the advertised catalog match the executable surface.
 
-## Medical Reasoning Workflow
+## Condensed Facade Profile (8 Tools)
+
+When using `ROOTCAUSE_TOOL_PROFILE=condensed`, the tool surface is consolidated into 8 action-based facade tools:
+
+1. `rc_evidence`:
+   - `action="add"`: Add structured clinical evidence with provenance and raw snippets.
+   - `action="get"`: Retrieve evidence item.
+   - `action="verify"`: Perform physical file snippet matching and SHA-256 validation.
+2. `rc_hypothesis`:
+   - `action="propose"`: Propose differential diagnosis hypothesis.
+   - `action="link"`: Link evidence with likelihood ratios.
+   - `action="get_differentials"`: Retrieve posterior-ranked differential list.
+   - `action="update"`: Update hypothesis prior/notes.
+   - `action="exclude"`: Exclude hypothesis with clinical justification.
+3. `rc_thinking`:
+   - `action="think"`: Record explicit diagnostic rationale and confidence.
+   - `action="reflect"`: Record cognitive bias checks and reflection.
+   - `action="gap"`: Record identified clinical data gaps.
+   - `action="challenge"`: Question anchoring assumptions.
+   - `action="get_chain"`: Retrieve full cognitive thinking chain.
+4. `rc_audit`:
+   - `action="stage_guidance"`: Inspect reasoning stage, checklist, and push questions.
+   - `action="detect_conflicts"`: Run automated diagnostic contradiction and omission checks.
+5. `rc_report`:
+   - `action="generate_contract"`: Generate Markdown, JSON, or FHIR report.
+   - `action="get_reasoning_chain"`: Retrieve action audit trail.
+   - `action="export_reasoning_chain"`: Save audit chain to disk.
+6. `rc_diagram`:
+   - `action="render_timeline"`: Render clinical chronological event timeline and Mermaid diagram.
+   - `action="validate_syntax"`: Universal Mermaid syntax auditor and sanitizer.
+7. `rc_checkpoint`:
+   - `action="create"`: Take immutable JSON state snapshot.
+   - `action="restore"`: Restore session to previously saved checkpoint.
+   - `action="list"`: List existing checkpoints for a session.
+8. `rc_rca`:
+   - Route traditional 6M Fishbone (`fishbone_init`, `fishbone_add_cause`, `fishbone_get`, `fishbone_export`), 5-Why Tree (`why_ask`, `why_get_tree`, `why_mark_root_cause`, `why_add_causal_link`, `why_export`, `why_teaching_case`), and HFACS-MES taxonomy tools.
+
+## Discrete Medical Reasoning Tools
 
 | Tool | Required intent |
 | --- | --- |
@@ -47,12 +85,40 @@ the advertised catalog match the executable surface.
 | `rc_link_evidence_to_hypothesis` | Apply a likelihood ratio and retain its rationale |
 | `rc_get_differential_diagnosis` | Return active hypotheses ranked by posterior probability |
 | `rc_exclude_hypothesis` | Exclude a hypothesis with reviewer and reason |
+| `rc_detect_conflicts` | Detect diagnostic contradictions, paradoxical drug reactions, and guideline omissions |
+| `rc_create_checkpoint` | Create an immutable JSON state snapshot with SHA-256 hash |
+| `rc_restore_checkpoint` | Restore session state from a previously saved checkpoint |
+| `rc_list_checkpoints` | List all saved checkpoints for a session |
 | `rc_get_reasoning_chain` | Retrieve orchestrator-generated audit steps |
 | `rc_export_reasoning_chain` | Export the reasoning chain under the configured export root |
 | `rc_audit_reasoning_state` | Audit clinical reasoning completeness, stage progression, and next recommended actions |
 | `rc_generate_contract_report` | Generate JSON, FHIR-compatible, or deterministic Markdown output |
 | `rc_validate_diagram` | Audit, validate, and auto-sanitize Mermaid syntax across all diagram types |
 | `rc_render_timeline` | Render structured event timelines with clinical pattern clustering |
+
+## MCP Resources & Prompts
+
+### Static Resources (`clinical://*`)
+
+- `clinical://protocols/anesthesia-mm-rca-protocol`: 4-Tier backward causal reasoning SOP.
+- `clinical://protocols/clinical-reasoning-sop`: Core diagnostic investigation playbook.
+- `clinical://templates/anesthesia-mm-rca-report-template`: Anesthesia M&M Markdown template.
+- `clinical://templates/near-miss-adverse-event-rca-template`: Near-miss & barrier failure template.
+- `clinical://domains/*`: Specialized crisis playbooks.
+
+### Dynamic Resource Templates
+
+- `clinical://sessions/{session_id}/report`: Rendered case report.
+- `clinical://sessions/{session_id}/timeline`: Chronological event timeline.
+- `clinical://sessions/{session_id}/guidance`: Multi-loop reasoning guidance.
+- `clinical://sessions/{session_id}/conflicts`: Gap analysis & conflict audit report.
+
+### Clinical Prompts
+
+- `anesthesia_mm_investigation`: Launch 4-Tier backward causal analysis.
+- `perioperative_crisis_differential`: Crisis differential expansion.
+- `near_miss_barrier_analysis`: Swiss Cheese non-death adverse event analysis.
+- `delayed_diagnosis_investigation`: Diagnostic trajectory and cognitive bias investigation.
 
 ### `rc_validate_diagram`
 

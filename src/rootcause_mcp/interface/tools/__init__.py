@@ -2,10 +2,11 @@
 MCP Tool definitions package.
 
 Contains tool schema definitions organized by domain:
-- Evidence management tools (3 tools) - NEW in 2.0
-- Differential diagnosis tools (4 tools) - NEW in 2.0
-- Reasoning chain, conflict detection & checkpoint tools (7 tools) - NEW in 2.0
-- CONTRACT report tools (1 tool) - NEW in 2.0
+- Condensed facade tools (8 unified tools) - NEW for ultra-low token budget
+- Evidence management tools (3 tools)
+- Differential diagnosis tools (4 tools)
+- Reasoning chain, conflict detection & checkpoint tools (7 tools)
+- CONTRACT report tools (1 tool)
 - Cognitive transparency tools (5 tools)
 - HFACS classification tools (6 tools)
 - Session management tools (4 tools)
@@ -13,11 +14,12 @@ Contains tool schema definitions organized by domain:
 - Why Tree analysis tools (6 tools)
 - Verification & diagram tools (3 tools)
 
-Total: 43 MCP tools (23 in the clinical profile, 23 in the RCA profile, 43 in the all profile)
+Total: 43 discrete tools across clinical (23), RCA (23), all (43), or condensed (8 unified facade tools).
 """
 
 from mcp.types import Tool
 
+from rootcause_mcp.interface.tools.condensed_tools import get_condensed_tools
 from rootcause_mcp.interface.tools.contract_tools import get_contract_tools
 from rootcause_mcp.interface.tools.dd_tools import get_dd_tools
 from rootcause_mcp.interface.tools.evidence_tools import get_evidence_tools
@@ -50,10 +52,16 @@ TOOL_OUTPUT_SCHEMA = {
 def get_all_tools(profile: str = "all") -> list[Tool]:
     """Get tool definitions for the configured context profile."""
     normalized_profile = profile.strip().lower()
-    if normalized_profile not in {"all", "clinical", "rca"}:
+    if normalized_profile not in {"all", "clinical", "rca", "condensed", "facade"}:
         raise ValueError(
-            f"Unsupported tool profile {profile!r}; expected all, clinical, or rca"
+            f"Unsupported tool profile {profile!r}; expected all, clinical, rca, or condensed"
         )
+
+    if normalized_profile in {"condensed", "facade"}:
+        return [
+            tool.model_copy(update={"output_schema": TOOL_OUTPUT_SCHEMA})
+            for tool in get_condensed_tools()
+        ]
 
     clinical_tools = [
         *get_thinking_tools(),
@@ -86,6 +94,7 @@ def get_all_tools(profile: str = "all") -> list[Tool]:
 
 __all__ = [
     "get_all_tools",
+    "get_condensed_tools",
     "get_contract_tools",
     "get_dd_tools",
     "get_evidence_tools",

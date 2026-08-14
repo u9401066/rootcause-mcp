@@ -36,23 +36,26 @@
 - 新增 `rc_audit_reasoning_state` MCP 工具（總計 37 tools）
 - 實作跨平台一鍵自動安裝與註冊腳本 (`scripts/setup.ps1`, `scripts/setup.sh`, `scripts/install.py`)
 - 實作 6 個真實案例端到端臨床試跑器 `scripts/run_case_trial.py` (包含 SAM、PRIS、MTP 高血鉀、術後肺栓塞、LVAD 幫浦吸附、延遲診斷等 6 大案例，31 個原始檔案 100% 驗證，0.039s 完成)
-- 實作 Mermaid 語法稽核與自動修復工具 `rc_validate_diagram` 與時序圖渲染工具 `rc_render_timeline` (擴充至 39 tools)
+- 實作 Mermaid 語法稽核與自動修復工具 `rc_validate_diagram` 與時序圖渲染工具 `rc_render_timeline`
 - 實作 5 大臨床時序演變模式 (`perioperative_sequence`, `acute_crisis`, `delayed_diagnosis`, `barrier_failure`, `device_incident`)
 - 實作非死亡醫療不良事件與 Near Miss RCA 規範 (`non_death_adverse_event_protocol.yaml`) 與專用報告範本 (`near_miss_adverse_event_rca_template.md`)
-- 通過 94 個檔案的嚴格 mypy 型別檢查與 72 項單元/整合測試 (81.49% 覆蓋率)
+- 實作 `SQLiteWhyTreeRepository` 持久化儲存庫，支援 WhyChain, WhyNode 與 CausalLink 100% 重啟還原
+- 實作 `ClinicalGapAnalyzer` 領域服務與 `rc_detect_conflicts` 工具，自動偵測診斷矛盾、藥物反常惡化反應與指引監測遺漏
+- 實作 `CaseCheckpointService` 快照服務與快照工具 (`rc_create_checkpoint`, `rc_restore_checkpoint`, `rc_list_checkpoints`)
+- 實作 **Tool Condensation Profile (`condensed`)**，將 43 個離散工具濃縮為 **8 個多型 Facade 工具**，大幅降低 >80% Tool Schema Token 消耗
+- 實作 **MCP Static Resources (`clinical://*`)** 與 **Dynamic Session Resource Templates**
+- 實作 **MCP Pre-Configured Clinical Prompts** (`anesthesia_mm_investigation`, 等 4 大臨床 Prompt)
+- 實作 **Server-Level Instructions & Meta-Prompt** 握手自動注入
+- 通過 102 個檔案的嚴格 mypy 型別檢查與 82 項單元/整合測試 (80.73% 覆蓋率)
 
 ## Doing
 
 - 準備 v2.0.0-alpha 的發佈前審查
-- 校正 HFACS handler 展示資料與 2024 taxonomy 的剩餘 legacy 命名
+- 更新 memory bank 與 Git 階段性 commit
 
 ## Next
 
-- 設計具 idempotent client aliases 與 rollback 的 batch case bundle
-- 新增 compact case checkpoint/resume artifact，避免 Agent 重讀完整 chain
-- 評估 SVG/PNG renderer 作為 optional deployment integration
-- 將 legacy Why Tree 從 InMemory repository 遷移到 SQLite
-- 建立正式資料庫 migration 機制
+- 建立正式資料庫 migration 機制 (Alembic)
 - 補 authentication、encryption-at-rest、tenant isolation 與 PHI governance
 - 將共用 output envelope 細化為每個 tool 的 domain-specific output schema
 - 發布 v2.0.0-alpha（不得宣稱為醫療器材或自主診斷系統）

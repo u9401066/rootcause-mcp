@@ -1,0 +1,275 @@
+"""
+MCP Resources Module for RootCause MCP (SDK 2.0).
+
+Exposes clinical playbooks, SOP protocols, report templates, and dynamic session artifacts
+as inspectable MCP resources and resource templates.
+"""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import TYPE_CHECKING
+
+from mcp.types import (
+    ReadResourceResult,
+    Resource,
+    ResourceTemplate,
+    TextResourceContents,
+)
+
+if TYPE_CHECKING:
+    from rootcause_mcp.application.server_state import ServerState
+
+
+def _get_config_root() -> Path:
+    """Get the configuration root path."""
+    env_config = os.environ.get("ROOTCAUSE_CONFIG_DIR")
+    if env_config:
+        return Path(env_config).resolve()
+    return (Path(__file__).resolve().parent.parent.parent.parent / "config").resolve()
+
+
+def get_static_resources() -> list[Resource]:
+    """Return all static clinical playbooks, protocols, and templates as MCP Resources."""
+    config_root = _get_config_root()
+    resources: list[Resource] = []
+
+    # 1. Protocols
+    protocols_dir = config_root / "protocols"
+    if protocols_dir.exists():
+        for p in protocols_dir.glob("*.yaml"):
+            slug = p.stem.replace("_", "-")
+            resources.append(
+                Resource(
+                    uri=f"clinical://protocols/{slug}",
+                    name=f"Clinical Protocol: {p.stem.replace('_', ' ').title()}",
+                    description=f"Clinical standard operating procedure protocol for {p.stem}",
+                    mime_type="application/yaml",
+                    size=p.stat().st_size if p.is_file() else None,
+                )
+            )
+
+    # 2. Domain Playbooks
+    domains_dir = config_root / "domains"
+    if domains_dir.exists():
+        for p in domains_dir.glob("*.yaml"):
+            slug = p.stem.replace("_", "-")
+            resources.append(
+                Resource(
+                    uri=f"clinical://domains/{slug}",
+                    name=f"Domain Playbook: {p.stem.replace('_', ' ').title()}",
+                    description=f"Specialized clinical crisis criteria, discriminators, and rescue guidelines for {p.stem}",
+                    mime_type="application/yaml",
+                    size=p.stat().st_size if p.is_file() else None,
+                )
+            )
+
+    # 3. Report Templates
+    templates_dir = config_root / "templates"
+    if templates_dir.exists():
+        for p in templates_dir.glob("*.md"):
+            slug = p.stem.replace("_", "-")
+            resources.append(
+                Resource(
+                    uri=f"clinical://templates/{slug}",
+                    name=f"Report Template: {p.stem.replace('_', ' ').title()}",
+                    description=f"Deterministic Markdown report template for {p.stem}",
+                    mime_type="text/markdown",
+                    size=p.stat().st_size if p.is_file() else None,
+                )
+            )
+
+    return resources
+
+
+def get_resource_templates() -> list[ResourceTemplate]:
+    """Return dynamic session resource templates for active clinical cases."""
+    return [
+        ResourceTemplate(
+            uri_template="clinical://sessions/{session_id}/report",
+            name="Session Clinical Reasoning Report",
+            description="Dynamic finalized or preliminary clinical reasoning contract report for a session",
+            mime_type="text/markdown",
+        ),
+        ResourceTemplate(
+            uri_template="clinical://sessions/{session_id}/timeline",
+            name="Session Event Timeline",
+            description="Dynamic chronological event timeline and Mermaid diagram for a session",
+            mime_type="text/markdown",
+        ),
+        ResourceTemplate(
+            uri_template="clinical://sessions/{session_id}/guidance",
+            name="Session Reasoning Guidance",
+            description="Active stage progression, readiness checklist, and next recommended actions",
+            mime_type="application/json",
+        ),
+        ResourceTemplate(
+            uri_template="clinical://sessions/{session_id}/conflicts",
+            name="Session Conflict & Gap Analysis",
+            description="Automated clinical contradiction and guideline monitoring omission audit",
+            mime_type="application/json",
+        ),
+    ]
+
+
+async def read_clinical_resource(
+    uri: str,
+    server_state: ServerState | None = None,
+) -> ReadResourceResult:
+    """
+    Read a clinical resource by URI.
+
+    Handles:
+    - Static: `clinical://protocols/{slug}`, `clinical://domains/{slug}`, `clinical://templates/{slug}`
+    - Dynamic: `clinical://sessions/{session_id}/{artifact}`
+    """
+    config_root = _get_config_root()
+    clean_uri = uri.strip()
+
+    # 1. Handle Protocols
+    if clean_uri.startswith("clinical://protocols/"):
+        slug = clean_uri.replace("clinical://protocols/", "").replace("-", "_")
+        target = config_root / "protocols" / f"{slug}.yaml"
+        if target.is_file():
+            text = target.read_text(encoding="utf-8")
+            return ReadResourceResult(
+                contents=[
+                    TextResourceContents(
+                        uri=clean_uri,
+                        mime_type="application/yaml",
+                        text=text,
+                    )
+                ]
+            )
+
+    # 2. Handle Domains
+    if clean_uri.startswith("clinical://domains/"):
+        slug = clean_uri.replace("clinical://domains/", "").replace("-", "_")
+        target = config_root / "domains" / f"{slug}.yaml"
+        if target.is_file():
+            text = target.read_text(encoding="utf-8")
+            return ReadResourceResult(
+                contents=[
+                    TextResourceContents(
+                        uri=clean_uri,
+                        mime_type="application/yaml",
+                        text=text,
+                    )
+                ]
+            )
+
+    # 3. Handle Templates
+    if clean_uri.startswith("clinical://templates/"):
+        slug = clean_uri.replace("clinical://templates/", "").replace("-", "_")
+        target = config_root / "templates" / f"{slug}.md"
+        if target.is_file():
+            text = target.read_text(encoding="utf-8")
+            return ReadResourceResult(
+                contents=[
+                    TextResourceContents(
+                        uri=clean_uri,
+                        mime_type="text/markdown",
+                        text=text,
+                    )
+                ]
+            )
+
+    # 4. Handle Dynamic Sessions
+    if clean_uri.startswith("clinical://sessions/") and server_state is not None:
+        parts = clean_uri.replace("clinical://sessions/", "").split("/")
+        if len(parts) == 2:
+            session_id, artifact = parts[0], parts[1]
+            orch = await server_state.get_orchestrator(session_id)
+            if orch is not None:
+                if artifact == "guidance":
+                    import json
+                    guidance = orch.get_guidance()
+                    return ReadResourceResult(
+                        contents=[
+                            TextResourceContents(
+                                uri=clean_uri,
+                                mime_type="application/json",
+                                text=json.dumps(guidance.model_dump(mode="json"), indent=2),
+                            )
+                        ]
+                    )
+                elif artifact == "conflicts":
+                    import json
+
+                    from rootcause_mcp.domain.services.gap_analyzer import (
+                        ClinicalGapAnalyzer,
+                    )
+                    gap_rep = ClinicalGapAnalyzer.analyze(
+                        session_id=session_id,
+                        evidence_store=orch.evidence_store,
+                        hypothesis_store=orch.hypothesis_store,
+                        thinking_chain=orch.thinking_chain,
+                        reasoning_chain=orch.reasoning_chain,
+                    )
+                    return ReadResourceResult(
+                        contents=[
+                            TextResourceContents(
+                                uri=clean_uri,
+                                mime_type="application/json",
+                                text=json.dumps(gap_rep.to_dict(), indent=2),
+                            )
+                        ]
+                    )
+                elif artifact == "timeline":
+                    from rootcause_mcp.interface.mermaid import build_timeline
+                    tl_data = build_timeline(orch.evidence_store.values())
+                    content = f"{tl_data['table']}\n\n{tl_data['mermaid']}"
+                    return ReadResourceResult(
+                        contents=[
+                            TextResourceContents(
+                                uri=clean_uri,
+                                mime_type="text/markdown",
+                                text=content,
+                            )
+                        ]
+                    )
+                elif artifact == "report":
+                    from rootcause_mcp.domain.value_objects.contract_report import (
+                        ContractReport,
+                    )
+                    from rootcause_mcp.interface.contract_markdown import (
+                        render_contract_report_markdown,
+                    )
+                    from rootcause_mcp.interface.mermaid import build_evidence_graph
+                    ranked_hypotheses = sorted(
+                        orch.hypothesis_store.values(),
+                        key=lambda h: h.current_probability,
+                        reverse=True,
+                    )
+                    rep = ContractReport(
+                        report_id=f"RPT-{session_id[:8]}",
+                        session_id=session_id,
+                        generated_by="resource_reader",
+                        hypotheses=[h.model_dump(mode="json") for h in ranked_hypotheses],
+                        evidence=[e.model_dump(mode="json") for e in orch.evidence_store.values()],
+                        reasoning_chain=[s.model_dump(mode="json") for s in orch.reasoning_chain.steps],
+                        thinking_chain=[s.model_dump(mode="json") for s in orch.thinking_chain.steps],
+                        evidence_graph=build_evidence_graph(orch.evidence_store.values(), orch.hypothesis_store.values()),
+                    )
+                    md_text = render_contract_report_markdown(rep, detail_level="standard")
+                    return ReadResourceResult(
+                        contents=[
+                            TextResourceContents(
+                                uri=clean_uri,
+                                mime_type="text/markdown",
+                                text=md_text,
+                            )
+                        ]
+                    )
+
+    # Resource not found fallback
+    return ReadResourceResult(
+        contents=[
+            TextResourceContents(
+                uri=clean_uri,
+                mime_type="text/plain",
+                text=f"Resource not found: {clean_uri}",
+            )
+        ]
+    )

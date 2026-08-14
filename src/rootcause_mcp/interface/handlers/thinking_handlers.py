@@ -60,12 +60,18 @@ class ThinkingHandlers:
                 )
 
         # Create thinking step
+        raw_tt = args.get("thinking_type", "DECISION_POINT")
+        try:
+            t_type = ThinkingType(raw_tt)
+        except ValueError:
+            t_type = ThinkingType.DECISION_POINT
+
         step = ThinkingStep(
-            thinking_type=ThinkingType(args["thinking_type"]),
+            thinking_type=t_type,
             content=args["content"],
-            internal_reasoning=args["internal_reasoning"],
+            internal_reasoning=args.get("internal_reasoning", args["content"]),
             alternatives=alternatives,
-            confidence=args["confidence"],
+            confidence=args.get("confidence", 0.8),
             uncertainty_factors=args.get("uncertainty_factors", []),
             related_evidence_ids=args.get("related_evidence_ids", []),
             related_hypothesis_ids=args.get("related_hypothesis_ids", []),
@@ -123,11 +129,12 @@ class ThinkingHandlers:
         orchestrator = await self._state.get_or_create_orchestrator(session_id)
         chain = orchestrator.thinking_chain
 
+        gap_type = args.get("gap_type", "MISSING_DATA")
         # Create gap identification step
         step = ThinkingStep(
             thinking_type=ThinkingType.EVIDENCE_GAP_IDENTIFIED,
             content=args["gap_description"],
-            internal_reasoning=f"Gap type: {args['gap_type']}. Impact: {args.get('impact_on_diagnosis', 'Unknown')}",
+            internal_reasoning=f"Gap type: {gap_type}. Impact: {args.get('impact_on_diagnosis', 'Unknown')}",
             confidence=0.9,  # Gap identification is usually high confidence
             uncertainty_factors=[args["gap_description"]],
         )
@@ -140,7 +147,7 @@ class ThinkingHandlers:
             "status": "success",
             "gap_id": step.id,
             "session_id": session_id,
-            "gap_type": args["gap_type"],
+            "gap_type": gap_type,
             "suggested_actions": args.get("suggested_actions", []),
             "guidance": guidance.model_dump(mode="json"),
         }
@@ -152,11 +159,14 @@ class ThinkingHandlers:
         orchestrator = await self._state.get_or_create_orchestrator(session_id)
         chain = orchestrator.thinking_chain
 
+        challenge_reasoning = args.get(
+            "challenge_reasoning", f"Challenged assumption: {args['assumption']}"
+        )
         # Create assumption challenge step
         step = ThinkingStep(
             thinking_type=ThinkingType.ASSUMPTION_QUESTIONED,
             content=f"Challenging assumption: {args['assumption']}",
-            internal_reasoning=args["challenge_reasoning"],
+            internal_reasoning=challenge_reasoning,
             confidence=0.7,  # Challenges are usually moderate confidence
             assumptions_made=[args["assumption"]],
         )

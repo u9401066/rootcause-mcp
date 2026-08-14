@@ -23,7 +23,14 @@ from mcp.server.stdio import stdio_server
 from mcp.types import (
     CallToolRequestParams,
     CallToolResult,
+    GetPromptRequestParams,
+    GetPromptResult,
+    ListPromptsResult,
+    ListResourcesResult,
+    ListResourceTemplatesResult,
     ListToolsResult,
+    ReadResourceRequestParams,
+    ReadResourceResult,
     TextContent,
 )
 
@@ -61,6 +68,7 @@ from rootcause_mcp.interface.handlers import (
     ContractHandlers,
     DDHandlers,
     EvidenceHandlers,
+    FacadeHandlers,
     FishboneHandlers,
     HFACSHandlers,
     ReasoningHandlers,
@@ -68,6 +76,14 @@ from rootcause_mcp.interface.handlers import (
     ThinkingHandlers,
     VerificationHandlers,
     WhyTreeHandlers,
+)
+
+# Prompts and Resources
+from rootcause_mcp.interface.prompts import get_all_prompts, get_prompt_result
+from rootcause_mcp.interface.resources import (
+    get_resource_templates,
+    get_static_resources,
+    read_clinical_resource,
 )
 
 # Tool definitions
@@ -95,6 +111,7 @@ class ServerRuntime:
     fishbone_handlers: FishboneHandlers | None = None
     why_tree_handlers: WhyTreeHandlers | None = None
     verification_handlers: VerificationHandlers | None = None
+    facade_handlers: FacadeHandlers | None = None
     database: Database | None = None
 
     def clear(self) -> None:
@@ -233,6 +250,18 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
         progress_tracker=progress_tracker,
         server_state=server_state,
     )
+    facade_handlers = FacadeHandlers(
+        evidence_handlers=evidence_handlers,
+        dd_handlers=dd_handlers,
+        thinking_handlers=thinking_handlers,
+        reasoning_handlers=reasoning_handlers,
+        contract_handlers=contract_handlers,
+        verification_handlers=verification_handlers,
+        session_handlers=session_handlers,
+        fishbone_handlers=fishbone_handlers,
+        why_tree_handlers=why_tree_handlers,
+        hfacs_handlers=hfacs_handlers,
+    )
 
     _runtime.server_state = server_state
     _runtime.thinking_handlers = thinking_handlers
@@ -245,6 +274,7 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     _runtime.fishbone_handlers = fishbone_handlers
     _runtime.why_tree_handlers = why_tree_handlers
     _runtime.verification_handlers = verification_handlers
+    _runtime.facade_handlers = facade_handlers
     _runtime.database = database
 
     logger.info("✅ All handlers initialized")
@@ -395,6 +425,20 @@ def _build_tool_dispatch(profile: str | None = None) -> dict[str, ToolHandler]:
             "rc_render_timeline": (_verification_handlers.handle_render_timeline),
         }
     )
+    _facade_handlers = _runtime.facade_handlers
+    if _facade_handlers is not None:
+        dispatch.update(
+            {
+                "rc_evidence": _facade_handlers.handle_evidence,
+                "rc_hypothesis": _facade_handlers.handle_hypothesis,
+                "rc_thinking": _facade_handlers.handle_thinking,
+                "rc_audit": _facade_handlers.handle_audit,
+                "rc_report": _facade_handlers.handle_report,
+                "rc_diagram": _facade_handlers.handle_diagram,
+                "rc_checkpoint": _facade_handlers.handle_checkpoint,
+                "rc_rca": _facade_handlers.handle_rca,
+            }
+        )
     active_profile = profile or _runtime.tool_profile or _get_tool_profile()
     visible_tool_names = {tool.name for tool in get_all_tools(active_profile)}
     return {
@@ -530,13 +574,73 @@ async def on_call_tool(
         )
 
 
-# Create server instance with SDK 2.0 API
+async def on_list_resources(
+    _ctx: ServerRequestContext, _params: Any
+) -> ListResourcesResult:
+    """List available static clinical resources (playbooks, protocols, templates)."""
+    return ListResourcesResult(resources=get_static_resources())
+
+
+async def on_list_resource_templates(
+    _ctx: ServerRequestContext, _params: Any
+) -> ListResourceTemplatesResult:
+    """List dynamic case session resource templates."""
+    return ListResourceTemplatesResult(
+        resource_templates=get_resource_templates()
+    )
+
+
+async def on_read_resource(
+    _ctx: ServerRequestContext, params: ReadResourceRequestParams
+) -> ReadResourceResult:
+    """Read clinical resource or dynamic session state by URI."""
+    return await read_clinical_resource(
+        str(params.uri), server_state=_runtime.server_state
+    )
+
+
+async def on_list_prompts(
+    _ctx: ServerRequestContext, _params: Any
+) -> ListPromptsResult:
+    """List predefined clinical investigation prompts."""
+    return ListPromptsResult(prompts=get_all_prompts())
+
+
+async def on_get_prompt(
+    _ctx: ServerRequestContext, params: GetPromptRequestParams
+) -> GetPromptResult:
+    """Get structured prompt messages for clinical investigation."""
+    return get_prompt_result(params.name, params.arguments)
+
+
+# Create server instance with SDK 2.0 API, resources, prompts, and instructions
 server = Server(
     "rootcause-mcp",
     version="2.0.0a1",
+    title="RootCause MCP: Clinical Reasoning & Medical RCA Harness",
+    description=(
+        "Deterministic medical reasoning, Bayesian differential diagnosis, "
+        "physical provenance verification, and 4-tier perioperative M&M root cause analysis."
+    ),
+    instructions=(
+        "RootCause MCP is a deterministic medical reasoning and clinical root cause analysis (RCA) harness. "
+        "Operate according to the 5-stage progression: 1) EVIDENCE_COLLECTION (anchor verbatim snippets against raw records), "
+        "2) DIFFERENTIAL_EXPANSION (propose >=3 competing hypotheses including emergency rule-outs), "
+        "3) BAYESIAN_EVALUATION (link evidence and evaluate disconfirming tests), "
+        "4) COGNITIVE_AUDIT (review anchoring bias, confirmation bias, and declare clinical gaps), "
+        "5) READY_FOR_SYNTHESIS (generate deterministic Markdown/FHIR reports). "
+        "For perioperative cardiac arrest / shock cases, follow the 4-Tier backward causal protocol (Tier 0 Rhythm -> "
+        "Tier 1 5H5T -> Tier 2 Tri-stream Triggers [Patient vs Surgical vs Anesthesia] -> Tier 3 HFACS Latent Gaps). "
+        "Inspect clinical:// playbooks and templates via resources, or invoke prompts for pre-configured guided workflows."
+    ),
     lifespan=lifespan,
     on_list_tools=on_list_tools,
     on_call_tool=on_call_tool,
+    on_list_resources=on_list_resources,
+    on_list_resource_templates=on_list_resource_templates,
+    on_read_resource=on_read_resource,
+    on_list_prompts=on_list_prompts,
+    on_get_prompt=on_get_prompt,
 )
 
 

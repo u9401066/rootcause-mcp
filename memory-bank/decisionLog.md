@@ -28,6 +28,15 @@
 | 2026-08-09 | **圖表採 Mermaid source + structured graph** | 保持 MCP transport 輕量、跨 client 可預覽；SVG/PNG/HTML renderer 留作 optional integration，不在核心 server 內啟動瀏覽器 |
 | 2026-08-09 | **FHIR mapping 屬 Interface presenter** | Domain 保留臨床概念與報告狀態，FHIR JSON、system URI 與容錯映射由 Interface 負責，維持 DDD 依賴方向 |
 | 2026-08-09 | **Token efficiency 是核心產品契約** | 使用 tool profiles、compact structured transport、persisted state 與 deterministic report automation，避免 Agent 重複載入/重算/重寫；不宣稱省去 raw 病歷閱讀與臨床判斷 |
+| 2026-08-14 | **8 Facade Tools Profile (`condensed`)** | 將 43 個離散工具濃縮為 8 個多型 Facade 工具，降低 >80% Tool Schema Token 消耗，並透過 action 多型派發保留 100% 功能 |
+| 2026-08-14 | **MCP Static Resources (`clinical://*`)** | 支援零 Tool Call 讀取臨床協議、專科 Playbook 與 Markdown 報告範本 |
+| 2026-08-14 | **MCP Dynamic Session Resource Templates** | 支援透過 URI 即時訂閱與檢驗案例報告、時序圖、推理導引與衝突清單 |
+| 2026-08-14 | **MCP Pre-Configured Clinical Prompts** | 提供麻醉 M&M、危機鑑別、Near Miss 屏障與延遲診斷 4 大臨床 Prompt 範本 |
+| 2026-08-14 | **Server-Level Instructions & Meta-Prompt** | 連線握手時自動注入系統級臨床推理 Meta-Prompt，鎖定 4-Tier 倒推因果與證據血緣 |
+| 2026-08-14 | **SQLite WhyTree 持久化** | 實作 `SQLiteWhyTreeRepository` 與 `WhyChainModel`，消除 WhyTree 記憶體遺失缺陷 |
+| 2026-08-14 | **臨床衝突與遺漏檢測 (`ClinicalGapAnalyzer`)** | 確定性偵測診斷矛盾、藥物反常惡化反應與臨床指引監測遺漏 (`rc_detect_conflicts`) |
+| 2026-08-14 | **不可變案例快照 (`CaseCheckpointService`)** | 支援案例狀態快照與分支實驗 (`rc_create_checkpoint`, `rc_restore_checkpoint`) |
+| 2026-08-14 | **確定性時序圖與 Mermaid 語法稽核** | 支援 5 種臨床時間軸模式 (`rc_render_timeline`) 與通用圖表語法修復 (`rc_validate_diagram`) |
 | 2026-08-14 | **硬性證據溯源 (Hard-Coded Provenance)** | 借鑑 ETL/Airbyte lineage 架構，Evidence 必須綁定 raw_snippet 與 SHA-256 密碼學摘要，由 ProvenanceVerifier 直接比對磁碟實體文件，實現零幻覺硬性溯源；明確不重疊 Asset-Aware 的 PDF OCR/表格分割角色 |
 | 2026-08-14 | **Flash 模型多輪導引狀態機** | 輕量模型易提早收斂與漏項；ClinicalGuidanceService 在每次工具回傳中注入 stage、checklist、missing prerequisites 與 next prompt，引導 Flash 模型在多輪對話中循序完成完整臨床思考鏈 |
 | 2026-08-14 | **臨床可自訂範本與 Playbook 體系** | 解耦確定性資料聚合引擎與純文字臨床規格；支援自訂 Markdown 報告範本 (`config/templates/`)、5 階段推論 SOP (`config/protocols/`) 與次專科臨床手冊 (`config/domains/`)，實現高可重現性與免寫代碼維護 |
