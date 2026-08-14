@@ -17,39 +17,85 @@ Typical status values:
 Legacy RCA tools also return Markdown/text content for interactive clients. The same
 text is included in `structuredContent.content`.
 
+### Token-efficient transport
+
+SDK 2.0 `structuredContent` is authoritative for modern tools. By default, the text
+fallback contains only status, identifiers, counts, and a pointer to structured
+content instead of duplicating the complete JSON payload. Set
+`ROOTCAUSE_RESPONSE_MODE=verbose` only for hosts that do not expose
+`structuredContent` to the Agent.
+
+Use `ROOTCAUSE_TOOL_PROFILE` to reduce the schema catalog placed in Agent context:
+
+| Profile | Advertised tools | Intended workflow |
+| --- | ---: | --- |
+| `clinical` | 17 | Evidence, DDx, cognitive audit, reasoning, guidance, report, causation |
+| `rca` | 21 | Session, HFACS, Fishbone, Why Tree, causation |
+| `all` | 37 | Complete catalog; default for compatibility |
+
+Hidden profile tools are not dispatchable. This prevents accidental calls and makes
+the advertised catalog match the executable surface.
+
 ## Medical Reasoning Workflow
 
 | Tool | Required intent |
 | --- | --- |
-| `rc_add_evidence` | Register a traceable clinical finding and quality grade |
+| `rc_add_evidence` | Register a traceable clinical finding, quality grade, verbatim raw snippet, and hash |
 | `rc_get_evidence` | Retrieve evidence by ID |
-| `rc_verify_evidence` | Record independent evidence verification |
+| `rc_verify_evidence` | Deterministically verify raw snippet against files on disk or record reviewer audit |
 | `rc_propose_hypothesis` | Create a diagnosis hypothesis with prior and explicit rationale |
 | `rc_link_evidence_to_hypothesis` | Apply a likelihood ratio and retain its rationale |
 | `rc_get_differential_diagnosis` | Return active hypotheses ranked by posterior probability |
 | `rc_exclude_hypothesis` | Exclude a hypothesis with reviewer and reason |
 | `rc_get_reasoning_chain` | Retrieve orchestrator-generated audit steps |
 | `rc_export_reasoning_chain` | Export the reasoning chain under the configured export root |
-| `rc_generate_contract_report` | Generate JSON or FHIR-compatible report output |
+| `rc_audit_reasoning_state` | Audit clinical reasoning completeness, stage progression, and next recommended actions |
+| `rc_generate_contract_report` | Generate JSON, FHIR-compatible, or deterministic Markdown output |
 
 ### `rc_add_evidence`
 
 Required fields: `session_id`, `content`.
 
-Important optional fields: `evidence_type`, `source_document`, `source_location`,
-`collected_by`, `clinical_strength`, `source_reliability`, `clinical_context`.
+Important optional fields:
+
+- `source_document`: File path or record ID (e.g., `"DATA_SOURCE_01_PRE_ANESTHESIA_EVALUATION.txt"`)
+- `source_location`: Specific location within document (e.g., `"Line 14"`)
+- `raw_snippet`: Exact verbatim excerpt from the physical file for cryptographic lineage
+- `content_hash`: Optional SHA-256 digest (computed automatically if omitted)
+- `extraction_method`: `"verbatim_quote"`, `"table_cell"`, `"structured_field"`, `"inference"`
+- `auto_verify`: Automatically verify snippet against physical disk file (`default: true`)
+- `clinical_strength`: `"STRONG"`, `"MODERATE"`, `"WEAK"`, `"ANECDOTAL"`
+- `source_reliability`: `"GRADE_A"`, `"GRADE_B"`, `"GRADE_C"`, `"GRADE_D"`
+- `evidence_type`: `"DOCUMENT"`, `"OBSERVATION"`, `"LAB_RESULT"`, `"IMAGING"`, etc.
 
 ```json
 {
   "session_id": "case-001",
-  "content": "Troponin I 2.5 ng/mL",
-  "evidence_type": "LAB_RESULT",
-  "source_document": "lab-report.pdf",
-  "source_location": "page 1",
+  "content": "Grade 2/6 Systolic Murmur at Left Sternal Border on pre-op exam",
+  "evidence_type": "OBSERVATION",
+  "source_document": "DATA_SOURCE_01_PRE_ANESTHESIA_EVALUATION.txt",
+  "source_location": "CV line 14",
+  "raw_snippet": "CV: RRR, Grade 2/6 Systolic Murmur at LSB (Left Sternal Border).",
   "clinical_strength": "STRONG",
   "source_reliability": "GRADE_A"
 }
 ```
+
+### `rc_verify_evidence`
+
+Deterministically matches verbatim quotes against physical files on disk or records human reviewer sign-off. If the file exists and the snippet matches, the server computes line numbers and cryptographic SHA-256 checksums without using an LLM.
+
+### `rc_audit_reasoning_state`
+
+Evaluates the multi-loop reasoning progress for AI agents (especially lightweight Flash/mini models). Returns:
+
+- `current_stage`: Current clinical reasoning stage (`EVIDENCE_COLLECTION`, `DIFFERENTIAL_EXPANSION`, `BAYESIAN_EVALUATION`, `COGNITIVE_AUDIT`, `READY_FOR_SYNTHESIS`)
+- `completeness_score`: Numerical score (0.0 to 1.0)
+- `checklist`: Detailed readiness checks (minimum 3 hypotheses, evidence linkage, disconfirming tests, uncertainty acknowledged, bias audited)
+- `next_recommended_actions`: Actionable tool call directives for the agent's next turn
+- `push_questions`: Socratic clinical prompts to deepen analysis
+
+### `rc_generate_contract_report`
 
 ### `rc_propose_hypothesis`
 
@@ -129,6 +175,10 @@ persisted through SQLModel repositories. Generated artifacts are confined to:
 ```text
 ROOTCAUSE_DATA_DIR/exports/<session_id>/
 ```
+
+Runtime exports are ephemeral and excluded from version control. Curated,
+license-reviewed benchmark inputs and expected artifacts belong under `examples/`
+with provenance and data-license metadata.
 
 The legacy Why Tree repository is currently process-local. See
 [ROADMAP.md](../ROADMAP.md) for planned persistence work.

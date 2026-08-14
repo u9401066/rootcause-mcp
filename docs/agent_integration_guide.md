@@ -15,6 +15,29 @@ RootCause MCP is NOT a diagnostic AI. It's a **reasoning harness** that helps yo
 - Quantify uncertainty
 - Generate auditable reports
 
+### Token-efficient operating mode
+
+For diagnosis-focused work, configure `ROOTCAUSE_TOOL_PROFILE=clinical`; use `rca`
+for HFACS/Fishbone/Why Tree work and `all` only when both surfaces are required.
+Keep `ROOTCAUSE_RESPONSE_MODE=compact` when your MCP host supports SDK 2.0
+`structuredContent`.
+
+Do not repeatedly retrieve complete evidence, thinking, and reasoning chains merely
+to write the final report. Once the structured state is complete, call:
+
+```json
+{
+    "session_id": "sess_001",
+    "format": "markdown",
+    "detail_level": "standard",
+    "finalize": true
+}
+```
+
+The server deterministically generates the ranked DDx, evidence matrix, uncertainty
+and bias review, completeness warnings, quality metrics, audit trail, and Evidence
+Graph. Use `brief` for context-efficient checkpoints and `full` for human audit.
+
 ---
 
 ## 🚨 Critical: Required Fields Force Transparency
@@ -204,7 +227,38 @@ await rc_reflect(
 
 ---
 
-## 🧠 Cognitive Best Practices
+### Pattern 4: Verbatim Provenance & Cryptographic Grounding
+
+```python
+# Add evidence with exact raw snippet and line locator
+finding = await rc_add_evidence(
+    session_id="sess_001",
+    content="Grade 2/6 Systolic Murmur at Left Sternal Border on pre-op exam",
+    evidence_type="OBSERVATION",
+    source_document="DATA_SOURCE_01_PRE_ANESTHESIA_EVALUATION.txt",
+    source_location="CV line 14",
+    raw_snippet="CV: RRR, Grade 2/6 Systolic Murmur at LSB (Left Sternal Border).",
+    clinical_strength="STRONG",
+    source_reliability="GRADE_A",
+    auto_verify=True  # Server verifies verbatim quote on disk
+)
+```
+
+---
+
+### Pattern 5: Multi-Loop Guidance for Lightweight (Flash) Models
+
+```python
+# Check guidance state machine at any turn
+audit = await rc_audit_reasoning_state(session_id="sess_001")
+
+# If not ready for synthesis, follow the next recommended actions
+if not audit["is_ready_for_report"]:
+    print(f"Current stage: {audit['stage_display']}")
+    print(f"Missing items: {audit['missing_prerequisites']}")
+    print(f"Next prompt: {audit['next_recommended_actions'][0]}")
+    # Flash agent executes the recommended tool in the next loop turn
+```
 
 ### 1. Always Consider Alternatives
 
@@ -295,7 +349,7 @@ await rc_reflect(
 
 ### ❌ Thin MCP (What We Want to Avoid)
 
-```
+```text
 Agent reads documents → Agent thinks internally → Agent calls MCP with conclusion
                                                     ↓
                                             MCP records result
@@ -306,7 +360,7 @@ Agent reads documents → Agent thinks internally → Agent calls MCP with concl
 
 ### ✅ Deep MCP (What We're Building)
 
-```
+```text
 Agent reads documents
     ↓
 Agent calls rc_add_evidence for each source-grounded finding
@@ -333,12 +387,14 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 ## 📊 What Gets Recorded
 
 ### ReasoningChain (What You Did)
+
 - Every tool call with timestamp
 - Evidence added
 - Hypotheses proposed
 - Bayesian updates performed
 
 ### ThinkingChain (Why You Did It)
+
 - Alternatives considered and rejected
 - Uncertainty factors
 - Confidence rationale
@@ -346,6 +402,7 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 - Assumptions made
 
 ### ContractReport (Auditable Output)
+
 - Complete evidence graph
 - Differential diagnosis tree with probabilities
 - Reasoning chain
@@ -375,7 +432,8 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 5. Call `rc_link_evidence_to_hypothesis` to perform Bayesian updating
 6. Call `rc_get_differential_diagnosis` to inspect the ranked DDx
 7. Call `rc_reflect` to identify biases
-8. Call `rc_generate_contract_report` to produce final auditable report
+8. Call `rc_generate_contract_report(format="markdown")` to produce the final
+    auditable artifact without asking the Agent to rewrite structured state
 
 ---
 
@@ -385,6 +443,6 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 
 ---
 
-**Version**: 1.0  
+**Version**: 1.1
 **Last Updated**: 2026-08-09  
 **For**: All AI Agents (Claude Code, Codex, OpenClaw, Cline, Z.ai, etc.)

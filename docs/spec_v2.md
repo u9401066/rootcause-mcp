@@ -450,6 +450,21 @@ graph TB
 - 新增/修改原因節點
 - 6M 分類管理
 - 匯出為 Mermaid / JSON / Markdown
+- Mermaid 匯出必須產生可由 Mermaid 11.x 解析的 fenced diagram，而非僅使用
+  Mermaid 副檔名包裝一般 Markdown。Fishbone 必須包含可辨識的水平主脊與 6M
+  分支；Reasoning Chain 必須以有序節點呈現步驟、信心與 evidence/hypothesis
+  關聯。所有使用者文字在插入 Mermaid label 前必須正規化與逸出。
+- CONTRACT evidence graph 必須同時提供機器可讀的 `nodes`/`edges` 與 Mermaid
+  表示；`include_*` 旗標必須實際控制輸出內容。未完成的 Markdown/HTML CONTRACT
+  格式不得出現在 MCP tool schema 中。
+- FHIR `DiagnosticReport` 必須保留 Hypothesis 原始 coding system，並依 posterior
+  probability 排序 conclusion。未提供標準碼的診斷必須使用跨程序穩定的 custom
+  code，不得依賴 Python 隨機化 `hash()`。
+- Token-efficiency contract：SDK 2.0 structured content 是完整資料來源，預設 text
+  fallback 不得重複序列化完整 payload；tool profile 必須讓 advertised schema 與
+  dispatch surface 一致；Markdown reasoning report 必須由既有 aggregate
+  deterministic 產生，`llm_tokens_used=0`。以 schema/payload UTF-8 bytes 作為
+  tokenizer-independent regression proxy。
 
 ### 3.3 與外部 MCP 協作模式
 

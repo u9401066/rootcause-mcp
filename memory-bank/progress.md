@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-08-09)
+# Progress (Updated: 2026-08-14)
 
 ## Done
 
@@ -24,8 +24,16 @@
 - 因果驗證統一委派 CausationValidator，移除過度自信預設
 - 支援 HFACS-MES 2024 代碼並保留 legacy code 讀取
 - 移除 MCP SDK 1.x server 與 legacy adapter
-- 完成 48 tests、80% coverage、Ruff、strict mypy、Bandit、Vulture 閘門
+- 完成 66 tests、81.56% coverage、Ruff、strict mypy、Bandit、Vulture 閘門
 - 重寫中英文 README、API 文件與 Agent 整合指南
+- 完成 Fishbone、Why Tree、Reasoning Chain、Evidence Graph 四種 Mermaid 視覺化
+- 修復 CONTRACT include flags、FHIR coding、穩定 custom diagnosis code 與套件 metadata
+- 使用 Mermaid CLI 11.16 實際渲染四種圖表
+- 完成 clinical/RCA tool profiles 與 compact SDK 2.0 structured transport
+- 完成 deterministic brief/standard/full Markdown reasoning report 與 completeness checks
+- 實作 `ProvenanceVerifier` 領域服務（raw snippet 逐字引文、行號比對、SHA-256 密碼學錨定）
+- 實作 `ClinicalGuidanceService` 狀態機（階段推進、完備度清單、下一步 Prompt 指令、蘇格拉底式詰問）
+- 新增 `rc_audit_reasoning_state` MCP 工具（總計 37 tools）
 
 ## Doing
 
@@ -34,6 +42,9 @@
 
 ## Next
 
+- 設計具 idempotent client aliases 與 rollback 的 batch case bundle
+- 新增 compact case checkpoint/resume artifact，避免 Agent 重讀完整 chain
+- 評估 SVG/PNG renderer 作為 optional deployment integration
 - 將 legacy Why Tree 從 InMemory repository 遷移到 SQLite
 - 建立正式資料庫 migration 機制
 - 補 authentication、encryption-at-rest、tenant isolation 與 PHI governance

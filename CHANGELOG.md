@@ -7,6 +7,69 @@
 
 ## [Unreleased]
 
+### Added - Hard-Coded Provenance & Multi-Loop Guidance (2026-08-14)
+
+- Added `ProvenanceVerifier` domain service for deterministic, zero-hallucination
+  verification of evidence quotes against raw clinical documents (TXT, CSV, HL7, XML)
+  with SHA-256 cryptographic digests and line location indexing.
+- Added `ClinicalGuidanceService` and `ReasoningGuidance` value object to guide
+  lightweight (Flash/mini) models through structured multi-turn completion
+  (stages, readiness checklists, missing prerequisites, next prompt directives,
+  and Socratic push questions).
+- Added `rc_audit_reasoning_state` MCP tool to inspect case readiness before report
+  generation (bringing total tools to 37: 17 clinical, 21 RCA, 37 all).
+- Integrated automatic guidance payloads into `rc_add_evidence`,
+  `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`, `rc_think_aloud`,
+  `rc_reflect`, and `rc_get_differential_diagnosis`.
+- Added automated report warnings against premature diagnostic closure (<3
+  differential hypotheses) and ungrounded/unverified evidence records.
+
+### Added - Token-Efficient Reasoning Harness (2026-08-09)
+
+- Added `clinical`, `rca`, and `all` tool profiles that constrain both advertised
+  schemas and executable dispatch.
+- Added compact SDK 2.0 text fallbacks while preserving complete authoritative
+  `structuredContent`; verbose compatibility mode remains configurable.
+- Added deterministic brief/standard/full Markdown clinical reasoning reports with
+  ranked DDx, evidence matrix, uncertainty/bias review, structural warnings,
+  quality metrics, reasoning audit, and Evidence Graph.
+- Added exact regression byte proxies: clinical schema context is 48.4% smaller
+  and synthetic structured-response text duplication is 99.7% smaller.
+- Report responses declare deterministic generation and zero server-side LLM tokens.
+
+### Added - Auditable Visualizations (2026-08-09)
+
+- Added shared Mermaid presenters for Fishbone, Why Tree, Reasoning Chain, and
+  CONTRACT Evidence Graph artifacts.
+- Added deterministic evidence-graph `nodes` / `edges`, support/contradiction
+  relationships, provenance labels, and graph-integrity warnings.
+- Added 6M Ishikawa spine layout with causes and sub-causes.
+- Added structural Mermaid regression tests and validated all four diagram types
+  with Mermaid CLI 11.16.
+
+### Fixed - Generated Artifacts (2026-08-09)
+
+- Fixed `rc_export_reasoning_chain(format="mermaid")` returning prose Markdown
+  under a misleading extension.
+- Fixed CONTRACT include flags being ignored, removed unimplemented HTML, and
+  replaced placeholder Markdown with deterministic report generation.
+- Fixed duplicate Why Tree parent/cross-link lines and contradictory cause-type
+  labels.
+- Fixed unstable Python `hash()`-based custom diagnosis identifiers.
+- Fixed coding-system validators that previously accepted malformed ICD-10 and
+  SNOMED CT values.
+- Moved FHIR presentation out of the Domain value object, preserved diagnosis
+  coding systems, ranked conclusions, skipped malformed persisted diagnoses, and
+  emitted FHIR JSON with a `.json` extension.
+- Aligned package metadata and project URLs with the Apache-2.0 repository.
+- Excluded ephemeral runtime exports from version control.
+
+### Quality - Artifact and Token-Efficiency Audit (2026-08-09)
+
+- 61 tests pass with 81.54% branch-aware coverage.
+- Ruff, strict mypy for 76 source files, Bandit, Vulture, `uv lock --check`, and
+  wheel/sdist builds pass.
+
 ### Fixed - Repository Audit (2026-08-09)
 
 - Replaced the obsolete SDK 1.x test/entry path with MCP SDK 2.0 lifecycle tests.

@@ -1,0 +1,86 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 760" role="img" aria-labelledby="title desc">
+  <title id="title">Token-efficient medical reasoning workflow</title>
+  <desc id="desc">The agent reads clinical records and makes clinical judgments while RootCause MCP reduces repeated schema, transport, calculation, quality-check, and report-writing work.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+      <path d="M0,0 L10,3 L0,6 Z" fill="#475569"/>
+    </marker>
+  </defs>
+
+  <rect width="1400" height="760" fill="#f8fafc"/>
+  <text x="700" y="48" font-family="Segoe UI, Arial, sans-serif" font-size="30" font-weight="700" text-anchor="middle" fill="#172554">Token-Efficient Medical Reasoning Harness</text>
+  <text x="700" y="78" font-family="Segoe UI, Arial, sans-serif" font-size="15" text-anchor="middle" fill="#475569">Clinical judgment stays with the Agent; repeatable work moves into deterministic code.</text>
+
+  <g transform="translate(40 125)">
+    <rect width="270" height="390" rx="8" fill="#fff7ed" stroke="#c2410c" stroke-width="2"/>
+    <text x="135" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="middle" fill="#9a3412">1. Agent Judgment</text>
+    <text x="24" y="78" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#431407">Read raw clinical records</text>
+    <text x="24" y="112" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#431407">Generate plausible hypotheses</text>
+    <text x="24" y="146" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#431407">Choose defensible LR values</text>
+    <text x="24" y="180" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#431407">Record uncertainty and bias</text>
+    <line x1="24" y1="210" x2="246" y2="210" stroke="#fdba74"/>
+    <text x="24" y="248" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" fill="#9a3412">Not automated</text>
+    <text x="24" y="278" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#7c2d12">Raw-document interpretation</text>
+    <text x="24" y="304" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#7c2d12">Clinical validity</text>
+    <text x="24" y="330" font-family="Segoe UI, Arial, sans-serif" font-size="13" fill="#7c2d12">Final human review</text>
+  </g>
+
+  <line x1="320" y1="320" x2="365" y2="320" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <g transform="translate(375 125)">
+    <rect width="290" height="390" rx="8" fill="#eff6ff" stroke="#2563eb" stroke-width="2"/>
+    <text x="145" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="middle" fill="#1e3a8a">2. Context Controls</text>
+    <rect x="22" y="68" width="246" height="92" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="145" y="98" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#1e40af">Profiled Tool Catalog</text>
+    <text x="145" y="126" font-family="Segoe UI, Arial, sans-serif" font-size="14" text-anchor="middle" fill="#334155">36 tools to 16 clinical tools</text>
+    <text x="145" y="148" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#1d4ed8">48.4% fewer schema bytes</text>
+
+    <rect x="22" y="184" width="246" height="112" rx="6" fill="#ffffff" stroke="#93c5fd"/>
+    <text x="145" y="214" font-family="Segoe UI, Arial, sans-serif" font-size="15" font-weight="700" text-anchor="middle" fill="#1e40af">Compact SDK 2.0 Results</text>
+    <text x="145" y="242" font-family="Segoe UI, Arial, sans-serif" font-size="14" text-anchor="middle" fill="#334155">Full structuredContent once</text>
+    <text x="145" y="266" font-family="Segoe UI, Arial, sans-serif" font-size="14" text-anchor="middle" fill="#334155">Bounded text fallback</text>
+    <text x="145" y="288" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#1d4ed8">99.7% less duplicate text</text>
+
+    <text x="145" y="344" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#475569">Profile and response mode are</text>
+    <text x="145" y="366" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#475569">frozen for each server lifespan.</text>
+  </g>
+
+  <line x1="675" y1="320" x2="720" y2="320" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <g transform="translate(730 125)">
+    <rect width="300" height="390" rx="8" fill="#f0fdf4" stroke="#15803d" stroke-width="2"/>
+    <text x="150" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="middle" fill="#14532d">3. Deterministic Harness</text>
+    <text x="28" y="82" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#14532d">Evidence provenance and grading</text>
+    <text x="28" y="118" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#14532d">Bayesian posterior updates</text>
+    <text x="28" y="154" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#14532d">Session persistence and rehydration</text>
+    <text x="28" y="190" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#14532d">Graph and diagram generation</text>
+    <text x="28" y="226" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#14532d">Completeness and traceability checks</text>
+    <text x="28" y="262" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#14532d">Stable coding and content hashing</text>
+    <line x1="28" y1="292" x2="272" y2="292" stroke="#86efac"/>
+    <text x="150" y="330" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700" text-anchor="middle" fill="#166534">No server-side LLM call</text>
+    <text x="150" y="358" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#475569">Same structured state, reproducible output</text>
+  </g>
+
+  <line x1="1040" y1="320" x2="1085" y2="320" stroke="#475569" stroke-width="3" marker-end="url(#arrow)"/>
+
+  <g transform="translate(1095 125)">
+    <rect width="265" height="390" rx="8" fill="#fefce8" stroke="#a16207" stroke-width="2"/>
+    <text x="132.5" y="36" font-family="Segoe UI, Arial, sans-serif" font-size="20" font-weight="700" text-anchor="middle" fill="#713f12">4. Audit Artifacts</text>
+    <text x="26" y="84" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#713f12">Ranked differential diagnosis</text>
+    <text x="26" y="120" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#713f12">Evidence matrix and gaps</text>
+    <text x="26" y="156" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#713f12">Reasoning audit and metrics</text>
+    <text x="26" y="192" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#713f12">Fishbone and Why Tree</text>
+    <text x="26" y="228" font-family="Segoe UI, Arial, sans-serif" font-size="15" fill="#713f12">Evidence Graph</text>
+    <line x1="26" y1="258" x2="239" y2="258" stroke="#fde047"/>
+    <text x="132.5" y="296" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#854d0e">JSON / FHIR / Markdown</text>
+    <text x="132.5" y="326" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700" text-anchor="middle" fill="#854d0e">Mermaid diagrams</text>
+    <text x="132.5" y="366" font-family="Segoe UI, Arial, sans-serif" font-size="13" text-anchor="middle" fill="#475569">Brief / standard / full detail</text>
+  </g>
+
+  <g transform="translate(90 570)">
+    <rect width="1220" height="125" rx="8" fill="#ffffff" stroke="#64748b" stroke-width="1.5"/>
+    <text x="610" y="34" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700" text-anchor="middle" fill="#0f172a">Core value: automate repeatable reasoning operations, not clinical judgment</text>
+    <text x="610" y="68" font-family="Segoe UI, Arial, sans-serif" font-size="14" text-anchor="middle" fill="#334155">Measured with tokenizer-independent UTF-8 byte regression fixtures.</text>
+    <text x="610" y="96" font-family="Segoe UI, Arial, sans-serif" font-size="14" text-anchor="middle" fill="#334155">Qualified clinicians remain responsible for source verification, coding, LR values, diagnosis, and action.</text>
+  </g>
+</svg>

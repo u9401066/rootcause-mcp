@@ -25,6 +25,11 @@
 | 2026-08-09 | **P0/P1 審計缺陷完成修復** | 36-tool registry、aggregate persistence、真實 ContractReport、保守因果驗證與品質閘門皆已完成 |
 | 2026-08-09 | **不宣稱醫療 production-ready** | 工程品質閘門通過，但 Why Tree persistence 與 deployment security/governance 尚未完成 |
 | 2026-08-09 | **MCP 僅保存外顯推理記錄** | Agent 才是推理主體；ThinkingStep 是 agent-authored rationale，不宣稱擷取模型隱藏 chain-of-thought |
+| 2026-08-09 | **圖表採 Mermaid source + structured graph** | 保持 MCP transport 輕量、跨 client 可預覽；SVG/PNG/HTML renderer 留作 optional integration，不在核心 server 內啟動瀏覽器 |
+| 2026-08-09 | **FHIR mapping 屬 Interface presenter** | Domain 保留臨床概念與報告狀態，FHIR JSON、system URI 與容錯映射由 Interface 負責，維持 DDD 依賴方向 |
+| 2026-08-09 | **Token efficiency 是核心產品契約** | 使用 tool profiles、compact structured transport、persisted state 與 deterministic report automation，避免 Agent 重複載入/重算/重寫；不宣稱省去 raw 病歷閱讀與臨床判斷 |
+| 2026-08-14 | **硬性證據溯源 (Hard-Coded Provenance)** | 借鑑 ETL/Airbyte lineage 架構，Evidence 必須綁定 raw_snippet 與 SHA-256 密碼學摘要，由 ProvenanceVerifier 直接比對磁碟實體文件，實現零幻覺硬性溯源；明確不重疊 Asset-Aware 的 PDF OCR/表格分割角色 |
+| 2026-08-14 | **Flash 模型多輪導引狀態機** | 輕量模型易提早收斂與漏項；ClinicalGuidanceService 在每次工具回傳中注入 stage、checklist、missing prerequisites 與 next prompt，引導 Flash 模型在多輪對話中循序完成完整臨床思考鏈 |
 
 ---
 

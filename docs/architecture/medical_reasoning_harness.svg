@@ -4,7 +4,7 @@
   
   <!-- Title -->
   <text x="600" y="40" font-family="Arial, sans-serif" font-size="28" font-weight="bold" text-anchor="middle" fill="#2c3e50">
-    RootCause MCP: Medical Reasoning Harness Architecture
+    RootCause MCP: Medical Reasoning and Clinical RCA Harness
   </text>
   
   <!-- Layer 1: AI Agent -->
@@ -29,10 +29,10 @@
       MCP Interface Layer (SDK 2.0)
     </text>
     <text x="550" y="50" font-family="Arial, sans-serif" font-size="14" text-anchor="middle" fill="#424242">
-      27 Typed Tools | Input/Output CONTRACT Validation | Structured Content
+      16 / 21 / 36 Profiled Tools | Compact Structured Results | Typed Contracts
     </text>
     <text x="550" y="70" font-family="Arial, sans-serif" font-size="12" font-style="italic" text-anchor="middle" fill="#666">
-      @mcp.tool() + BaseModel → Automatic schema generation
+      SDK 2.0 callbacks | input/output schemas | profile-frozen dispatch
     </text>
   </g>
   
@@ -76,10 +76,10 @@
     <!-- CoT Tracker -->
     <rect x="870" y="45" width="200" height="70" rx="5" fill="#ffffff" stroke="#ffa000" stroke-width="1.5"/>
     <text x="970" y="70" font-family="Arial, sans-serif" font-size="14" font-weight="bold" text-anchor="middle" fill="#ff6f00">
-      Chain-of-Thought
+      Explicit Rationale
     </text>
     <text x="970" y="90" font-family="Arial, sans-serif" font-size="12" text-anchor="middle" fill="#666">
-      Audit Trail Tracker
+      Agent-authored audit record
     </text>
   </g>
   
@@ -135,7 +135,7 @@
       ReasoningStep
     </text>
     <text x="570" y="85" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
-      • Chain of Thought
+      • Action Audit Trail
     </text>
     <text x="570" y="100" font-family="Arial, sans-serif" font-size="11" text-anchor="middle" fill="#666">
       • Timestamped
@@ -206,7 +206,7 @@
     
     <text x="900" y="55" font-family="Arial, sans-serif" font-size="13" text-anchor="middle" fill="#424242">
       📋 Contract Report<br/>
-      (FHIR / JSON / Mermaid)
+      (JSON / FHIR / Markdown / Mermaid)
     </text>
   </g>
   

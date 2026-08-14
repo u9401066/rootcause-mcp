@@ -76,6 +76,38 @@
 - [x] GuidedResponse 進度追蹤整合
 - [x] 總計 19 個 MCP Tools 上線
 
+### Phase 2.6: 可稽核圖表輸出 (2026-08-09)
+
+- [x] Fishbone Mermaid 改為可辨識的 6M Ishikawa 主脊、骨枝與次因版型
+- [x] Why Tree Mermaid 支援根因、跨因果連結與重複 parent edge 合併
+- [x] Reasoning Chain 產生真正的有序 Mermaid 稽核鏈
+- [x] CONTRACT Evidence Graph 提供 deterministic `nodes` / `edges` 與 Mermaid
+- [x] Mermaid label 正規化與特殊字元逸出
+- [x] 使用 Mermaid CLI 11.16 實際渲染四種圖表
+- [ ] Optional SVG/PNG renderer
+- [ ] Cytoscape/D3/interactive HTML export
+
+### Phase 2.7: Token-Efficient Reasoning Harness (2026-08-09)
+
+- [x] `clinical` / `rca` / `all` tool profiles
+- [x] SDK 2.0 compact text fallback，完整資料只保留於 structured content
+- [x] Deterministic brief/standard/full Markdown reasoning report
+- [x] 自動 DD 排名、Evidence Matrix、uncertainty/bias 與 completeness checks
+- [x] Schema/payload UTF-8 byte regression proxies
+- [ ] Transactional batch case bundle（client aliases、idempotency、rollback）
+- [ ] Compact checkpoint/resume artifact
+- [ ] 實際 model tokenizer 與 end-to-end cost benchmark
+
+### Phase 2.8: Hard-Coded Provenance & Multi-Loop Guidance (2026-08-14)
+
+- [x] `ProvenanceVerifier` 領域服務：原始病歷逐字引文 (raw_snippet)、行號定位、SHA-256 密碼學錨定
+- [x] 確定性實體檔案比對（TXT, CSV, HL7, XML），完全不依賴神經網路或 LLM
+- [x] `ClinicalGuidanceService` 推理狀態機：自動評估階段、完備度評分、檢查清單、下一步 Prompt 指令與蘇格拉底式詰問
+- [x] `rc_audit_reasoning_state` 工具上線（總計 37 tools）
+- [x] 報告自動完整性警告：防範過早診斷收斂 (premature closure)、無來源引文與未驗證證據
+- [ ] 跨病歷時序對齊與生理趨勢衝突偵測
+- [ ] Guideline-linked Likelihood Ratio 知識檢索庫
+
 ---
 
 ## 進行中 🚧
