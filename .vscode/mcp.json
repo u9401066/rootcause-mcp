@@ -2,14 +2,16 @@
   "servers": {
     "rootcauseMcp": {
       "type": "stdio",
-      "command": "uv",
+      "command": "C:\\Users\\Ericlab\\AppData\\Local\\hermes\\bin\\uv.EXE",
       "args": [
         "run",
         "rootcause-mcp"
       ],
       "env": {
         "ROOTCAUSE_CONFIG_DIR": "${workspaceFolder}/config",
-        "ROOTCAUSE_DATA_DIR": "${workspaceFolder}/data"
+        "ROOTCAUSE_DATA_DIR": "${workspaceFolder}/data",
+        "ROOTCAUSE_TOOL_PROFILE": "all",
+        "ROOTCAUSE_RESPONSE_MODE": "compact"
       },
       "dev": {
         "watch": "src/**/*.py",
