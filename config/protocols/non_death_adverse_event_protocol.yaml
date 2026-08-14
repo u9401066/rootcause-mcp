@@ -1,0 +1,46 @@
+# ============================================================================
+# 非死亡醫療不良事件與異常未遂 (Near Miss) 根因分析規範
+# Non-Death Adverse Events & Near Miss Root Cause Analysis Protocol
+# ============================================================================
+# 目的：
+# 針對未造成死亡的複雜醫療異常（如 Near Miss 未遂事件、藥物不良事件 ADE、
+# 醫療器材警報事件、延遲診斷、手術重大非預期併發症），
+# 著重於「防護層級失效分析 (Barrier Analysis)」與「成功攔截因素」，以建立防呆機制。
+# ============================================================================
+
+version: "2.0.0"
+protocol_name: "Non-Death Adverse Event & Near Miss RCA Protocol"
+last_updated: "2026-08-14"
+
+harm_severity_classification:
+  ncc_merp_index:
+    - category: "Category A"
+      description: "環境或流程潛在具發生錯誤的風險 (Circumstances or events that have capacity to cause error)"
+    - category: "Category B"
+      description: "發生錯誤但未接觸到病人 (Error occurred but did not reach patient - Near Miss)"
+    - category: "Category C"
+      description: "錯誤已接觸到病人但未造成傷害 (Error reached patient but did not cause harm)"
+    - category: "Category D"
+      description: "錯誤接觸病人需進行額外監測以確保未受傷害 (Error reached patient, required monitoring)"
+    - category: "Category E"
+      description: "造成暫時性傷害需額外處置 (Temporary harm, required intervention)"
+    - category: "Category F"
+      description: "造成暫時性傷害且延長住院時間 (Temporary harm, required initial or prolonged hospitalization)"
+    - category: "Category G"
+      description: "造成永久性病人傷害 (Permanent patient harm)"
+    - category: "Category H"
+      description: "需要維持生命之處置 (Harm required intervention necessary to sustain life)"
+
+core_investigation_dimensions:
+  1_timeline_reconstruction:
+    name: "時序重構與關鍵決策點 (Timeline & Critical Decision Points)"
+    guidance: "選用適當 Timeline Pattern（如 delayed_diagnosis, barrier_failure, device_incident）依時間錨定所有事件。"
+  2_barrier_and_defense_audit:
+    name: "屏障失效分析 (Barrier & Swiss-Cheese Defense Audit)"
+    guidance: "針對開單端、調劑端、執行端、監測端逐一檢核防線為何被穿透。"
+  3_recovery_and_interception:
+    name: "攔截與挽救機制 (Interception & Recovery Factors)"
+    guidance: "分析為何本事件未演變成死亡？有哪些機警行為、安全防線或臨床即時處置發揮了攔截作用？"
+  4_error_proofing_poka_yoke:
+    name: "防呆與系統改善 (Error-Proofing / Poka-Yoke Actions)"
+    guidance: "優先提出強效防呆（強制鎖定、硬體限制、閉環通報），而非僅依賴『再教育』或『提醒同仁注意』。"

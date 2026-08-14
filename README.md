@@ -253,10 +253,10 @@ See [Agent Integration Guide](docs/agent_integration_guide.md) for payload examp
 | Session | 4 | Start, retrieve, list, and archive RCA sessions |
 | Fishbone | 4 | Initialize, add causes, inspect, and export |
 | Why Tree | 6 | Ask why, inspect, cross-link, mark root causes, export, and teach |
-| Causation verification | 1 | Conservative counterfactual and mechanism checks |
-| **Total** | **37** | |
+| Verification & diagram tools | 3 | Counterfactual causation checks, Mermaid syntax auditor, and timeline renderer |
+| **Total** | **39** | |
 
-All tools expose an MCP SDK 2.0 `input_schema` and a structured output envelope.
+All tools expose an MCP SDK 2.0 `input_schema` and a structured output envelope (19 in clinical profile, 23 in RCA profile, 39 in all profile).
 New medical-reasoning tools return structured domain data; legacy RCA tools retain
 human-readable text and also expose it through structured content.
 

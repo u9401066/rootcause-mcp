@@ -1,15 +1,17 @@
 """
-Verification Tool Definitions.
+Verification & Diagram Tool Definitions.
 
-Defines 1 Causation Verification MCP tool:
+Defines Causation Verification and Diagram Rendering/Auditing MCP tools:
 - rc_verify_causation
+- rc_validate_diagram
+- rc_render_timeline
 """
 
 from mcp.types import Tool
 
 
 def get_verification_tools() -> list[Tool]:
-    """Return Verification tool definitions."""
+    """Return Verification and Diagram tool definitions."""
     return [
         Tool(
             name="rc_verify_causation",
@@ -71,6 +73,113 @@ def get_verification_tools() -> list[Tool]:
                     },
                 },
                 "required": ["session_id", "cause", "effect"],
+            },
+        ),
+        Tool(
+            name="rc_validate_diagram",
+            description=(
+                "Audit, validate, and auto-sanitize Mermaid diagram syntax (flowchart, timeline, "
+                "sequence, state, fishbone, why_tree). Checks delimiter balance, label quotes, "
+                "colon formatting, and returns clean executable Mermaid source with diagnostics."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "mermaid_source": {
+                        "type": "string",
+                        "description": "Raw Mermaid source code or diagram definition to audit",
+                    },
+                    "diagram_type": {
+                        "type": "string",
+                        "enum": [
+                            "flowchart",
+                            "graph",
+                            "timeline",
+                            "sequenceDiagram",
+                            "stateDiagram",
+                            "erDiagram",
+                            "gantt",
+                            "pie",
+                            "mindmap",
+                        ],
+                        "description": "Expected diagram type (optional, auto-detected if omitted)",
+                    },
+                    "auto_fix": {
+                        "type": "boolean",
+                        "description": "Automatically escape reserved characters, balance brackets, and fix syntax",
+                        "default": True,
+                    },
+                },
+                "required": ["mermaid_source"],
+            },
+        ),
+        Tool(
+            name="rc_render_timeline",
+            description=(
+                "Render structured chronological event timeline and Mermaid diagram using clinical patterns "
+                "(perioperative_sequence, acute_crisis, delayed_diagnosis, barrier_failure, device_incident, auto, custom)."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID (optional, to load persisted clinical evidence)",
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "time": {
+                                    "type": "string",
+                                    "description": "Timestamp or time label (e.g., '08:00', 'POD 1 16:00')",
+                                },
+                                "phase": {
+                                    "type": "string",
+                                    "description": "Clinical phase/stage for grouping (optional)",
+                                },
+                                "content": {
+                                    "type": "string",
+                                    "description": "Clinical event or finding description",
+                                },
+                                "source_document": {
+                                    "type": "string",
+                                    "description": "Source document ID (optional)",
+                                },
+                                "verified": {
+                                    "type": "boolean",
+                                    "description": "Whether evidence is verified (optional)",
+                                },
+                            },
+                            "required": ["content"],
+                        },
+                        "description": "Custom list of timeline events (optional)",
+                    },
+                    "pattern": {
+                        "type": "string",
+                        "enum": [
+                            "auto",
+                            "perioperative_sequence",
+                            "acute_crisis",
+                            "delayed_diagnosis",
+                            "barrier_failure",
+                            "device_incident",
+                            "custom",
+                        ],
+                        "description": "Clinical timeline pattern used for phase clustering",
+                        "default": "auto",
+                    },
+                    "title": {
+                        "type": "string",
+                        "description": "Custom timeline title (optional)",
+                    },
+                    "include_table": {
+                        "type": "boolean",
+                        "description": "Include Markdown event matrix table in response",
+                        "default": True,
+                    },
+                },
             },
         ),
     ]

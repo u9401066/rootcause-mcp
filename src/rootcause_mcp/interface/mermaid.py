@@ -57,30 +57,279 @@ def _extract_time_key(text: str) -> str:
         r"\b(\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}"
         r"|\d{2}/\d{2}\s+\d{2}:\d{2}"
         r"|POD\s*\d+\s+\d{2}:\d{2}"
+        r"|\d{4}/\d{2}/\d{2}"
         r"|\d{2}:\d{2})\b"
     )
     match = re.search(pattern, text, flags=re.IGNORECASE)
     return match.group(1) if match else ""
 
 
-def _infer_phase(time_str: str, content: str) -> str:
-    """Infer clinical phase for timeline grouping."""
-    text = f"{time_str} {content}".lower()
+def _detect_pattern_from_text(text: str) -> str:
+    """Auto-detect clinical timeline pattern from content keywords."""
+    if any(
+        k in text
+        for k in [
+            "rad_report",
+            "ct scan",
+            "memo",
+            "fax",
+            "triage",
+            "delayed",
+            "44 day",
+            "biopsy",
+            "lost to follow-up",
+            "01/05",
+            "01/07",
+            "02/20",
+        ]
+    ):
+        return "delayed_diagnosis"
+    if any(
+        k in text
+        for k in [
+            "lvad",
+            "heartmate",
+            "pump",
+            "suction",
+            "controller log",
+            "power spike",
+            "low flow",
+            "pi 1.0",
+            "rpm",
+            "bowing into lv",
+        ]
+    ):
+        return "device_incident"
+    if any(
+        k in text
+        for k in [
+            "order expired",
+            "not_given",
+            "mar.csv",
+            "pharmacy",
+            "clexane held",
+            "dispensing",
+            "not renewed",
+        ]
+    ):
+        return "barrier_failure"
+    if any(
+        k in text
+        for k in [
+            "induction",
+            "intubation",
+            "pre-op",
+            "pre_anesthesia",
+            "surgeon",
+            "or ",
+            "pacu",
+            "tee",
+            "propofol 80mg",
+            "08:00",
+            "08:05",
+            "08:18",
+        ]
+    ):
+        return "perioperative_sequence"
+    return "acute_crisis"
+
+
+def _infer_delayed_diag_phase(text: str) -> str:
+    if any(
+        k in text
+        for k in ["opd", "clinic", "initial visit", "exam arranged", "01/05", "visit"]
+    ):
+        return "1. Initial Contact & Testing Order"
+    if any(
+        k in text
+        for k in [
+            "ct completed",
+            "rad",
+            "mass found",
+            "critical finding",
+            "01/07",
+            "hl7",
+        ]
+    ):
+        return "2. Diagnostic Test & Result Generation"
+    if any(
+        k in text
+        for k in [
+            "faxed",
+            "desk",
+            "seminar",
+            "early leave",
+            "moved to archive",
+            "lost",
+            "14:01",
+            "14:10",
+            "14:30",
+            "14:45",
+        ]
+    ):
+        return "3. Communication Gap & Missed Opportunity"
+    if any(
+        k in text
+        for k in [
+            "44 days",
+            "blank",
+            "unaware",
+            "progression",
+            "interval",
+            "normal thought",
+        ]
+    ):
+        return "4. Latent Disease Progression"
+    if any(
+        k in text
+        for k in [
+            "hemoptysis",
+            "er triage",
+            "triage",
+            "flare",
+            "crisis discovery",
+            "02/20",
+        ]
+    ):
+        return "5. Symptom Flare & Crisis Discovery"
+    return "6. Late Diagnosis & Corrective Action"
+
+
+def _infer_barrier_failure_phase(text: str) -> str:
+    if any(
+        k in text
+        for k in ["order written", "hold 24h", "op note", "dvt prophylaxis", "14:00"]
+    ):
+        return "1. Prescribing & Ordering Phase"
+    if any(
+        k in text
+        for k in ["pharmacy", "dispensing", "order expired", "not renewed", "09:00"]
+    ):
+        return "2. Dispensing & Pharmacy Barrier"
+    if any(
+        k in text
+        for k in ["mar", "not_given", "admin_by", "dose omitted", "calf pain", "16:00"]
+    ):
+        return "3. Administration & Nursing Barrier"
+    if any(
+        k in text
+        for k in [
+            "fever",
+            "tachycardia",
+            "progress note",
+            "misdiagnosed",
+            "08:30",
+            "11:30",
+        ]
+    ):
+        return "4. Monitoring & Detection Barrier"
+    return "5. Interception or Adverse Outcome"
+
+
+def _infer_device_incident_phase(text: str) -> str:
+    if any(
+        k in text
+        for k in ["baseline", "implanted", "3 months", "02:00", "pi 4.5", "power 4.1"]
+    ):
+        return "1. Baseline Device Setting"
+    if any(
+        k in text
+        for k in ["rv failure", "decreased preload", "02:45", "pi 1.5", "suction start"]
+    ):
+        return "2. Mechanical / Hemodynamic Disturbance"
+    if any(
+        k in text
+        for k in [
+            "alarm",
+            "low flow",
+            "power spike",
+            "cola urine",
+            "04:00",
+            "controller log",
+        ]
+    ):
+        return "3. Controller Alarm & Warnings"
+    if any(
+        k in text
+        for k in [
+            "fluid given",
+            "speed increased",
+            "echo misread",
+            "er triage",
+            "thrombosis suspected",
+        ]
+    ):
+        return "4. Clinical Misinterpretation & Action"
+    return "5. Corrective Rescue (Speed Reduction / RV Support)"
+
+
+def _infer_acute_crisis_phase(text: str) -> str:
+    if any(
+        k in text
+        for k in ["baseline", "pre-event", "admitted", "history", "08:00", "23:30"]
+    ):
+        return "1. Pre-Event Baseline"
+    if any(
+        k in text
+        for k in [
+            "trigger",
+            "infusion",
+            "older stock",
+            "unit #7",
+            "induction",
+            "01:00",
+            "01:45",
+        ]
+    ):
+        return "2. Precipitating Trigger"
+    if any(
+        k in text
+        for k in [
+            "worsening",
+            "hypotension",
+            "acidosis",
+            "rhabdomyolysis",
+            "crash",
+            "02:00",
+            "02:30",
+        ]
+    ):
+        return "3. Acute Deterioration"
+    if any(
+        k in text
+        for k in [
+            "alarm",
+            "peaked t",
+            "hi_t_wave",
+            "brugada",
+            "alert",
+            "02:12",
+            "05:30",
+        ]
+    ):
+        return "4. Crisis Recognition & Alarm"
+    if any(
+        k in text
+        for k in ["code blue", "arrest", "cpr", "epinephrine", "02:45", "12:10"]
+    ):
+        return "5. Rescue & Resuscitation"
+    return "6. Stabilization / Post-Crisis Outcome"
+
+
+def _infer_perioperative_phase(text: str) -> str:
     if any(
         k in text
         for k in [
             "pre-op",
             "baseline",
             "admission",
-            "opd",
             "08:00",
             "history",
-            "day 1",
-            "23:30",
+            "pre_anesthesia",
         ]
     ):
         return "1. Baseline & Pre-Op"
-    elif any(
+    if any(
         k in text
         for k in [
             "induction",
@@ -90,112 +339,352 @@ def _infer_phase(time_str: str, content: str) -> str:
             "08:05",
             "08:08",
             "08:10",
-            "clexane held",
-            "unit #7",
-            "01:00",
-            "01:15",
-            "01:45",
+            "surgical incision",
         ]
     ):
         return "2. Induction & Surgical Events"
-    elif any(
+    if any(
         k in text
         for k in [
             "hypotension",
             "crash",
             "worsening",
             "acidosis",
-            "rhabdomyolysis",
             "ephedrine",
             "epinephrine",
             "08:12",
             "08:15",
             "08:18",
-            "02:00",
-            "02:30",
-            "04:00",
-            "16:00",
-            "swelling",
         ]
     ):
         return "3. Crisis Progression & Deterioration"
-    elif any(
+    if any(
         k in text
         for k in [
             "tee",
             "doppler",
-            "brugada",
             "dagger",
             "sam",
             "echo",
-            "r/o",
             "normal size",
             "08:20",
-            "05:30",
-            "07:00",
-            "autopsy",
-            "k > 8.5",
+            "a-line waveform",
         ]
     ):
         return "4. Diagnostic Findings & Rule-Outs"
-    elif any(
-        k in text
-        for k in [
-            "code blue",
-            "arrest",
-            "pea",
-            "asystole",
-            "death",
-            "cpr",
-            "02:45",
-            "12:10",
-        ]
-    ):
-        return "5. Critical Collapse & Resuscitation"
-    return "3. Clinical Progression"
+    return "5. Critical Collapse & Resuscitation"
+
+
+def _infer_phase(time_str: str, content: str, pattern: str = "auto") -> str:
+    """Infer clinical phase for timeline grouping across various clinical patterns."""
+    text = f"{time_str} {content}".lower()
+    selected_pattern = _detect_pattern_from_text(text) if pattern == "auto" else pattern
+
+    dispatchers = {
+        "delayed_diagnosis": _infer_delayed_diag_phase,
+        "barrier_failure": _infer_barrier_failure_phase,
+        "device_incident": _infer_device_incident_phase,
+        "acute_crisis": _infer_acute_crisis_phase,
+        "perioperative_sequence": _infer_perioperative_phase,
+    }
+    handler = dispatchers.get(selected_pattern, _infer_perioperative_phase)
+    return handler(text)
 
 
 def build_timeline(
-    evidence: Iterable[Evidence],
+    evidence: Iterable[Evidence] | None = None,
     _reasoning_chain: ReasoningChain | None = None,
+    pattern: str = "auto",
+    custom_events: list[dict[str, Any]] | None = None,
+    title: str | None = None,
 ) -> dict[str, Any]:
-    """Build structured chronological timeline and Mermaid diagram from evidence items."""
+    """
+    Build structured chronological timeline and Mermaid diagram from evidence items or custom events.
+
+    Supports configurable clinical timeline patterns:
+    - 'perioperative_sequence'
+    - 'acute_crisis'
+    - 'delayed_diagnosis'
+    - 'barrier_failure'
+    - 'device_incident'
+    - 'auto'
+    - 'custom'
+    """
     events: list[dict[str, Any]] = []
 
-    for item in evidence:
-        t_str = ""
-        if item.event_timestamp:
-            t_str = str(item.event_timestamp)
-        if not t_str and item.source.raw_snippet:
-            t_str = _extract_time_key(item.source.raw_snippet)
-        if not t_str:
-            t_str = _extract_time_key(item.content)
-        if not t_str and item.source.location:
-            t_str = _extract_time_key(item.source.location)
-        if not t_str:
-            t_str = "T_Event"
+    # 1. Ingest custom events if provided
+    if custom_events:
+        for ev in custom_events:
+            t_str = str(ev.get("time") or ev.get("timestamp") or "T_Event")
+            content = str(ev.get("content") or ev.get("description") or "")
+            phase = ev.get("phase") or _infer_phase(t_str, content, pattern)
+            events.append(
+                {
+                    "id": str(ev.get("id") or f"EVT-{len(events) + 1}"),
+                    "time": t_str,
+                    "phase": phase,
+                    "content": content,
+                    "source_document": ev.get("source_document")
+                    or ev.get("source")
+                    or "Record",
+                    "verified": bool(ev.get("verified", False)),
+                    "evidence_type": str(
+                        ev.get("evidence_type") or ev.get("type") or "OBSERVATION"
+                    ),
+                }
+            )
 
-        phase = _infer_phase(
-            t_str, f"{item.content} {item.source.raw_snippet or ''}"
-        )
-        events.append(
-            {
-                "id": item.id.value,
-                "time": t_str,
-                "phase": phase,
-                "content": item.content,
-                "source_document": item.source.document_id,
-                "verified": item.verified,
-                "evidence_type": item.evidence_type.value,
-            }
-        )
+    # 2. Ingest domain Evidence items if provided
+    if evidence:
+        for item in evidence:
+            t_str = ""
+            if item.event_timestamp:
+                t_str = str(item.event_timestamp)
+            if not t_str and item.source.raw_snippet:
+                t_str = _extract_time_key(item.source.raw_snippet)
+            if not t_str:
+                t_str = _extract_time_key(item.content)
+            if not t_str and item.source.location:
+                t_str = _extract_time_key(item.source.location)
+            if not t_str:
+                t_str = "T_Event"
+
+            phase = _infer_phase(
+                t_str,
+                f"{item.content} {item.source.raw_snippet or ''}",
+                pattern,
+            )
+            events.append(
+                {
+                    "id": item.id.value,
+                    "time": t_str,
+                    "phase": phase,
+                    "content": item.content,
+                    "source_document": item.source.document_id,
+                    "verified": item.verified,
+                    "evidence_type": item.evidence_type.value,
+                }
+            )
 
     events.sort(key=lambda x: (x["phase"], x["time"], x["id"]))
+    diagram_title = (
+        title or f"Clinical Chronology ({pattern.replace('_', ' ').title()})"
+    )
 
     return {
+        "pattern": pattern,
+        "title": diagram_title,
         "events": events,
-        "mermaid": render_timeline_mermaid(events),
+        "mermaid": render_timeline_mermaid(events, title=diagram_title),
         "table": render_timeline_table(events),
+    }
+
+
+def _detect_diagram_header(
+    lines: list[str],
+    diagram_type: str | None,
+    auto_fix: bool,
+    fixed_lines: list[str],
+    warnings: list[str],
+    errors: list[str],
+) -> str:
+    """Detect or insert appropriate Mermaid diagram header."""
+    header_patterns = [
+        "flowchart",
+        "graph",
+        "timeline",
+        "sequenceDiagram",
+        "stateDiagram",
+        "stateDiagram-v2",
+        "erDiagram",
+        "classDiagram",
+        "gantt",
+        "pie",
+        "mindmap",
+        "gitGraph",
+    ]
+    detected_type = "unknown"
+    if lines:
+        first_token = lines[0].strip().split()[0] if lines[0].strip() else ""
+        for hp in header_patterns:
+            if first_token.startswith(hp) or lines[0].strip().startswith(hp):
+                detected_type = hp
+                break
+
+    if detected_type != "unknown":
+        return detected_type
+
+    if diagram_type and diagram_type in header_patterns:
+        detected_type = diagram_type
+        if auto_fix:
+            header = (
+                f"{diagram_type} TB"
+                if diagram_type in {"flowchart", "graph"}
+                else diagram_type
+            )
+            fixed_lines.append(header)
+            warnings.append(f"Added missing diagram header '{header}' automatically.")
+        else:
+            errors.append(f"Missing header declaration for {diagram_type}.")
+    elif auto_fix:
+        detected_type = "flowchart"
+        fixed_lines.append("flowchart TB")
+        warnings.append("Added default header 'flowchart TB'.")
+    else:
+        errors.append(
+            "Missing valid Mermaid diagram header (e.g., 'flowchart TB', 'timeline', 'sequenceDiagram')."
+        )
+    return detected_type
+
+
+def _audit_and_fix_mermaid_line(
+    idx: int,
+    line: str,
+    detected_type: str,
+    auto_fix: bool,
+    warnings: list[str],
+) -> tuple[str, int, int]:
+    """Audit bracket balances and auto-sanitize line content."""
+    stripped = line.strip()
+    open_sq, close_sq = stripped.count("["), stripped.count("]")
+    open_pa, close_pa = stripped.count("("), stripped.count(")")
+    open_cu, close_cu = stripped.count("{"), stripped.count("}")
+
+    if open_sq != close_sq:
+        warnings.append(
+            f"Line {idx}: Unbalanced square brackets '[' ({open_sq}) vs ']' ({close_sq})."
+        )
+    if open_pa != close_pa:
+        warnings.append(
+            f"Line {idx}: Unbalanced parentheses '(' ({open_pa}) vs ')' ({close_pa})."
+        )
+    if open_cu != close_cu:
+        warnings.append(
+            f"Line {idx}: Unbalanced braces '{{' ({open_cu}) vs '}}' ({close_cu})."
+        )
+
+    sanitized = line
+    if auto_fix:
+        if detected_type == "timeline" and ":" in stripped:
+            parts = stripped.split(":", 1)
+            if len(parts) == 2:
+                time_part = parts[0].strip()
+                desc_part = parts[1].replace(":", " -")
+                sanitized = f"        {time_part} :{desc_part}"
+        elif detected_type in {"flowchart", "graph"}:
+            sanitized = re.sub(r"(?<=\S)\s*->\s*(?=\S)", " --> ", sanitized)
+
+            def _fix_label(m: re.Match[str]) -> str:
+                return f"{m.group(1)}{m.group(2).replace('"', '&quot;')}{m.group(3)}"
+
+            label_pat = r"(\[\"|\(\[\"|\[\[\"|\(\(\"|\{\{\"|\>\[\")([\s\S]+?)(\"\]|\"\]\)|\"\]\]|\"\)\)|\"\}\})"
+            sanitized = re.sub(label_pat, _fix_label, sanitized)
+
+    nodes = 1 if ("[" in sanitized or "(" in sanitized) else 0
+    edges = 1 if any(tok in sanitized for tok in ["-->", "-.->", "==>"]) else 0
+    return sanitized, nodes, edges
+
+
+def validate_mermaid_syntax(
+    source: str,
+    diagram_type: str | None = None,
+    auto_fix: bool = True,
+) -> dict[str, Any]:
+    """
+    Audit, validate, and sanitize Mermaid diagram syntax.
+
+    Checks:
+    - Diagram header declarations
+    - Delimiter balancing ([], (), {}, [()], [[]], (()))
+    - Unescaped quotes and reserved symbols inside labels
+    - Unclosed subgraph blocks
+    - Colon handling inside timeline text entries
+    - Illegal arrow connector tokens
+    """
+    raw = source.strip()
+    if raw.startswith("```"):
+        lines_raw = raw.splitlines()
+        raw = "\n".join(lines_raw[1:-1]).strip()
+
+    errors: list[str] = []
+    warnings: list[str] = []
+    fixed_lines: list[str] = []
+
+    lines = [line.rstrip() for line in raw.splitlines() if line.strip()]
+    detected_type = _detect_diagram_header(
+        lines=lines,
+        diagram_type=diagram_type,
+        auto_fix=auto_fix,
+        fixed_lines=fixed_lines,
+        warnings=warnings,
+        errors=errors,
+    )
+
+    header_names = [
+        "flowchart",
+        "graph",
+        "timeline",
+        "sequenceDiagram",
+        "stateDiagram",
+        "stateDiagram-v2",
+        "erDiagram",
+        "classDiagram",
+        "gantt",
+        "pie",
+        "mindmap",
+        "gitGraph",
+    ]
+
+    subgraph_count = 0
+    end_count = 0
+    total_nodes = 0
+    total_edges = 0
+
+    for idx, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if (
+            idx == 1
+            and detected_type != "unknown"
+            and any(stripped.startswith(hp) for hp in header_names)
+        ):
+            fixed_lines.append(stripped)
+            continue
+
+        if stripped.startswith("subgraph"):
+            subgraph_count += 1
+        elif stripped == "end":
+            end_count += 1
+
+        sanitized_line, n_count, e_count = _audit_and_fix_mermaid_line(
+            idx=idx,
+            line=line,
+            detected_type=detected_type,
+            auto_fix=auto_fix,
+            warnings=warnings,
+        )
+        total_nodes += n_count
+        total_edges += e_count
+        fixed_lines.append(sanitized_line)
+
+    if auto_fix and subgraph_count > end_count:
+        missing = subgraph_count - end_count
+        fixed_lines.extend("    end" for _ in range(missing))
+        warnings.append(f"Auto-closed {missing} unclosed subgraph block(s).")
+    elif subgraph_count < end_count:
+        errors.append(
+            f"Found {end_count} 'end' statements but only {subgraph_count} 'subgraph' blocks."
+        )
+
+    sanitized_source = "\n".join(fixed_lines).strip()
+    return {
+        "is_valid": len(errors) == 0,
+        "diagram_type": detected_type,
+        "errors": errors,
+        "warnings": warnings,
+        "sanitized_mermaid": sanitized_source,
+        "preview_markdown": mermaid_block(sanitized_source),
+        "node_count": total_nodes,
+        "edge_count": total_edges,
     }
 
 

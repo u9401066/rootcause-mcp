@@ -241,10 +241,10 @@ rc_start_session
 | Session | 4 | 建立、查詢、列出與封存 RCA Session |
 | Fishbone | 4 | 初始化、新增原因、檢視與匯出 |
 | Why Tree | 6 | 追問、檢視、跨鏈接、標記根因、匯出與教學案例 |
-| 因果驗證 | 1 | 保守的反事實、時序與機制檢查 |
-| **總計** | **37** | |
+| 驗證與圖表工具 | 3 | 保守的反事實因果檢核、Mermaid 語法稽核器與時序圖渲染器 |
+| **總計** | **39** | |
 
-36 個工具都有 MCP SDK 2.0 `input_schema` 與 structured output envelope。新的醫學推理
+39 個工具都有 MCP SDK 2.0 `input_schema` 與 structured output envelope (臨床 Profile 19 工具、RCA Profile 23 工具、All Profile 39 工具)。新的醫學推理
 工具回傳結構化 domain data；舊 RCA 工具保留人類可讀文字，同時包裝成 structured
 content。
 

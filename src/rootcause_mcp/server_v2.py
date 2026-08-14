@@ -229,7 +229,10 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
         session_repo,
         progress_tracker,
     )
-    verification_handlers = VerificationHandlers(progress_tracker)
+    verification_handlers = VerificationHandlers(
+        progress_tracker=progress_tracker,
+        server_state=server_state,
+    )
 
     _runtime.server_state = server_state
     _runtime.thinking_handlers = thinking_handlers
@@ -384,6 +387,8 @@ def _build_tool_dispatch(profile: str | None = None) -> dict[str, ToolHandler]:
             "rc_export_why_tree": _why_tree_handlers.handle_export_why_tree,
             "rc_build_teaching_case": _why_tree_handlers.handle_build_teaching_case,
             "rc_verify_causation": (_verification_handlers.handle_verify_causation),
+            "rc_validate_diagram": (_verification_handlers.handle_validate_diagram),
+            "rc_render_timeline": (_verification_handlers.handle_render_timeline),
         }
     )
     active_profile = profile or _runtime.tool_profile or _get_tool_profile()

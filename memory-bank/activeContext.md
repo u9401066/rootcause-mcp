@@ -4,31 +4,34 @@
 
 ## Current Focus
 
-Automated 1-click installation suite, 4 god-level anesthesia/ICU benchmark trials, deterministic chronological event timeline generation, and 4-tier M&M backward causal reasoning are complete and verified.
+Mermaid syntax auditing, universal diagram verification (`rc_validate_diagram`), timeline pattern rendering (`rc_render_timeline`), and non-death near-miss adverse event RCA protocols are complete.
 
-Verified Trial Run & Benchmark Outcomes:
+Verified Outcomes:
 
-- `scripts/run_case_trial.py` executes end-to-end multi-loop diagnostic trials across 4 god-level multi-file clinical cases:
-  1. `dynamic_lvot_obstruction_sam`: Intraoperative shock worsening with Epinephrine (SAM) across 5 raw files (TXT, CSV, XML). 100% provenance verification, top hypothesis P=1.000.
-  2. `pris_status_epilepticus`: Propofol Infusion Syndrome misdiagnosed as sepsis/pancreatitis across 5 raw files. 100% provenance verification, top hypothesis P=1.000.
-  3. `trauma_hyperkalemia_arrest`: Massive transfusion (MTP) older blood hyperkalemic cardiac arrest across 5 raw files (TXT, CSV, XML). 100% provenance verification, top hypothesis P=1.000.
-  4. `postop_pe_death`: Post-THA pulmonary embolism PEA arrest due to expired/held DVT prophylaxis across 5 raw files. 100% provenance verification, top hypothesis P=1.000.
-  - All 4 cases executed in **0.027s combined** with 100% exact line provenance matching across 21 heterogeneous raw files.
-- Deterministic Chronological Event Timeline (`build_timeline`, `render_timeline_mermaid`, `render_timeline_table`) with clinical phase clustering (Baseline, Induction, Crisis, Diagnostics, Collapse) integrated into contract report templates.
-- 4-Tier Anesthesiology backward causal protocol (`config/protocols/anesthesia_mm_rca_protocol.yaml`), domain playbooks (`config/domains/`), and customizable M&M conference report templates (`config/templates/`).
-- `scripts/setup.ps1` (Windows PowerShell), `scripts/setup.sh` (Linux/macOS), and `scripts/install.py` (Universal Python CLI) configure VS Code, Claude Desktop, and Cline with self-check tests and automated trial validation.
+- `rc_validate_diagram` tool provides deterministic syntax auditing, bracket balancing, unescaped label quote sanitization, and diagnostics for custom agent Mermaid code.
+- `rc_render_timeline` tool and `build_timeline()` support 5 clinical timeline patterns (`perioperative_sequence`, `acute_crisis`, `delayed_diagnosis`, `barrier_failure`, `device_incident`, `custom`, `auto`).
+- `config/templates/near_miss_adverse_event_rca_template.md` provides specialized non-death RCA reporting with Swiss Cheese barrier failure analysis, NCC MERP severity grading, and error-proofing action plans.
+- `scripts/run_case_trial.py` benchmark expanded to 6 multi-file clinical cases:
+  1. `dynamic_lvot_obstruction_sam` (SAM perioperative shock arrest)
+  2. `pris_status_epilepticus` (PRIS sedation toxicity shock)
+  3. `trauma_hyperkalemia_arrest` (Trauma MTP hyperkalemia arrest)
+  4. `postop_pe_death` (Post-op PE death from expired prophylaxis)
+  5. `lvad_suction_event` (Non-death LVAD suction vs pump thrombosis device incident)
+  6. `realistic_delayed_diagnosis` (Non-death lung cancer 44-day delayed diagnosis)
+  - All 6 cases executed in **0.039s total** with 100% provenance verification across 31 heterogeneous raw files.
+- Catalog expanded to **39 tools** (19 clinical, 23 RCA, 39 all).
 
 ## Quality Baseline
 
 | Gate | Result |
 | --- | --- |
-| Tests | 69 passed |
-| Coverage | 81.59% branch-aware |
+| Tests | 72 passed |
+| Coverage | 81.49% branch-aware |
 | Ruff | Passed for `src`, `tests`, `scripts` |
 | Mypy | Strict mode passed for all 94 source files |
 | Bandit | Medium/high severity scan passed |
 | Vulture | No findings at 80% confidence |
-| Trials | 4/4 anesthesia benchmark cases passed (0.027s total) |
+| Trials | 6/6 clinical benchmark cases passed (0.039s total) |
 
 ## Deployment Status
 

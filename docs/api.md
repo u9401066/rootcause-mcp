@@ -51,6 +51,48 @@ the advertised catalog match the executable surface.
 | `rc_export_reasoning_chain` | Export the reasoning chain under the configured export root |
 | `rc_audit_reasoning_state` | Audit clinical reasoning completeness, stage progression, and next recommended actions |
 | `rc_generate_contract_report` | Generate JSON, FHIR-compatible, or deterministic Markdown output |
+| `rc_validate_diagram` | Audit, validate, and auto-sanitize Mermaid syntax across all diagram types |
+| `rc_render_timeline` | Render structured event timelines with clinical pattern clustering |
+
+### `rc_validate_diagram`
+
+Audits, validates, and auto-sanitizes raw Mermaid diagram code submitted by AI agents or external tools. Checks for delimiter balance (`[...]`, `(...)`, `[()]`, `{}`), unescaped double quotes inside labels, unclosed `subgraph` blocks, colon delimiters in `timeline`, and broken arrow connectors (`->` vs `-->`).
+
+```json
+{
+  "mermaid_source": "subgraph Process\n  A[\"Step 1: Administer \"Drug A\"\"] -> B[\"Step 2: Check vitals\"]\n",
+  "diagram_type": "flowchart",
+  "auto_fix": true
+}
+```
+
+Returns:
+
+- `is_valid`: Boolean flag indicating if syntax is valid / fixable
+- `diagram_type`: Detected or specified diagram type (`flowchart`, `timeline`, etc.)
+- `sanitized_mermaid`: Clean, executable Mermaid source code
+- `preview_markdown`: Markdown-fenced preview block
+- `warnings` / `errors`: Detailed syntax diagnostics
+
+### `rc_render_timeline`
+
+Renders structured chronological event timelines and Mermaid diagrams using clinical pattern clustering:
+
+- `perioperative_sequence` (Baseline & Pre-op → Induction → Crisis → Findings → Resuscitation)
+- `acute_crisis` (Pre-event → Precipitating trigger → Deterioration → Crisis recognition → Rescue → Outcome)
+- `delayed_diagnosis` (Initial contact → Diagnostic test → Communication gap → Latent progression → Symptom flare → Late diagnosis)
+- `barrier_failure` (Prescribing → Pharmacy barrier → Nursing barrier → Monitoring barrier → Interception/Harm)
+- `device_incident` (Baseline setting → Mechanical disturbance → Controller alarm → Clinical action → Rescue)
+- `auto` (Automatically selects best pattern based on content keywords)
+- `custom` (Custom event stages)
+
+```json
+{
+  "session_id": "case-001",
+  "pattern": "perioperative_sequence",
+  "title": "Intraoperative Hemodynamic Timeline"
+}
+```
 
 ### `rc_add_evidence`
 

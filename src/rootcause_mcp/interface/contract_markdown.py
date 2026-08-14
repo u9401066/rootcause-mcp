@@ -91,18 +91,14 @@ def _render_custom_template(
         "rule_out_summary": rule_out_summary,
         "must_not_miss_evaluated": f"{len(hypotheses)} emergency differential conditions modeled",
         "evidence_table": "\n".join(_evidence_table(evidence, evidence_limit)),
-        "timeline_diagram": timeline_mermaid
-        or "_No timeline diagram generated._",
+        "timeline_diagram": timeline_mermaid or "_No timeline diagram generated._",
         "timeline_table": timeline_table or "_No timeline table generated._",
-        "cognitive_safety_section": "\n".join(
-            _cognitive_safety(report.thinking_chain)
-        ),
+        "cognitive_safety_section": "\n".join(_cognitive_safety(report.thinking_chain)),
         "automated_checks_section": "\n".join(_automated_findings(report)),
         "quality_metrics_section": "\n".join(_quality_metrics(report)),
         "reasoning_chain_diagram": reasoning_mermaid
         or "_No diagram generated for brief mode._",
-        "evidence_graph_diagram": evidence_mermaid
-        or "_No evidence graph generated._",
+        "evidence_graph_diagram": evidence_mermaid or "_No evidence graph generated._",
         "generated_by": _cell(report.generated_by),
         "report_version": _cell(report.report_version),
         "total_evidence_count": str(len(report.evidence)),

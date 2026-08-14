@@ -35,11 +35,11 @@
 - 實作 `ClinicalGuidanceService` 狀態機（階段推進、完備度清單、下一步 Prompt 指令、蘇格拉底式詰問）
 - 新增 `rc_audit_reasoning_state` MCP 工具（總計 37 tools）
 - 實作跨平台一鍵自動安裝與註冊腳本 (`scripts/setup.ps1`, `scripts/setup.sh`, `scripts/install.py`)
-- 實作 4 個真實案例端到端臨床試跑器 `scripts/run_case_trial.py` (包含 SAM、PRIS、MTP 高血鉀停跳、術後肺栓塞等 4 大麻醉重症案例，21 個原始檔案 100% 驗證，0.027s 完成)
-- 實作確定性事件/證據時序圖引擎 (`build_timeline`, `render_timeline_mermaid`, `render_timeline_table`) 與 Markdown 報告範本整合
-- 實作麻醉科專屬 4-Tier 倒推因果推論規範 (`anesthesia_mm_rca_protocol.yaml`)、次專科手冊 (`config/domains/`) 與 M&M 報告範本 (`anesthesia_mm_rca_report_template.md`)
-- 強化臨床參數別名容錯 (`EvidenceStrength`, `EvidenceReliability`, `EvidenceType`, `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`)
-- 通過 94 個檔案的嚴格 mypy 型別檢查與 69 項單元/整合測試 (81.59% 覆蓋率)
+- 實作 6 個真實案例端到端臨床試跑器 `scripts/run_case_trial.py` (包含 SAM、PRIS、MTP 高血鉀、術後肺栓塞、LVAD 幫浦吸附、延遲診斷等 6 大案例，31 個原始檔案 100% 驗證，0.039s 完成)
+- 實作 Mermaid 語法稽核與自動修復工具 `rc_validate_diagram` 與時序圖渲染工具 `rc_render_timeline` (擴充至 39 tools)
+- 實作 5 大臨床時序演變模式 (`perioperative_sequence`, `acute_crisis`, `delayed_diagnosis`, `barrier_failure`, `device_incident`)
+- 實作非死亡醫療不良事件與 Near Miss RCA 規範 (`non_death_adverse_event_protocol.yaml`) 與專用報告範本 (`near_miss_adverse_event_rca_template.md`)
+- 通過 94 個檔案的嚴格 mypy 型別檢查與 72 項單元/整合測試 (81.49% 覆蓋率)
 
 ## Doing
 

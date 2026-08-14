@@ -16,9 +16,18 @@
 - Added automatic registration across client hosts: VS Code (`.vscode/mcp.json`),
   Claude Desktop (`claude_desktop_config.json`), and Cline (`cline_mcp_settings.json`).
 - Added end-to-end clinical trial runner `scripts/run_case_trial.py` supporting
-  4 realistic multi-file benchmark cases (`dynamic_lvot_obstruction_sam`,
-  `pris_status_epilepticus`, `trauma_hyperkalemia_arrest`, and `postop_pe_death`)
-  with 100% physical provenance verification and 0.027s total execution.
+  6 realistic multi-file benchmark cases (`dynamic_lvot_obstruction_sam`,
+  `pris_status_epilepticus`, `trauma_hyperkalemia_arrest`, `postop_pe_death`,
+  `lvad_suction_event`, and `realistic_delayed_diagnosis`) with 100% physical
+  provenance verification and 0.039s total execution.
+- Added `rc_validate_diagram` MCP tool for auditing, linting, and auto-sanitizing
+  custom agent Mermaid diagram syntax with delimiter balancing and label escaping.
+- Added `rc_render_timeline` MCP tool and 5 Clinical Timeline Patterns (`perioperative_sequence`,
+  `acute_crisis`, `delayed_diagnosis`, `barrier_failure`, `device_incident`, `custom`, `auto`).
+- Added Non-Death Adverse Event & Near Miss RCA template (`config/templates/near_miss_adverse_event_rca_template.md`),
+  investigation protocol (`config/protocols/non_death_adverse_event_protocol.yaml`), and
+  domain playbooks (`config/domains/lvad_mechanical_crisis.yaml`, `delayed_diagnosis_systems.yaml`).
+- Expanded MCP tool catalog to 39 tools (19 clinical profile, 23 RCA profile, 39 all profile).
 - Added deterministic Chronological Event Timeline & Mermaid timeline generation
   (`build_timeline`, `render_timeline_mermaid`, `render_timeline_table`) with clinical phase
   clustering and Markdown contract report integration (`{{timeline_diagram}}`, `{{timeline_table}}`).

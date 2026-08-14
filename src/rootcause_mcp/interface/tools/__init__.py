@@ -11,9 +11,9 @@ Contains tool schema definitions organized by domain:
 - Session management tools (4 tools)
 - Fishbone diagram tools (4 tools)
 - Why Tree analysis tools (6 tools)
-- Verification tools (1 tool)
+- Verification & diagram tools (3 tools)
 
-Total: 37 MCP tools (17 in the clinical profile, 21 in the RCA profile)
+Total: 39 MCP tools (19 in the clinical profile, 23 in the RCA profile, 39 in the all profile)
 """
 
 from mcp.types import Tool

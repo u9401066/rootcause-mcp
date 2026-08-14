@@ -1,4 +1,4 @@
-"""MCP adapter for the causation-verification Domain Service."""
+"""MCP adapter for causation-verification and diagram validation/rendering."""
 
 from __future__ import annotations
 
@@ -16,21 +16,91 @@ from rootcause_mcp.domain.services.causation_validator import (
     VerificationLevel,
 )
 from rootcause_mcp.domain.value_objects.enums import VerificationResult
+from rootcause_mcp.interface.mermaid import (
+    build_timeline,
+    validate_mermaid_syntax,
+)
 
 if TYPE_CHECKING:
+    from rootcause_mcp.application.server_state import ServerState
     from rootcause_mcp.application.session_progress import SessionProgressTracker
 
 
 class VerificationHandlers:
-    """Expose causation validation through the MCP interface layer."""
+    """Expose causation validation and diagram verification through MCP interface layer."""
 
     def __init__(
         self,
         progress_tracker: SessionProgressTracker | None = None,
         validator: CausationValidator | None = None,
+        server_state: ServerState | None = None,
     ) -> None:
         self._progress = progress_tracker
         self._validator = validator or CausationValidator()
+        self._server_state = server_state
+
+    async def handle(self, tool_name: str, arguments: dict[str, Any]) -> Any:
+        """Route verification and diagram tool calls."""
+        if tool_name == "rc_verify_causation":
+            return await self.handle_verify_causation(arguments)
+        elif tool_name == "rc_validate_diagram":
+            return await self.handle_validate_diagram(arguments)
+        elif tool_name == "rc_render_timeline":
+            return await self.handle_render_timeline(arguments)
+        else:
+            raise ValueError(f"Unknown verification/diagram tool: {tool_name}")
+
+    async def handle_validate_diagram(
+        self,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Audit, validate, and auto-sanitize Mermaid diagram source."""
+        source = arguments["mermaid_source"]
+        diagram_type = arguments.get("diagram_type")
+        auto_fix = arguments.get("auto_fix", True)
+
+        result = validate_mermaid_syntax(
+            source=source,
+            diagram_type=diagram_type,
+            auto_fix=auto_fix,
+        )
+        return {
+            "status": "success" if result["is_valid"] else "warning",
+            **result,
+        }
+
+    async def handle_render_timeline(
+        self,
+        arguments: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Render a structured chronological event timeline with clinical pattern clustering."""
+        session_id = arguments.get("session_id")
+        custom_events = arguments.get("events")
+        pattern = arguments.get("pattern", "auto")
+        title = arguments.get("title")
+        include_table = arguments.get("include_table", True)
+
+        evidence_items = []
+        if session_id and self._server_state is not None:
+            orch = await self._server_state.get_orchestrator(session_id)
+            if orch:
+                evidence_items = list(orch.evidence_store.values())
+
+        tl_res = build_timeline(
+            evidence=evidence_items,
+            pattern=pattern,
+            custom_events=custom_events,
+            title=title,
+        )
+        return {
+            "status": "success",
+            "pattern": tl_res["pattern"],
+            "title": tl_res["title"],
+            "total_events": len(tl_res["events"]),
+            "events": tl_res["events"],
+            "mermaid": tl_res["mermaid"],
+            "table": tl_res["table"] if include_table else None,
+        }
 
     async def handle_verify_causation(
         self,

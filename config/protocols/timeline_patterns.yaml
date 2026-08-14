@@ -1,0 +1,150 @@
+# ============================================================================
+# 臨床時序圖推演模式庫 (Clinical Timeline Patterns Catalog)
+# ============================================================================
+# 提供 AI Agent 根據臨床案例類型選擇最佳的時序分期與演變模式，
+# 支援時序圖 (Mermaid Timeline) 與時序表格的結構化聚類生成。
+# ============================================================================
+
+version: "2.0.0"
+catalog_name: "Standard Clinical Timeline Patterns"
+last_updated: "2026-08-14"
+
+patterns:
+
+  # 1. 圍術期標準分期模式 (Perioperative Sequence)
+  perioperative_sequence:
+    name: "圍術期標準分期模式 (Perioperative Sequence)"
+    description: "適用於麻醉、手術室、恢復室 (PACU) 內的急性生理波動與事件"
+    phases:
+      - id: "p1"
+        name: "1. Baseline & Pre-Op"
+        description: "術前評估、基線生命徵象、病史與用藥調查"
+        keywords: ["pre-op", "baseline", "admission", "opd", "08:00", "pre_anesthesia"]
+      - id: "p2"
+        name: "2. Induction & Surgical Events"
+        description: "麻醉誘導、氣管插管、手術擺位、外科劃刀、骨水泥灌注"
+        keywords: ["induction", "intubation", "rsi", "positioning", "incision", "08:05", "08:08", "08:10"]
+      - id: "p3"
+        name: "3. Crisis Progression & Deterioration"
+        description: "術中血壓劇降、心律不整、用藥反常惡化、酸中毒進展"
+        keywords: ["hypotension", "crash", "worsening", "ephedrine", "epinephrine", "08:12", "08:15", "08:18"]
+      - id: "p4"
+        name: "4. Diagnostic Findings & Rule-Outs"
+        description: "緊急經食道超音波 (TEE)、動脈波形分析、抽血數值排除"
+        keywords: ["tee", "doppler", "dagger", "sam", "echo", "08:20", "a-line waveform"]
+      - id: "p5"
+        name: "5. Critical Collapse & Resuscitation"
+        description: "心跳停止、CPR、急救用藥調整、手術暫停或恢復"
+        keywords: ["code blue", "arrest", "pea", "asystole", "cpr", "resuscitation", "rosc"]
+
+  # 2. 急性重症搶救模式 (Acute Crisis)
+  acute_crisis:
+    name: "急性重症搶救模式 (Acute Crisis & Resuscitation)"
+    description: "適用於急診、加護病房 (ICU)、創傷搶救與嚴重休克進展"
+    phases:
+      - id: "c1"
+        name: "1. Pre-Event Baseline"
+        description: "事發前初始狀態、既往病史"
+        keywords: ["baseline", "pre-event", "admitted", "history", "23:30"]
+      - id: "c2"
+        name: "2. Precipitating Trigger"
+        description: "誘發性給藥、輸血、侵入性處置、外傷衝擊"
+        keywords: ["trigger", "infusion", "older stock", "unit #7", "mtp", "01:00", "01:45"]
+      - id: "c3"
+        name: "3. Acute Deterioration"
+        description: "生命徵象惡化、乳酸飆升、呼吸急促、意識改變"
+        keywords: ["worsening", "acidosis", "rhabdomyolysis", "02:00", "02:30"]
+      - id: "c4"
+        name: "4. Crisis Recognition & Alarm"
+        description: "生理監視器警報、檢驗危急值通報、異常心電圖波形"
+        keywords: ["alarm", "peaked t", "hi_t_wave", "brugada", "alert", "02:12", "05:30"]
+      - id: "c5"
+        name: "5. Rescue & Resuscitation"
+        description: "搶救介入 (CPR、特異性解毒劑、緊急透析、插管)"
+        keywords: ["code blue", "arrest", "cpr", "calcium", "intralipid", "02:45"]
+      - id: "c6"
+        name: "6. Stabilization / Post-Crisis Outcome"
+        description: "轉歸結果、重症後照護或法醫/死因確認"
+        keywords: ["stabilization", "autopsy", "k > 8.5", "recovered", "transferred"]
+
+  # 3. 延遲診斷與演變模式 (Delayed Diagnosis)
+  delayed_diagnosis:
+    name: "延遲診斷與隱匿演變模式 (Delayed Diagnosis & Latent Evolution)"
+    description: "適用於門診/急診漏看報告、未追蹤異常檢驗值、病灶隱匿進展"
+    phases:
+      - id: "d1"
+        name: "1. Initial Contact & Testing Order"
+        description: "病人初次就診、開立影像或病理檢驗醫囑"
+        keywords: ["opd", "clinic", "initial visit", "exam arranged", "01/05", "visit"]
+      - id: "d2"
+        name: "2. Diagnostic Test & Result Generation"
+        description: "檢驗執行完成、影像或病理產出危急異常報告"
+        keywords: ["ct completed", "rad", "mass found", "critical finding", "01/07", "hl7"]
+      - id: "d3"
+        name: "3. Communication Gap & Missed Opportunity"
+        description: "報告傳真/推播未送達、醫師未閱覽、清潔或行政人為歸檔失誤"
+        keywords: ["faxed", "desk", "seminar", "early leave", "moved to archive", "lost", "14:01", "14:45"]
+      - id: "d4"
+        name: "4. Latent Disease Progression"
+        description: "空白等待期間，病人誤以為正常，病灶隱匿惡化"
+        keywords: ["44 days", "blank", "unaware", "progression", "interval", "normal thought"]
+      - id: "d5"
+        name: "5. Symptom Flare & Crisis Discovery"
+        description: "嚴重症狀爆發 (如大咳血、劇痛、穿孔)，至急診就醫"
+        keywords: ["hemoptysis", "er triage", "triage", "flare", "crisis discovery", "02/20"]
+      - id: "d6"
+        name: "6. Late Diagnosis & Corrective Action"
+        description: "急診調閱舊檔發現漏看、啟動緊急處置與病安通報"
+        keywords: ["delayed recognized", "admitted", "urgent surgery", "apology", "corrective"]
+
+  # 4. 瑞士乳酪防線失效模式 (Barrier Failure)
+  barrier_failure:
+    name: "瑞士乳酪防護失效模式 (Swiss Cheese Barrier Failure)"
+    description: "適用於給藥錯誤、醫囑過期未續開、跨單位交接漏失等系統防線失靈"
+    phases:
+      - id: "b1"
+        name: "1. Prescribing & Ordering Phase"
+        description: "開立醫囑端之決策、暫停醫囑時效"
+        keywords: ["order written", "hold 24h", "op note", "dvt prophylaxis", "14:00"]
+      - id: "b2"
+        name: "2. Dispensing & Pharmacy Barrier"
+        description: "藥局端之覆核、醫囑過期系統判定"
+        keywords: ["pharmacy", "dispensing", "order expired", "not renewed", "09:00"]
+      - id: "b3"
+        name: "3. Administration & Nursing Barrier"
+        description: "病房護理給藥三讀五對、藥物未給 (Not Given) 判定"
+        keywords: ["mar", "not_given", "admin_by", "dose omitted", "calf pain", "16:00"]
+      - id: "b4"
+        name: "4. Monitoring & Detection Barrier"
+        description: "早期異常徵候（如單側小腿腫脹）被定錨為其他原因"
+        keywords: ["fever", "tachycardia", "progress note", "misdiagnosed", "08:30", "11:30"]
+      - id: "b5"
+        name: "5. Interception or Adverse Outcome"
+        description: "防線全數穿透，終端重大危害或成功攔截"
+        keywords: ["pea", "code blue", "arrest", "harm", "intercepted", "12:10"]
+
+  # 5. 醫療器材與機械事件模式 (Device Incident)
+  device_incident:
+    name: "醫療器材與機械性危機模式 (Medical Device Incident)"
+    description: "適用於 LVAD、ECMO、呼吸器、透析機、微量輸注幫浦之警報與機械故障"
+    phases:
+      - id: "m1"
+        name: "1. Baseline Device Setting"
+        description: "器材初始設定、基準流量、壓力、轉速 (RPM)"
+        keywords: ["baseline", "implanted", "3 months", "02:00", "pi 4.5", "power 4.1"]
+      - id: "m2"
+        name: "2. Mechanical / Hemodynamic Disturbance"
+        description: "右心衰竭、前負荷驟降、管路受壓、氣道阻力飆高"
+        keywords: ["rv failure", "decreased preload", "02:45", "pi 1.5", "suction start"]
+      - id: "m3"
+        name: "3. Controller Alarm & Warnings"
+        description: "控制器跳出 Low Flow、Power Spike、高壓警報、溶血徵兆"
+        keywords: ["alarm", "low flow", "power spike", "cola urine", "04:00", "controller log"]
+      - id: "m4"
+        name: "4. Clinical Misinterpretation & Action"
+        description: "誤判為缺水而猛灌輸液、或誤判為血栓而加轉速導致吸附加劇"
+        keywords: ["fluid given", "speed increased", "echo misread", "thrombosis suspected"]
+      - id: "m5"
+        name: "5. Corrective Rescue & Resolution"
+        description: "正確鑑別機轉、降轉速、強心支持、更換器材、成功救援"
+        keywords: ["speed decreased", "milrinone", "inotropes", "suction resolved", "recovered"]

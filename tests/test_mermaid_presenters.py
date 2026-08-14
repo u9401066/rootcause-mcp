@@ -1,5 +1,7 @@
 """Regression tests for generated Mermaid analysis artifacts."""
 
+import pytest
+
 from rootcause_mcp.application.clinical_reasoning_orchestrator import (
     ClinicalReasoningOrchestrator,
 )
@@ -21,9 +23,8 @@ from rootcause_mcp.interface.mermaid import (
     escape_mermaid_label,
     render_fishbone_mermaid,
     render_reasoning_chain_mermaid,
-    render_timeline_mermaid,
-    render_timeline_table,
     render_why_tree_mermaid,
+    validate_mermaid_syntax,
 )
 
 
@@ -230,7 +231,9 @@ def test_timeline_mermaid_renders_phases_and_timestamps() -> None:
     assert "section 3. Crisis Progression &amp; Deterioration" in diagram
     assert "section 4. Diagnostic Findings &amp; Rule-Outs" in diagram
     assert "08:00 : 08 -00 Baseline BP 165/90, HR 85, Grade 2/6 murmur" in diagram
-    assert "08:18 : 08 -18 CRASH BP 35/15, HR 160 following Epinephrine bolus" in diagram
+    assert (
+        "08:18 : 08 -18 CRASH BP 35/15, HR 160 following Epinephrine bolus" in diagram
+    )
 
     table = tl_data["table"]
     assert "| `08:00` | **1. Baseline & Pre-Op** |" in table
@@ -242,3 +245,124 @@ def test_timeline_mermaid_handles_empty_evidence() -> None:
     assert len(tl_data["events"]) == 0
     assert "No timeline events recorded" in tl_data["mermaid"]
     assert "No timeline events recorded" in tl_data["table"]
+
+
+def test_validate_mermaid_syntax_auto_fix_and_diagnostics() -> None:
+    """Mermaid syntax validator should detect issues and auto-fix formatting."""
+    # Test 1: Flowchart with unclosed subgraph and unescaped quotes
+    bad_flowchart = """
+    subgraph Main Process
+        A["Step 1: Administer "Drug A" now"] -> B["Step 2: Check vitals"]
+    """
+    res1 = validate_mermaid_syntax(
+        bad_flowchart, diagram_type="flowchart", auto_fix=True
+    )
+    assert res1["is_valid"] is True
+    assert res1["diagram_type"] == "flowchart"
+    assert "&quot;Drug A&quot;" in res1["sanitized_mermaid"]
+    assert "-->" in res1["sanitized_mermaid"]
+    assert "end" in res1["sanitized_mermaid"]
+
+    # Test 2: Timeline with extra colons in event description
+    bad_timeline = """
+    timeline
+        title Patient Deterioration
+        section Day 1
+            08:00 : BP: 120/80, HR: 85 bpm
+    """
+    res2 = validate_mermaid_syntax(bad_timeline, auto_fix=True)
+    assert res2["is_valid"] is True
+    assert res2["diagram_type"] == "timeline"
+    assert "BP - 120/80, HR - 85 bpm" in res2["sanitized_mermaid"]
+
+
+def test_timeline_patterns_delayed_diagnosis_and_barrier_failure() -> None:
+    """Timeline builder should classify events according to specific clinical patterns."""
+    # Pattern 1: Delayed Diagnosis
+    rad_events = [
+        {"time": "2024/01/05", "content": "OPD visit, arranged chest CT scan"},
+        {
+            "time": "2024/01/07",
+            "content": "CT completed, found 2.5cm mass in RUL (Critical Finding)",
+        },
+        {
+            "time": "14:01",
+            "content": "Report faxed to nursing station, placed on physician desk",
+        },
+        {"time": "44 days blank", "content": "Patient unaware, progression of cough"},
+        {"time": "2024/02/20", "content": "Patient presented to ER with hemoptysis"},
+    ]
+    tl_diag = build_timeline(pattern="delayed_diagnosis", custom_events=rad_events)
+    assert len(tl_diag["events"]) == 5
+    phases = [ev["phase"] for ev in tl_diag["events"]]
+    assert "1. Initial Contact & Testing Order" in phases
+    assert "2. Diagnostic Test & Result Generation" in phases
+    assert "3. Communication Gap & Missed Opportunity" in phases
+    assert "5. Symptom Flare & Crisis Discovery" in phases
+
+    # Pattern 2: Barrier Failure
+    med_events = [
+        {"time": "14:00", "content": "Order written: Hold Clexane for 24h"},
+        {"time": "09:00", "content": "Pharmacy MAR: Order expired and not renewed"},
+        {
+            "time": "16:00",
+            "content": "Nursing record: Patient bilateral calf pain and leg swelling",
+        },
+        {"time": "11:30", "content": "Chest tightness and sudden desaturation to 85%"},
+    ]
+    tl_barrier = build_timeline(pattern="barrier_failure", custom_events=med_events)
+    assert len(tl_barrier["events"]) == 4
+    b_phases = [ev["phase"] for ev in tl_barrier["events"]]
+    assert "1. Prescribing & Ordering Phase" in b_phases
+    assert "2. Dispensing & Pharmacy Barrier" in b_phases
+    assert "3. Administration & Nursing Barrier" in b_phases
+
+
+@pytest.mark.asyncio
+async def test_verification_handlers_diagram_and_timeline_tools() -> None:
+    """VerificationHandlers should execute rc_validate_diagram and rc_render_timeline."""
+    from rootcause_mcp.application.server_state import ServerState
+    from rootcause_mcp.interface.handlers.evidence_handlers import EvidenceHandlers
+    from rootcause_mcp.interface.handlers.verification_handlers import (
+        VerificationHandlers,
+    )
+
+    state = ServerState()
+    ev_handler = EvidenceHandlers(state)
+    v_handler = VerificationHandlers(server_state=state)
+
+    session_id = "v-handler-test-01"
+    await ev_handler.handle(
+        "rc_add_evidence",
+        {
+            "session_id": session_id,
+            "content": "08:00 Baseline BP 160/90",
+            "source_document": "chart.txt",
+        },
+    )
+
+    # Tool 1: rc_validate_diagram
+    val_res = await v_handler.handle(
+        "rc_validate_diagram",
+        {
+            "mermaid_source": 'A["Test "Epi" Crash"] -> B',
+            "diagram_type": "flowchart",
+            "auto_fix": True,
+        },
+    )
+    assert val_res["status"] == "success"
+    assert val_res["is_valid"] is True
+    assert "&quot;Epi&quot;" in val_res["sanitized_mermaid"]
+    assert "```mermaid" in val_res["preview_markdown"]
+
+    # Tool 2: rc_render_timeline
+    tl_res = await v_handler.handle(
+        "rc_render_timeline",
+        {
+            "session_id": session_id,
+            "pattern": "perioperative_sequence",
+        },
+    )
+    assert tl_res["status"] == "success"
+    assert tl_res["total_events"] >= 1
+    assert "timeline" in tl_res["mermaid"]

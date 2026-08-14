@@ -1,0 +1,36 @@
+# Clinical Domain Playbook: Delayed Diagnosis & Closed-Loop Reporting Breakdown
+# 供病安委員會、放射科、門診與急診檢討報告遺漏與延遲診斷使用之專科手冊
+
+domain: "Diagnostic Safety & Clinical Informatics"
+scenario: "Missed Critical Radiology/Pathology Finding leading to Delayed Treatment"
+
+pathophysiology:
+  primary_mechanism: "Breakdown of closed-loop communication between diagnostic providers (Radiology/Pathology) and ordering clinicians, exacerbated by lack of tracking safety nets and administrative archiving flaws"
+  contributing_system_factors:
+    - "非同步傳真或靜態郵件缺乏主動確認簽收 (No Acknowledgment / Read Receipt)"
+    - "缺乏未讀危急值自動升級通知機制 (No Automated Critical Alert Escalation)"
+    - "診斷動量偏誤 (Diagnostic Momentum / Assumption of Normalcy by patient and primary team)"
+
+pathognomonic_findings:
+  - marker: "Critical Finding generated in HL7/RIS report but not acknowledged in EMR for > 7-30 days"
+    modality: "RIS / EMR Audit Log"
+    significance: "資訊傳遞鏈斷裂 (Closed-Loop Communication Failure)"
+  - marker: "Paper/Fax report physical displacement (e.g. moved to archive box by non-clinical staff)"
+    modality: "Physical Nursing Logbook / Administrative Memo"
+    significance: "人工作業防線缺乏防呆 (Manual Process Fragility)"
+  - marker: "Patient assumption of normalcy ('No news is good news')"
+    modality: "Patient Interview / Triage Note"
+    significance: "病患端未獲得雙向衛教通知"
+
+diagnostic_rules_to_rule_out:
+  - diagnosis: "Normal Follow-up with Disease Recurrence"
+    discriminator: "原始檢查即已清晰標註 2.5cm 惡性可疑腫塊 (Critical Alert)，非新發病灶"
+  - diagnosis: "Intentional Patient Non-compliance"
+    discriminator: "病患從未接獲電話或簡訊回診通知，非自行爽約"
+
+treatment_protocol:
+  error_proofing_actions:
+    - "強制實施 EMR 電子危急值閉環回覆機制 (Critical Value Alerting with Mandatory Acknowledgment within 24h)"
+    - "若開單醫師 48 小時內未開啟危急報告，自動派案給科部代理醫師或個案管理師 (Case Manager)"
+    - "建立病患端雙向透明通知 App/簡訊，提醒病患『已有檢查報告完成，請預約回診』"
+    - "取消紙本/傳真作為危急報告之主要交付管道"
