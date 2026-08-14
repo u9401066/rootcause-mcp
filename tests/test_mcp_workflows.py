@@ -10,6 +10,7 @@ from typing import Any
 import pytest
 from mcp.types import CallToolRequestParams, CallToolResult, TextContent
 
+from rootcause_mcp import server_v2
 from rootcause_mcp.server_v2 import lifespan, on_call_tool, server
 
 
@@ -32,6 +33,30 @@ def _text(result: CallToolResult) -> str:
 def _structured(result: CallToolResult) -> dict[str, Any]:
     assert isinstance(result.structured_content, dict)
     return result.structured_content
+
+
+def test_structured_results_use_compact_text_fallback(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Modern results must not duplicate a large structured payload by default."""
+    payload = {
+        "status": "success",
+        "session_id": "case",
+        "total_evidence": 50,
+        "evidence": [{"content": "x" * 1000} for _ in range(50)],
+    }
+
+    monkeypatch.delenv("ROOTCAUSE_RESPONSE_MODE", raising=False)
+    compact_result = server_v2._to_call_tool_result(payload)
+    compact = _text(compact_result)
+    assert len(compact.encode()) == 174
+    assert "x" * 100 not in compact
+    assert _structured(compact_result) == payload
+
+    monkeypatch.setenv("ROOTCAUSE_RESPONSE_MODE", "verbose")
+    verbose = _text(server_v2._to_call_tool_result(payload))
+    assert len(verbose.encode()) == 51743
+    assert len(verbose.encode()) > len(compact.encode()) * 50
 
 
 def _configure_runtime(
@@ -208,6 +233,19 @@ async def test_medical_reasoning_mcp_workflow(
             "rc_export_reasoning_chain",
             {"session_id": session_id, "format": "json"},
         )
+        mermaid_export = _structured(
+            await _call(
+                "rc_export_reasoning_chain",
+                {"session_id": session_id, "format": "mermaid"},
+            )
+        )
+        mermaid_path = Path(mermaid_export["output_path"])
+        mermaid_content = mermaid_path.read_text(encoding="utf-8")
+        assert mermaid_path.suffix == ".md"
+        assert mermaid_content.startswith("```mermaid\nflowchart TB")
+        assert "S1 --> S2" in mermaid_content
+        assert f'E1["Evidence<br/>{evidence_id}"]' in mermaid_content
+        assert f'H1["Hypothesis<br/>{hypothesis_id}"]' in mermaid_content
         await _call(
             "rc_export_reasoning_chain",
             {"session_id": session_id, "format": "markdown"},

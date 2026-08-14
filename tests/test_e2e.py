@@ -9,16 +9,118 @@ Tests the full pipeline:
 5. Generate CONTRACT report
 """
 
+import json
 from pathlib import Path
 
 import pytest
 
+from rootcause_mcp.interface.contract_markdown import render_contract_report_markdown
+from rootcause_mcp.interface.fhir import render_contract_report_fhir
 from rootcause_mcp.interface.handlers import (
     ContractHandlers,
     DDHandlers,
     EvidenceHandlers,
     ThinkingHandlers,
 )
+
+
+async def _assert_markdown_report_levels(
+    contract_handler: ContractHandlers,
+    session_id: str,
+) -> None:
+    markdown_report = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "standard",
+            "finalize": True,
+        },
+    )
+    markdown_path = Path(markdown_report["output_path"])
+    markdown = markdown_path.read_text(encoding="utf-8")
+    assert markdown_path.suffix == ".md"
+    assert markdown_report["generation_mode"] == "deterministic"
+    assert markdown_report["llm_tokens_used"] == 0
+    assert markdown_report["artifact_bytes"] == len(markdown.encode())
+    assert "## Executive Summary" in markdown
+    assert "## Ranked Differential Diagnosis" in markdown
+    assert "## Evidence Matrix" in markdown
+    assert "## Uncertainty and Cognitive Safety" in markdown
+    assert "## Automated Completeness Checks" in markdown
+    assert "1 evidence record(s) have not been independently verified" in markdown
+    assert "## Evidence Graph" in markdown
+    assert "Cardiogenic shock" in markdown
+    assert "**1 evidence record**" in markdown
+    assert "**1 hypothesis**" in markdown
+    assert "nursing_flowsheet.csv @ Line 42" in markdown
+    assert "## Recorded Agent Rationale" not in markdown
+
+    brief_report = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "brief",
+        },
+    )
+    brief = Path(brief_report["output_path"]).read_text(encoding="utf-8")
+    assert "## Evidence Graph" not in brief
+    assert "## Reasoning Audit" not in brief
+
+    full_report = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "full",
+        },
+    )
+    full = Path(full_report["output_path"]).read_text(encoding="utf-8")
+    assert "## Recorded Agent Rationale" in full
+    assert "Post-CABG patient with hypotension and tachycardia" in full
+
+
+async def _assert_contract_inclusion_filters(
+    contract_handler: ContractHandlers,
+    session_id: str,
+) -> None:
+    minimal_report = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "json",
+            "include_reasoning_chain": False,
+            "include_thinking_chain": False,
+            "include_evidence_graph": False,
+            "include_quality_metrics": False,
+        },
+    )
+    minimal_payload = json.loads(
+        Path(minimal_report["output_path"]).read_text(encoding="utf-8")
+    )
+    assert minimal_payload["reasoning_chain"] == []
+    assert minimal_payload["thinking_chain"] == []
+    assert "evidence_graph" not in minimal_payload
+    assert "evidence_metrics" not in minimal_payload
+    assert "reasoning_metrics" not in minimal_payload
+    assert "evidence_metrics" not in minimal_report
+    assert "reasoning_metrics" not in minimal_report
+
+    thinking_only_report = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "json",
+            "include_reasoning_chain": False,
+            "include_thinking_chain": True,
+        },
+    )
+    thinking_only_payload = json.loads(
+        Path(thinking_only_report["output_path"]).read_text(encoding="utf-8")
+    )
+    assert thinking_only_payload["reasoning_chain"] == []
+    assert thinking_only_payload["thinking_chain"]
 
 
 @pytest.mark.asyncio
@@ -155,6 +257,37 @@ async def test_complete_clinical_reasoning_workflow(
     )
     assert report["status"] == "success"
     assert "output_path" in report
+    assert report["evidence_graph_nodes"] == 2
+    assert report["evidence_graph_edges"] == 1
+
+    report_payload = json.loads(Path(report["output_path"]).read_text(encoding="utf-8"))
+    graph = report_payload["evidence_graph"]
+    assert {node["type"] for node in graph["nodes"]} == {
+        "evidence",
+        "hypothesis",
+    }
+    assert graph["edges"] == [
+        {
+            "source": evd1["evidence_id"],
+            "target": hyp1["hypothesis_id"],
+            "relationship": "supports",
+        }
+    ]
+    assert graph["mermaid"].startswith("```mermaid\nflowchart LR")
+
+    await _assert_contract_inclusion_filters(contract_handler, session_id)
+
+    fhir_report = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {"session_id": session_id, "format": "fhir"},
+    )
+    fhir_path = Path(fhir_report["output_path"])
+    assert fhir_path.suffix == ".json"
+    assert json.loads(fhir_path.read_text(encoding="utf-8"))["resourceType"] == (
+        "DiagnosticReport"
+    )
+
+    await _assert_markdown_report_levels(contract_handler, session_id)
 
 
 def test_export_path_rejects_traversal(
@@ -208,6 +341,34 @@ async def test_contract_report_vo() -> None:
         report_id="RPT-001",
         session_id="test_session",
         generated_by="test_agent",
+        hypotheses=[
+            {
+                "diagnosis": {
+                    "code": "not-a-snomed-code",
+                    "display": "Malformed persisted diagnosis",
+                    "system": "SNOMED_CT",
+                },
+                "current_probability": 0.99,
+            },
+            {
+                "diagnosis": {
+                    "code": "233604007",
+                    "display": "Pneumonia",
+                    "system": "SNOMED_CT",
+                    "version": None,
+                },
+                "current_probability": 0.2,
+            },
+            {
+                "diagnosis": {
+                    "code": "I21.9",
+                    "display": "Acute myocardial infarction",
+                    "system": "ICD_10",
+                    "version": None,
+                },
+                "current_probability": 0.8,
+            },
+        ],
         evidence_metrics=evidence_metrics,
         reasoning_metrics=reasoning_metrics,
     )
@@ -221,6 +382,49 @@ async def test_contract_report_vo() -> None:
     assert report.content_hash is not None
 
     # Test FHIR export
-    fhir = report.to_fhir()
+    fhir = render_contract_report_fhir(report)
     assert fhir["resourceType"] == "DiagnosticReport"
     assert fhir["status"] == "final"
+    assert fhir["code"]["coding"][0] == {
+        "system": "urn:rootcause-mcp:report-type",
+        "code": "clinical-reasoning-report",
+        "display": "Clinical reasoning report",
+    }
+    conclusion_codings = [entry["coding"][0] for entry in fhir["conclusionCode"]]
+    assert [coding["code"] for coding in conclusion_codings] == [
+        "I21.9",
+        "233604007",
+    ]
+    assert [coding["system"] for coding in conclusion_codings] == [
+        "http://hl7.org/fhir/sid/icd-10",
+        "http://snomed.info/sct",
+    ]
+    markdown = render_contract_report_markdown(report)
+    assert "INVALID CODE: SNOMED_CT:not-a-snomed-code" in markdown
+
+
+def test_contract_hash_ignores_derived_mermaid_presentation() -> None:
+    from rootcause_mcp.domain.value_objects.contract_report import ContractReport
+
+    graph = {
+        "nodes": [{"id": "EVD-1", "type": "evidence", "label": "Finding"}],
+        "edges": [],
+        "warnings": [],
+    }
+    first = ContractReport(
+        report_id="RPT-1",
+        session_id="case-1",
+        generated_by="test-agent",
+        evidence_graph={**graph, "mermaid": "style version one"},
+    )
+    second = ContractReport(
+        report_id="RPT-2",
+        session_id="case-1",
+        generated_by="test-agent",
+        evidence_graph={**graph, "mermaid": "style version two"},
+    )
+
+    first.finalize("reviewer")
+    second.finalize("reviewer")
+
+    assert first.content_hash == second.content_hash

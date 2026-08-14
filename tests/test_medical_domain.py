@@ -1,10 +1,16 @@
 """Focused regression tests for medical reasoning domain behavior."""
 
+import pytest
+
+from rootcause_mcp.application.clinical_reasoning_orchestrator import (
+    ClinicalReasoningOrchestrator,
+)
 from rootcause_mcp.domain.entities.hypothesis import Hypothesis, HypothesisStatus
 from rootcause_mcp.domain.value_objects.clinical_concept import (
     ClinicalConcept,
     CodingSystem,
 )
+from rootcause_mcp.interface.fhir import clinical_concept_to_fhir_coding
 
 
 def _hypothesis(probability: float) -> Hypothesis:
@@ -25,11 +31,44 @@ def _hypothesis(probability: float) -> Hypothesis:
 def test_clinical_concept_exports_fhir_coding() -> None:
     concept = _hypothesis(0.3).diagnosis
 
-    assert concept.to_fhir_coding() == {
+    assert clinical_concept_to_fhir_coding(concept) == {
         "system": "http://hl7.org/fhir/sid/icd-10",
         "code": "I21.9",
         "display": "Acute myocardial infarction",
     }
+
+
+@pytest.mark.parametrize(
+    ("system", "code"),
+    [
+        (CodingSystem.ICD_10, "not-an-icd-code"),
+        (CodingSystem.SNOMED_CT, "I21.9"),
+    ],
+)
+def test_clinical_concept_rejects_malformed_standard_codes(
+    system: CodingSystem,
+    code: str,
+) -> None:
+    with pytest.raises(ValueError):
+        ClinicalConcept(
+            code=code,
+            display="Invalid concept",
+            system=system,
+            version=None,
+        )
+
+
+def test_custom_diagnosis_code_is_stable_and_fhir_safe() -> None:
+    orchestrator = ClinicalReasoningOrchestrator("stable-code")
+    hypothesis = orchestrator.propose_hypothesis(
+        diagnosis="Acute myocardial infarction",
+        rationale="Clinical syndrome requires a stable custom concept identifier.",
+    )
+
+    assert hypothesis.diagnosis.code == "CUSTOM-DD339F0D6655"
+    assert clinical_concept_to_fhir_coding(hypothesis.diagnosis)["system"] == (
+        "urn:rootcause-mcp:custom-clinical-concept"
+    )
 
 
 def test_bayesian_update_handles_probability_boundaries() -> None:

@@ -8,6 +8,8 @@ Verifies that:
 4. Handlers can be instantiated
 """
 
+import json
+
 import pytest
 
 from rootcause_mcp.interface.handlers import (
@@ -21,9 +23,43 @@ from rootcause_mcp.interface.tools import get_all_tools
 
 
 def test_all_tools_loadable() -> None:
-    """Test that all 36 tools can be loaded."""
+    """Test that all 37 tools can be loaded."""
     tools = get_all_tools()
-    assert len(tools) == 36, f"Expected 36 tools, got {len(tools)}"
+    assert len(tools) == 37, f"Expected 37 tools, got {len(tools)}"
+
+
+def test_tool_profiles_reduce_advertised_schema_context() -> None:
+    """Clinical and RCA agents should not need the complete schema catalog."""
+    all_tools = get_all_tools("all")
+    clinical_tools = get_all_tools("clinical")
+    rca_tools = get_all_tools("rca")
+
+    assert len(clinical_tools) == 17
+    assert len(rca_tools) == 21
+    assert {tool.name for tool in clinical_tools} & {tool.name for tool in rca_tools} == {
+        "rc_verify_causation"
+    }
+
+    all_bytes = len(
+        json.dumps(
+            [tool.model_dump(mode="json") for tool in all_tools],
+            ensure_ascii=False,
+        ).encode()
+    )
+    clinical_bytes = len(
+        json.dumps(
+            [tool.model_dump(mode="json") for tool in clinical_tools],
+            ensure_ascii=False,
+        ).encode()
+    )
+    rca_bytes = len(
+        json.dumps(
+            [tool.model_dump(mode="json") for tool in rca_tools],
+            ensure_ascii=False,
+        ).encode()
+    )
+    assert clinical_bytes < all_bytes * 0.6
+    assert rca_bytes < all_bytes * 0.6
 
 
 def test_all_tools_have_valid_schemas() -> None:
@@ -69,9 +105,10 @@ def test_tool_categories() -> None:
     assert "rc_get_differential_diagnosis" in tool_names
     assert "rc_exclude_hypothesis" in tool_names
 
-    # Reasoning Chain (2)
+    # Reasoning Chain (3)
     assert "rc_get_reasoning_chain" in tool_names
     assert "rc_export_reasoning_chain" in tool_names
+    assert "rc_audit_reasoning_state" in tool_names
 
     # CONTRACT (1)
     assert "rc_generate_contract_report" in tool_names

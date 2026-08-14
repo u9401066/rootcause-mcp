@@ -68,6 +68,8 @@ async def test_add_causal_link_detects_feedback_loop(tmp_path: Path) -> None:
             "answer": "缺乏明確 escalation trigger 與交班提醒",
         }
     )
+    assert "Proximate/Intermediate" in second[0].text
+    assert second[0].text.count("**Cause Type:**") == 1
     second_node_id = _extract_node_id(second[0].text)
 
     result = await handlers.handle_add_causal_link(
