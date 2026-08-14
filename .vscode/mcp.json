@@ -3,7 +3,10 @@
     "rootcauseMcp": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "rootcause-mcp"],
+      "args": [
+        "run",
+        "rootcause-mcp"
+      ],
       "env": {
         "ROOTCAUSE_CONFIG_DIR": "${workspaceFolder}/config",
         "ROOTCAUSE_DATA_DIR": "${workspaceFolder}/data"
@@ -13,6 +16,36 @@
         "debug": {
           "type": "python"
         }
+      }
+    },
+    "asset-aware-mcp": {
+      "type": "stdio",
+      "command": "C:\\Users\\Ericlab\\.local\\bin\\uv.exe",
+      "args": [
+        "tool",
+        "run",
+        "--python",
+        "3.11",
+        "--from",
+        "asset-aware-mcp==1.0.1",
+        "asset-aware-mcp"
+      ],
+      "env": {
+        "LLM_BACKEND": "ollama",
+        "OLLAMA_HOST": "http://localhost:11434",
+        "OLLAMA_MODEL": "granite4.1:3b",
+        "OLLAMA_EMBEDDING_MODEL": "nomic-embed-text",
+        "ENABLE_LIGHTRAG": "false",
+        "ASSET_AWARE_DISABLE_DOTENV": "true",
+        "DATA_DIR": "d:\\workspace260115_2\\rootcause-mcp\\data",
+        "UV_CACHE_DIR": "d:\\workspace260115_2\\rootcause-mcp\\data\\.uv-cache",
+        "ASSET_AWARE_SUPPRESS_MARKER_OUTPUT": "true",
+        "ASSET_AWARE_MARKER_OUTPUT_LOG": "d:\\workspace260115_2\\rootcause-mcp\\data\\logs\\marker.log",
+        "ASSET_AWARE_MCP_TEXT_RESPONSE_CHARS": "12000",
+        "ASSET_AWARE_MCP_IMAGE_RESPONSE_CHARS": "750000",
+        "ASSET_AWARE_TABLE_STARTUP_LOAD_MAX_BYTES": "20971520",
+        "ASSET_AWARE_SECTION_TREE_LOAD_MAX_BYTES": "20971520",
+        "ASSET_AWARE_SEGMENTATION_SOURCE_LOAD_MAX_BYTES": "20971520"
       }
     }
   },

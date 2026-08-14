@@ -40,15 +40,27 @@ class EvidenceSource(BaseModel):
     """
     Evidence source provenance.
 
-    Tracks where the evidence came from and who collected it.
+    Tracks where the evidence came from, verbatim raw snippet, checksum, and who collected it.
     """
 
     document_id: str | None = Field(
-        None, description="Document identifier (e.g., file path, record ID)"
+        default=None, description="Document identifier (e.g., file path, record ID)"
     )
     location: str | None = Field(
-        None,
+        default=None,
         description="Specific location within document (e.g., 'Line 42', 'Page 3, Para 2')",
+    )
+    raw_snippet: str | None = Field(
+        default=None,
+        description="Exact literal quote or data text extracted verbatim from the source document",
+    )
+    content_hash: str | None = Field(
+        default=None,
+        description="SHA-256 cryptographic digest of the raw snippet or source record",
+    )
+    extraction_method: str | None = Field(
+        default=None,
+        description="Extraction method (e.g., 'verbatim_quote', 'table_cell', 'structured_field')",
     )
     collected_by: str = Field(
         ..., description="Person/system that collected this evidence"
@@ -58,7 +70,7 @@ class EvidenceSource(BaseModel):
         description="When evidence was collected (UTC)",
     )
     source_system: str | None = Field(
-        None, description="Source system (e.g., 'Epic', 'Cerner', 'Manual Entry')"
+        default=None, description="Source system (e.g., 'Epic', 'Cerner', 'Manual Entry')"
     )
 
     model_config = {"frozen": True}
@@ -79,6 +91,7 @@ class Evidence(BaseModel):
         ...     source=EvidenceSource(
         ...         document_id="nursing_flowsheet.csv",
         ...         location="Line 42",
+        ...         raw_snippet="08:30,BP,75/40,HR,120",
         ...         collected_by="RN_CHEN"
         ...     ),
         ...     clinical_context="Post-op hypotension"
@@ -92,7 +105,7 @@ class Evidence(BaseModel):
     content: str = Field(..., min_length=1, description="Evidence content/description")
     evidence_type: EvidenceType = Field(..., description="Type of evidence")
     clinical_context: str | None = Field(
-        None, description="Clinical context (e.g., 'Post-op Day 1 hypotension')"
+        default=None, description="Clinical context (e.g., 'Post-op Day 1 hypotension')"
     )
 
     # Quality
@@ -103,7 +116,7 @@ class Evidence(BaseModel):
 
     # Temporal
     event_timestamp: datetime | None = Field(
-        None, description="When the clinical event occurred (if applicable)"
+        default=None, description="When the clinical event occurred (if applicable)"
     )
 
     # Relationships (IDs only, actual linking done via repositories)
@@ -117,12 +130,18 @@ class Evidence(BaseModel):
         default_factory=list, description="Hypothesis IDs this evidence contradicts"
     )
 
-    # Metadata
+    # Metadata & Verification
     verified: bool = Field(
-        False, description="Has this evidence been independently verified?"
+        default=False, description="Has this evidence been independently verified?"
     )
-    verifier: str | None = Field(None, description="Who verified this evidence")
-    verification_timestamp: datetime | None = Field(None)
+    verifier: str | None = Field(default=None, description="Who verified this evidence")
+    verification_method: str | None = Field(
+        default=None, description="Method of verification (e.g., 'EXACT_SNIPPET_MATCH', 'MANUAL_REVIEWER')"
+    )
+    matched_lines: list[int] = Field(
+        default_factory=list, description="1-based line numbers in the raw file where snippet was verified"
+    )
+    verification_timestamp: datetime | None = Field(default=None)
 
     tags: list[str] = Field(
         default_factory=list, description="Custom tags for categorization"
@@ -171,21 +190,37 @@ class Evidence(BaseModel):
             return self.model_copy(update={"contradicts_hypothesis_ids": updated_ids})
         return self
 
-    def mark_verified(self, verifier: str) -> Self:
+    def mark_verified(
+        self,
+        verifier: str,
+        verification_method: str = "MANUAL_REVIEWER",
+        matched_lines: list[int] | None = None,
+        content_hash: str | None = None,
+    ) -> Self:
         """
-        Mark evidence as independently verified.
+        Mark evidence as independently verified with provenance audit details.
 
         Args:
-            verifier: ID/name of the person verifying
+            verifier: ID/name of the person or automated service verifying
+            verification_method: Verification method used
+            matched_lines: 1-based line numbers where quote was located
+            content_hash: SHA-256 hash of verified snippet
 
         Returns:
             New Evidence instance with verification status
         """
+        updated_source = self.source
+        if content_hash and self.source.content_hash != content_hash:
+            updated_source = self.source.model_copy(update={"content_hash": content_hash})
+
         return self.model_copy(
             update={
                 "verified": True,
                 "verifier": verifier,
+                "verification_method": verification_method,
+                "matched_lines": matched_lines or self.matched_lines,
                 "verification_timestamp": datetime.now(UTC),
+                "source": updated_source,
             }
         )
 

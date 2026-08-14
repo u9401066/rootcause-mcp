@@ -55,4 +55,18 @@ def get_reasoning_tools() -> list[Tool]:
                 "required": ["session_id"],
             },
         ),
+        Tool(
+            name="rc_audit_reasoning_state",
+            description="Audit clinical reasoning completeness, stage progression, missing prerequisites, and next recommended actions for AI agents",
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID",
+                    },
+                },
+                "required": ["session_id"],
+            },
+        ),
     ]

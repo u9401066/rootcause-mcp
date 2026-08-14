@@ -4,7 +4,7 @@ MCP Tool definitions package.
 Contains tool schema definitions organized by domain:
 - Evidence management tools (3 tools) - NEW in 2.0
 - Differential diagnosis tools (4 tools) - NEW in 2.0
-- Reasoning chain tools (2 tools) - NEW in 2.0
+- Reasoning chain tools (3 tools) - NEW in 2.0
 - CONTRACT report tools (1 tool) - NEW in 2.0
 - Cognitive transparency tools (5 tools)
 - HFACS classification tools (6 tools)
@@ -13,7 +13,7 @@ Contains tool schema definitions organized by domain:
 - Why Tree analysis tools (6 tools)
 - Verification tools (1 tool)
 
-Total: 36 MCP tools (15 medical reasoning/cognitive tools)
+Total: 37 MCP tools (17 in the clinical profile, 21 in the RCA profile)
 """
 
 from mcp.types import Tool
@@ -47,22 +47,38 @@ TOOL_OUTPUT_SCHEMA = {
 }
 
 
-def get_all_tools() -> list[Tool]:
-    """Get all 36 MCP tool definitions."""
-    tools = []
-    # NEW in 2.0: Cognitive Layer (Deep Reasoning)
-    tools.extend(get_thinking_tools())  # 5 tools - rc_think_aloud, rc_reflect, etc.
-    # NEW in 2.0: Medical Reasoning Tools
-    tools.extend(get_evidence_tools())  # 3 tools
-    tools.extend(get_dd_tools())  # 4 tools
-    tools.extend(get_reasoning_tools())  # 2 tools
-    tools.extend(get_contract_tools())  # 1 tool
-    # Existing RCA Tools
-    tools.extend(get_hfacs_tools())  # 6 tools
-    tools.extend(get_session_tools())  # 4 tools
-    tools.extend(get_fishbone_tools())  # 4 tools
-    tools.extend(get_why_tree_tools())  # 6 tools
-    tools.extend(get_verification_tools())  # 1 tool
+def get_all_tools(profile: str = "all") -> list[Tool]:
+    """Get tool definitions for the configured context profile."""
+    normalized_profile = profile.strip().lower()
+    if normalized_profile not in {"all", "clinical", "rca"}:
+        raise ValueError(
+            f"Unsupported tool profile {profile!r}; expected all, clinical, or rca"
+        )
+
+    clinical_tools = [
+        *get_thinking_tools(),
+        *get_evidence_tools(),
+        *get_dd_tools(),
+        *get_reasoning_tools(),
+        *get_contract_tools(),
+        *get_verification_tools(),
+    ]
+    rca_tools = [
+        *get_hfacs_tools(),
+        *get_session_tools(),
+        *get_fishbone_tools(),
+        *get_why_tree_tools(),
+        *get_verification_tools(),
+    ]
+
+    if normalized_profile == "clinical":
+        tools = clinical_tools
+    elif normalized_profile == "rca":
+        tools = rca_tools
+    else:
+        tools_by_name = {tool.name: tool for tool in [*clinical_tools, *rca_tools]}
+        tools = list(tools_by_name.values())
+
     return [
         tool.model_copy(update={"output_schema": TOOL_OUTPUT_SCHEMA})
         for tool in tools

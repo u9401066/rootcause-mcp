@@ -23,6 +23,7 @@ from rootcause_mcp.domain.entities.fishbone import Fishbone, FishboneCause
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
 from rootcause_mcp.infrastructure.export_paths import build_export_path
+from rootcause_mcp.interface.mermaid import render_fishbone_mermaid
 
 if TYPE_CHECKING:
     from rootcause_mcp.application.session_progress import SessionProgressTracker
@@ -316,7 +317,7 @@ class FishboneHandlers:
             result = "\n".join(lines)
 
         else:  # mermaid
-            result = self._generate_fishbone_mermaid(fishbone)
+            result = render_fishbone_mermaid(fishbone)
 
         # Write to file for easy preview
         file_path = self._write_export_file(
@@ -326,109 +327,3 @@ class FishboneHandlers:
             result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
 
         return [TextContent(type="text", text=result)]
-
-    def _generate_fishbone_mermaid(self, fishbone: Fishbone) -> str:
-        """Generate a proper Ishikawa fishbone diagram in Mermaid format.
-
-        Creates a diagram that actually looks like a fishbone:
-        - Problem statement as the fish head (right side)
-        - Main spine running horizontally
-        - 6M categories as major bones branching off
-        - Causes as smaller bones from each category
-        - Upper categories (Personnel, Equipment, Material) branch upward
-        - Lower categories (Process, Environment, Monitoring) branch downward
-        """
-
-        # Escape quotes in text for Mermaid
-        def escape(text: str, max_len: int = 35) -> str:
-            text = text.replace('"', "'").replace("\n", " ")
-            return text[:max_len] + "..." if len(text) > max_len else text
-
-        problem = escape(fishbone.problem_statement, 50)
-
-        # Define upper and lower categories for fishbone layout
-        upper_cats = [
-            FishboneCategoryType.PERSONNEL,
-            FishboneCategoryType.EQUIPMENT,
-            FishboneCategoryType.MATERIAL,
-        ]
-        lower_cats = [
-            FishboneCategoryType.PROCESS,
-            FishboneCategoryType.ENVIRONMENT,
-            FishboneCategoryType.MONITORING,
-        ]
-
-        lines = [
-            "```mermaid",
-            "flowchart LR",
-            "",
-            "    %% === FISHBONE (ISHIKAWA) DIAGRAM ===",
-            "    %% Problem is the fish head on the right",
-            "    %% Categories branch up/down from spine",
-            "",
-            "    %% Fish Head (Problem Statement)",
-            f'    HEAD(["🐟 {problem}"]):::head',
-            "",
-            "    %% Main Spine",
-            "    SPINE[ ]:::spine",
-            "    SPINE --> HEAD",
-            "",
-        ]
-
-        # Generate upper categories (branch upward)
-        lines.append("    %% === UPPER BRANCHES (Personnel, Equipment, Material) ===")
-        for cat_type in upper_cats:
-            category = fishbone.get_category(cat_type)
-            cat_id = cat_type.value.upper()[:4]
-            cat_name = cat_type.value
-
-            # Category node
-            lines.append(f'    {cat_id}["{cat_name}"]:::category')
-            lines.append(f"    {cat_id} --> SPINE")
-
-            # Causes as sub-branches
-            if category.has_causes:
-                for i, cause in enumerate(category.causes):
-                    cause_id = f"{cat_id}_{i}"
-                    desc = escape(cause.description)
-                    hfacs = f" ({cause.hfacs_code})" if cause.hfacs_code else ""
-                    lines.append(f'    {cause_id}["{desc}{hfacs}"]:::cause')
-                    lines.append(f"    {cause_id} --> {cat_id}")
-
-            lines.append("")
-
-        # Generate lower categories (branch downward)
-        lines.append("    %% === LOWER BRANCHES (Process, Environment, Monitoring) ===")
-        for cat_type in lower_cats:
-            category = fishbone.get_category(cat_type)
-            cat_id = cat_type.value.upper()[:4]
-            cat_name = cat_type.value
-
-            # Category node
-            lines.append(f'    {cat_id}["{cat_name}"]:::category')
-            lines.append(f"    {cat_id} --> SPINE")
-
-            # Causes as sub-branches
-            if category.has_causes:
-                for i, cause in enumerate(category.causes):
-                    cause_id = f"{cat_id}_{i}"
-                    desc = escape(cause.description)
-                    hfacs = f" ({cause.hfacs_code})" if cause.hfacs_code else ""
-                    lines.append(f'    {cause_id}["{desc}{hfacs}"]:::cause')
-                    lines.append(f"    {cause_id} --> {cat_id}")
-
-            lines.append("")
-
-        # Add styling to make it look more like a fishbone
-        lines.extend(
-            [
-                "    %% === STYLING ===",
-                "    classDef head fill:#e74c3c,stroke:#c0392b,stroke-width:3px,color:#fff,font-weight:bold",
-                "    classDef spine fill:#456,stroke:#234,stroke-width:4px,color:#fff",
-                "    classDef category fill:#f96,stroke:#c63,stroke-width:2px,color:#fff,font-weight:bold",
-                "    classDef cause fill:#9cf,stroke:#36a,stroke-width:1px",
-                "```",
-            ]
-        )
-
-        return "\n".join(lines)

@@ -7,6 +7,7 @@ This is the core "harness" that enables any AI agent to perform specialist-level
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime
 from typing import Any
 
@@ -22,6 +23,11 @@ from rootcause_mcp.domain.entities.reasoning_step import (
     ReasoningStepType,
 )
 from rootcause_mcp.domain.entities.thinking_step import ThinkingChain
+from rootcause_mcp.domain.services.guidance_service import ClinicalGuidanceService
+from rootcause_mcp.domain.services.provenance_verifier import (
+    ProvenanceMatch,
+    ProvenanceVerifier,
+)
 from rootcause_mcp.domain.value_objects.clinical_concept import (
     ClinicalConcept,
     CodingSystem,
@@ -31,6 +37,7 @@ from rootcause_mcp.domain.value_objects.evidence_quality import (
     EvidenceReliability,
     EvidenceStrength,
 )
+from rootcause_mcp.domain.value_objects.reasoning_guidance import ReasoningGuidance
 
 
 class ClinicalReasoningOrchestrator:
@@ -39,12 +46,13 @@ class ClinicalReasoningOrchestrator:
 
     Hides complexity:
     - Bayesian calculations
-    - Evidence quality grading
+    - Evidence quality grading and deterministic provenance verification
     - FHIR/SNOMED coding
+    - Multi-loop reasoning guidance for Flash models
     - HFACS classification
 
     Agent only needs to:
-    1. add_evidence("natural language description")
+    1. add_evidence("natural language description", source_document="...", raw_snippet="...")
     2. propose_hypothesis("diagnosis name")
     3. link_evidence_to_hypothesis(evidence_id, hypothesis_id)
     4. get_differential_diagnosis()
@@ -68,6 +76,7 @@ class ClinicalReasoningOrchestrator:
         self.thinking_chain = ThinkingChain(session_id=session_id)
         self.evidence_store: dict[str, Evidence] = {}
         self.hypothesis_store: dict[str, Hypothesis] = {}
+        self._provenance_verifier = ProvenanceVerifier()
         self._step_counter = 0
 
     def restore(
@@ -93,33 +102,41 @@ class ClinicalReasoningOrchestrator:
         evidence_type: str = "DOCUMENT",
         source_document: str | None = None,
         source_location: str | None = None,
+        raw_snippet: str | None = None,
+        content_hash: str | None = None,
+        extraction_method: str | None = None,
         collected_by: str = "agent",
         clinical_strength: str = "MODERATE",
         source_reliability: str = "GRADE_B",
         clinical_context: str | None = None,
         event_timestamp: datetime | None = None,
+        auto_verify: bool = True,
     ) -> Evidence:
         """
-        Add evidence with automatic quality grading.
+        Add evidence with automatic quality grading and deterministic provenance verification.
 
         Agent-friendly API:
-        - Just provide natural language content
-        - System handles Oxford CEBM grading
-        - System tracks provenance automatically
+        - Just provide natural language content and optional raw snippet
+        - System handles Oxford CEBM grading and cryptographic hash
+        - System anchors provenance against raw data files on disk
 
         Args:
             content: Natural language evidence description
             evidence_type: DOCUMENT/OBSERVATION/LAB_RESULT/etc.
-            source_document: File or record ID
+            source_document: File path or record ID
             source_location: Location within document (e.g., "Line 42")
+            raw_snippet: Exact verbatim quote from the raw document
+            content_hash: Optional SHA-256 digest
+            extraction_method: Extraction method (e.g., "verbatim_quote", "table_cell")
             collected_by: Who collected this evidence
             clinical_strength: STRONG/MODERATE/WEAK/ANECDOTAL
             source_reliability: GRADE_A/GRADE_B/GRADE_C/GRADE_D
             clinical_context: Clinical context (e.g., "Post-op Day 1")
             event_timestamp: When the clinical event occurred
+            auto_verify: Whether to automatically verify against file on disk
 
         Returns:
-            Evidence entity with auto-generated ID
+            Evidence entity with auto-generated ID and verification status
         """
         # Create quality grading
         quality = EvidenceQuality(
@@ -127,15 +144,24 @@ class ClinicalReasoningOrchestrator:
             reliability=EvidenceReliability(source_reliability),
         )
 
+        # Compute content hash if snippet provided
+        computed_hash = content_hash
+        if raw_snippet and not computed_hash:
+            digest = hashlib.sha256(raw_snippet.strip().encode("utf-8")).hexdigest()
+            computed_hash = f"sha256:{digest}"
+
         # Create source provenance
         source = EvidenceSource(
             document_id=source_document,
             location=source_location,
+            raw_snippet=raw_snippet,
+            content_hash=computed_hash,
+            extraction_method=extraction_method,
             collected_by=collected_by,
             source_system=None,
         )
 
-        # Create evidence
+        # Create base evidence
         evidence = Evidence(
             content=content,
             evidence_type=EvidenceType(evidence_type),
@@ -145,8 +171,26 @@ class ClinicalReasoningOrchestrator:
             event_timestamp=event_timestamp,
             verified=False,
             verifier=None,
+            verification_method=None,
+            matched_lines=[],
             verification_timestamp=None,
         )
+
+        # Deterministic provenance verification against raw files
+        if auto_verify and source_document:
+            match = self._provenance_verifier.verify_provenance(
+                document_id=source_document,
+                raw_snippet=raw_snippet,
+                location=source_location,
+                content=content,
+            )
+            if match.is_verified:
+                evidence = evidence.mark_verified(
+                    verifier="SYSTEM_PROVENANCE_VERIFIER",
+                    verification_method=match.match_type,
+                    matched_lines=list(match.line_numbers),
+                    content_hash=match.snippet_hash,
+                )
 
         # Store evidence
         self.evidence_store[evidence.id.value] = evidence
@@ -155,7 +199,11 @@ class ClinicalReasoningOrchestrator:
         self._add_reasoning_step(
             step_type=ReasoningStepType.OBSERVATION,
             content=f"Added evidence: {content[:100]}",
-            rationale=f"Evidence type: {evidence_type}, Quality: {clinical_strength}/{source_reliability}",
+            rationale=(
+                f"Evidence type: {evidence_type}, "
+                f"Quality: {clinical_strength}/{source_reliability}, "
+                f"Verified: {evidence.verified} ({evidence.verification_method or 'UNVERIFIED'})"
+            ),
             evidence_ids=[evidence.id.value],
             confidence=quality.overall_score,
         )
@@ -211,8 +259,10 @@ class ClinicalReasoningOrchestrator:
             )
         else:
             # No standard code provided, use custom
+            normalized_diagnosis = " ".join(diagnosis.split()).casefold()
+            digest = hashlib.sha256(normalized_diagnosis.encode()).hexdigest()
             concept = ClinicalConcept(
-                code=f"CUSTOM-{hash(diagnosis) % 100000:05d}",
+                code=f"CUSTOM-{digest[:12].upper()}",
                 display=diagnosis,
                 system=CodingSystem.CUSTOM,
                 version=None,
@@ -379,6 +429,76 @@ class ClinicalReasoningOrchestrator:
     def get_evidence(self, evidence_id: str) -> Evidence | None:
         """Get evidence by ID."""
         return self.evidence_store.get(evidence_id)
+
+    def verify_evidence(
+        self,
+        evidence_id: str,
+        verified_by: str = "agent",
+        raw_snippet: str | None = None,
+        document_id: str | None = None,
+    ) -> tuple[Evidence, ProvenanceMatch | None]:
+        """
+        Verify evidence against physical files or mark with reviewer audit.
+
+        Args:
+            evidence_id: ID of evidence to verify
+            verified_by: Person or system recording verification
+            raw_snippet: Optional verbatim quote to verify on disk
+            document_id: Optional document ID override
+
+        Returns:
+            Tuple of (Updated Evidence, Optional ProvenanceMatch)
+        """
+        evidence = self.evidence_store.get(evidence_id)
+        if not evidence:
+            raise KeyError(f"Evidence {evidence_id} not found")
+
+        target_doc = document_id or evidence.source.document_id
+        target_snippet = raw_snippet or evidence.source.raw_snippet
+
+        match: ProvenanceMatch | None = None
+        if target_doc:
+            match = self._provenance_verifier.verify_provenance(
+                document_id=target_doc,
+                raw_snippet=target_snippet,
+                location=evidence.source.location,
+                content=evidence.content,
+            )
+            if match.is_verified:
+                verified_evidence = evidence.mark_verified(
+                    verifier=verified_by or "SYSTEM_PROVENANCE_VERIFIER",
+                    verification_method=match.match_type,
+                    matched_lines=list(match.line_numbers),
+                    content_hash=match.snippet_hash,
+                )
+            else:
+                verified_evidence = evidence.mark_verified(
+                    verifier=verified_by,
+                    verification_method="MANUAL_REVIEWER_UNVERIFIED_FILE",
+                )
+        else:
+            verified_evidence = evidence.mark_verified(
+                verifier=verified_by,
+                verification_method="MANUAL_REVIEWER",
+            )
+
+        self.evidence_store[evidence_id] = verified_evidence
+        return verified_evidence, match
+
+    def get_guidance(self) -> ReasoningGuidance:
+        """
+        Get actionable multi-loop reasoning guidance and completeness checklist.
+
+        Returns:
+            ReasoningGuidance value object with current stage and next recommended tools.
+        """
+        return ClinicalGuidanceService.evaluate(
+            session_id=self.session_id,
+            evidence_store=self.evidence_store,
+            hypothesis_store=self.hypothesis_store,
+            thinking_chain=self.thinking_chain,
+            reasoning_chain=self.reasoning_chain,
+        )
 
     def get_hypothesis(self, hypothesis_id: str) -> Hypothesis | None:
         """Get hypothesis by ID."""

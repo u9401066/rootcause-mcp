@@ -75,12 +75,14 @@ class ThinkingHandlers:
 
         chain.add_step(step)
         await self._state.persist_orchestrator(session_id)
+        guidance = orchestrator.get_guidance()
 
         return {
             "status": "success",
             "thinking_step_id": step.id,
             "session_id": session_id,
             "total_thinking_steps": len(chain.steps),
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_reflect(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -103,6 +105,7 @@ class ThinkingHandlers:
 
         chain.add_step(step)
         await self._state.persist_orchestrator(session_id)
+        guidance = orchestrator.get_guidance()
 
         return {
             "status": "success",
@@ -110,6 +113,7 @@ class ThinkingHandlers:
             "session_id": session_id,
             "identified_gaps": args.get("identified_gaps", []),
             "identified_biases": args.get("identified_biases", []),
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_identify_gaps(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -130,6 +134,7 @@ class ThinkingHandlers:
 
         chain.add_step(step)
         await self._state.persist_orchestrator(session_id)
+        guidance = orchestrator.get_guidance()
 
         return {
             "status": "success",
@@ -137,6 +142,7 @@ class ThinkingHandlers:
             "session_id": session_id,
             "gap_type": args["gap_type"],
             "suggested_actions": args.get("suggested_actions", []),
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_challenge_assumption(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -157,6 +163,7 @@ class ThinkingHandlers:
 
         chain.add_step(step)
         await self._state.persist_orchestrator(session_id)
+        guidance = orchestrator.get_guidance()
 
         return {
             "status": "success",
@@ -164,6 +171,7 @@ class ThinkingHandlers:
             "session_id": session_id,
             "assumption_challenged": args["assumption"],
             "alternative_scenario": args.get("alternative_scenario"),
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_get_thinking_chain(self, args: dict[str, Any]) -> dict[str, Any]:

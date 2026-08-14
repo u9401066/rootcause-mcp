@@ -51,6 +51,20 @@ def get_evidence_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Location within document (e.g., 'Line 42', 'Page 3')",
                     },
+                    "raw_snippet": {
+                        "type": "string",
+                        "description": "Exact literal excerpt or data line from the raw source document for deterministic lineage",
+                    },
+                    "content_hash": {
+                        "type": "string",
+                        "description": "Optional SHA-256 cryptographic digest of the raw snippet",
+                    },
+                    "extraction_method": {
+                        "type": "string",
+                        "enum": ["verbatim_quote", "table_cell", "structured_field", "inference", "other"],
+                        "description": "Method used to extract this finding",
+                        "default": "verbatim_quote",
+                    },
                     "collected_by": {
                         "type": "string",
                         "description": "Who collected this evidence",
@@ -71,6 +85,11 @@ def get_evidence_tools() -> list[Tool]:
                     "clinical_context": {
                         "type": "string",
                         "description": "Clinical context (e.g., 'Post-op Day 1 hypotension')",
+                    },
+                    "auto_verify": {
+                        "type": "boolean",
+                        "description": "Automatically verify snippet against physical file on disk if available",
+                        "default": True,
                     },
                 },
                 "required": ["session_id", "content"],
@@ -96,7 +115,7 @@ def get_evidence_tools() -> list[Tool]:
         ),
         Tool(
             name="rc_verify_evidence",
-            description="Mark evidence as independently verified",
+            description="Verify evidence against raw physical files or record independent reviewer audit",
             input_schema={
                 "type": "object",
                 "properties": {
@@ -111,9 +130,18 @@ def get_evidence_tools() -> list[Tool]:
                     "verified_by": {
                         "type": "string",
                         "description": "Who verified this evidence",
+                        "default": "agent",
+                    },
+                    "raw_snippet": {
+                        "type": "string",
+                        "description": "Verbatim quote to search and verify in the source file on disk",
+                    },
+                    "document_id": {
+                        "type": "string",
+                        "description": "Optional file path override if not previously set on evidence",
                     },
                 },
-                "required": ["session_id", "evidence_id", "verified_by"],
+                "required": ["session_id", "evidence_id"],
             },
         ),
     ]

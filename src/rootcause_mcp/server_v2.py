@@ -12,7 +12,7 @@ import json
 import logging
 import os
 from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
@@ -82,6 +82,8 @@ logger = logging.getLogger(__name__)
 class ServerRuntime:
     """Mutable resources owned by one MCP server lifespan."""
 
+    tool_profile: str | None = None
+    response_mode: str | None = None
     server_state: ServerState | None = None
     thinking_handlers: ThinkingHandlers | None = None
     evidence_handlers: EvidenceHandlers | None = None
@@ -128,6 +130,40 @@ def _get_data_path() -> Path:
     return project_root / "data"
 
 
+def _get_tool_profile() -> str:
+    """Return the configured MCP schema/dispatch profile."""
+    return os.environ.get("ROOTCAUSE_TOOL_PROFILE", "all").strip().lower()
+
+
+def _get_response_mode() -> str:
+    """Return compact SDK 2.0 output mode or verbose compatibility mode."""
+    mode = os.environ.get("ROOTCAUSE_RESPONSE_MODE", "compact").strip().lower()
+    if mode not in {"compact", "verbose"}:
+        raise ValueError(
+            "ROOTCAUSE_RESPONSE_MODE must be either 'compact' or 'verbose'"
+        )
+    return mode
+
+
+def _freeze_runtime_configuration() -> None:
+    """Validate and freeze context-affecting settings for one lifespan."""
+    tool_profile = _get_tool_profile()
+    response_mode = _get_response_mode()
+    get_all_tools(tool_profile)
+    _runtime.tool_profile = tool_profile
+    _runtime.response_mode = response_mode
+    logger.info(
+        "MCP tool profile=%s response mode=%s",
+        tool_profile,
+        response_mode,
+    )
+    if response_mode == "compact":
+        logger.info(
+            "Compact responses require host structuredContent support; "
+            "set ROOTCAUSE_RESPONSE_MODE=verbose otherwise"
+        )
+
+
 @asynccontextmanager
 async def lifespan(_server: Server) -> AsyncIterator[None]:
     """
@@ -136,6 +172,7 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     Initializes all handlers and repositories on startup.
     """
     logger.info("Initializing RootCause MCP Server (SDK 2.0)...")
+    _freeze_runtime_configuration()
 
     # Setup paths
     config_path = _get_config_path()
@@ -224,7 +261,8 @@ async def on_list_tools(_ctx: ServerRequestContext, _params: Any) -> ListToolsRe
     Returns:
         ListToolsResult with all tool definitions
     """
-    return ListToolsResult(tools=get_all_tools())
+    profile = _runtime.tool_profile or _get_tool_profile()
+    return ListToolsResult(tools=get_all_tools(profile))
 
 
 ToolHandler = Callable[[dict[str, Any]], Awaitable[Any]]
@@ -237,7 +275,7 @@ async def _call_without_arguments(
     return await method()
 
 
-def _build_tool_dispatch() -> dict[str, ToolHandler]:
+def _build_tool_dispatch(profile: str | None = None) -> dict[str, ToolHandler]:
     """Build the explicit tool-to-handler registry for every advertised tool."""
     _thinking_handlers = _runtime.thinking_handlers
     _evidence_handlers = _runtime.evidence_handlers
@@ -309,7 +347,11 @@ def _build_tool_dispatch() -> dict[str, ToolHandler]:
     dispatch.update(
         {
             name: partial(_reasoning_handlers.handle, name)
-            for name in ("rc_get_reasoning_chain", "rc_export_reasoning_chain")
+            for name in (
+                "rc_get_reasoning_chain",
+                "rc_export_reasoning_chain",
+                "rc_audit_reasoning_state",
+            )
         }
     )
     dispatch["rc_generate_contract_report"] = partial(
@@ -344,7 +386,70 @@ def _build_tool_dispatch() -> dict[str, ToolHandler]:
             "rc_verify_causation": (_verification_handlers.handle_verify_causation),
         }
     )
-    return dispatch
+    active_profile = profile or _runtime.tool_profile or _get_tool_profile()
+    visible_tool_names = {tool.name for tool in get_all_tools(active_profile)}
+    return {
+        name: handler
+        for name, handler in dispatch.items()
+        if name in visible_tool_names
+    }
+
+
+def _compact_structured_text(result: dict[str, Any]) -> str:
+    """Build a bounded text fallback without duplicating structured content."""
+    summary: dict[str, Any] = {}
+    preferred_keys = (
+        "status",
+        "message",
+        "session_id",
+        "report_id",
+        "evidence_id",
+        "hypothesis_id",
+        "thinking_step_id",
+        "reflection_id",
+        "gap_id",
+        "challenge_id",
+        "format",
+        "output_path",
+        "finalized",
+        "verified",
+        "posterior_probability",
+        "quality_score",
+    )
+    for key in preferred_keys:
+        value = result.get(key)
+        if isinstance(value, str):
+            summary[key] = value if len(value) <= 240 else f"{value[:237]}..."
+        elif key in result and (
+            isinstance(value, int | float | bool) or value is None
+        ):
+            summary[key] = value
+
+    for key, value in result.items():
+        is_count = key.startswith("total_") or key.endswith(
+            ("_count", "_steps", "_nodes", "_edges")
+        )
+        if is_count and isinstance(value, int | float):
+            summary.setdefault(key, value)
+
+    if "guidance" in result and isinstance(result["guidance"], dict):
+        g = result["guidance"]
+        if "current_stage" in g:
+            summary["stage"] = g["current_stage"]
+        if "completeness_score" in g:
+            with suppress(ValueError, TypeError):
+                summary["completeness"] = f"{float(g['completeness_score']):.0%}"
+        if g.get("next_recommended_actions") and isinstance(
+            g["next_recommended_actions"], list
+        ):
+            summary["next_prompt"] = str(g["next_recommended_actions"][0])[:180]
+
+    summary.setdefault("status", "success")
+    summary["detail"] = "structuredContent"
+    summary["fallback"] = (
+        "Set ROOTCAUSE_RESPONSE_MODE=verbose if structuredContent is unavailable"
+    )
+    return json.dumps(summary, ensure_ascii=False, separators=(",", ":"), default=str)
 
 
 def _to_call_tool_result(result: Any) -> CallToolResult:
@@ -352,13 +457,14 @@ def _to_call_tool_result(result: Any) -> CallToolResult:
     if isinstance(result, CallToolResult):
         return result
     if isinstance(result, dict):
+        response_mode = _runtime.response_mode or _get_response_mode()
+        text = (
+            json.dumps(result, ensure_ascii=False, indent=2, default=str)
+            if response_mode == "verbose"
+            else _compact_structured_text(result)
+        )
         return CallToolResult(
-            content=[
-                TextContent(
-                    type="text",
-                    text=json.dumps(result, ensure_ascii=False, indent=2, default=str),
-                )
-            ],
+            content=[TextContent(type="text", text=text)],
             structured_content=result,
         )
     if isinstance(result, (list, tuple)):

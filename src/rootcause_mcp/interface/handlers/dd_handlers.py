@@ -57,6 +57,7 @@ class DDHandlers:
             exclusion_criteria=args.get("exclusion_criteria"),
         )
         await self._state.persist_orchestrator(session_id)
+        guidance = orch.get_guidance()
 
         return {
             "status": "success",
@@ -68,6 +69,7 @@ class DDHandlers:
                 "differential_diagnoses_considered", []
             ),
             "uncertainty_factors": args.get("uncertainty_factors", []),
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_link_evidence(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -101,6 +103,8 @@ class DDHandlers:
                 "message": str(e),
             }
 
+        guidance = orch.get_guidance()
+
         return {
             "status": "success",
             "hypothesis_id": hypothesis_id,
@@ -108,6 +112,7 @@ class DDHandlers:
             "posterior_probability": updated_hypothesis.current_probability,
             "likelihood_ratio": likelihood_ratio,
             "supports": supports,
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_get_differential_diagnosis(
@@ -133,12 +138,14 @@ class DDHandlers:
             status_filter=status_enum,
             min_probability=min_probability,
         )
+        guidance = orch.get_guidance()
 
         return {
             "status": "success",
             "session_id": session_id,
             "hypotheses": [h.model_dump(mode="json") for h in hypotheses],
             "total": len(hypotheses),
+            "guidance": guidance.model_dump(mode="json"),
         }
 
     async def handle_exclude_hypothesis(self, args: dict[str, Any]) -> dict[str, Any]:
@@ -165,6 +172,7 @@ class DDHandlers:
                 "message": f"Hypothesis {hypothesis_id} not found in session {session_id}",
             }
         await self._state.persist_orchestrator(session_id)
+        guidance = orch.get_guidance()
 
         return {
             "status": "success",
@@ -172,4 +180,5 @@ class DDHandlers:
             "diagnosis": excluded_hypothesis.diagnosis.display,
             "hypothesis_status": excluded_hypothesis.status.value,
             "exclusion_reason": args["exclusion_reason"],
+            "guidance": guidance.model_dump(mode="json"),
         }

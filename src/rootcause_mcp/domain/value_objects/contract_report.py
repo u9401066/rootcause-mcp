@@ -79,6 +79,7 @@ class ContractReport(BaseModel):
     evidence: list[dict[str, Any]] = Field(default_factory=list)
     reasoning_chain: list[dict[str, Any]] = Field(default_factory=list)
     thinking_chain: list[dict[str, Any]] = Field(default_factory=list)
+    evidence_graph: dict[str, Any] | None = None
 
     # Quality metrics
     evidence_metrics: EvidenceCoverageMetrics | None = None
@@ -110,12 +111,21 @@ class ContractReport(BaseModel):
         import json
 
         # Calculate content hash
+        graph_content = None
+        if self.evidence_graph is not None:
+            graph_content = {
+                key: value
+                for key, value in self.evidence_graph.items()
+                if key != "mermaid"
+            }
+
         content = json.dumps(
             {
                 "hypotheses": self.hypotheses,
                 "evidence": self.evidence,
                 "reasoning_chain": self.reasoning_chain,
                 "thinking_chain": self.thinking_chain,
+                "evidence_graph": graph_content,
             },
             sort_keys=True,
         )
@@ -125,44 +135,5 @@ class ContractReport(BaseModel):
         self.is_finalized = True
         self.finalized_at = datetime.now(UTC)
         self.approved_by = finalized_by
-
-    def to_fhir(self) -> dict[str, Any]:
-        """
-        Export to FHIR-compatible format.
-
-        Returns:
-            FHIR DiagnosticReport resource
-        """
-        return {
-            "resourceType": "DiagnosticReport",
-            "id": self.report_id,
-            "status": "final" if self.is_finalized else "preliminary",
-            "code": {
-                "coding": [
-                    {
-                        "system": "http://loinc.org",
-                        "code": "11502-2",
-                        "display": "Pathology report",
-                    }
-                ],
-                "text": "Clinical Reasoning Report",
-            },
-            "effectiveDateTime": self.generated_at.isoformat(),
-            "issued": self.finalized_at.isoformat() if self.finalized_at else None,
-            "performer": [{"display": self.generated_by}],
-            "conclusion": f"Differential diagnosis with {len(self.hypotheses)} hypotheses",
-            "conclusionCode": [
-                {
-                    "coding": [
-                        {
-                            "system": "http://hl7.org/fhir/sid/icd-10",
-                            "code": h.get("diagnosis", {}).get("code", "unknown"),
-                            "display": h.get("diagnosis", {}).get("display", "Unknown"),
-                        }
-                    ]
-                }
-                for h in self.hypotheses[:3]  # Top 3 hypotheses
-            ],
-        }
 
     model_config = {"frozen": False}  # Mutable until finalized

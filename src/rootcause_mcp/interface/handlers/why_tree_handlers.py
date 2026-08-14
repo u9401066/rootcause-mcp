@@ -12,69 +12,27 @@ Handles Why Tree (5-Why Analysis) tools:
 
 from __future__ import annotations
 
-import json
-import logging
 from collections.abc import Sequence
-from datetime import datetime
-from typing import TYPE_CHECKING, Any, ClassVar
+from typing import TYPE_CHECKING, Any
 
 from mcp.types import TextContent
 
 from rootcause_mcp.application.guided_response import format_guided_response
-from rootcause_mcp.domain.entities.why_node import (
-    CausalLink,
-    TeachingCase,
-    WhyChain,
-    WhyNode,
-)
-from rootcause_mcp.domain.value_objects.enums import CausalLinkType, TeachingLevel
+from rootcause_mcp.domain.entities.why_node import CausalLink, WhyChain, WhyNode
+from rootcause_mcp.domain.value_objects.enums import CausalLinkType
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
-from rootcause_mcp.infrastructure.export_paths import build_export_path
+from rootcause_mcp.interface.handlers.why_tree_artifact_handlers import (
+    WhyTreeArtifactHandlers,
+)
+from rootcause_mcp.interface.handlers.why_tree_guidance import get_cause_type_by_level
 
 if TYPE_CHECKING:
     from rootcause_mcp.application.session_progress import SessionProgressTracker
     from rootcause_mcp.domain.repositories.session_repository import SessionRepository
     from rootcause_mcp.domain.repositories.why_tree_repository import WhyTreeRepository
 
-logger = logging.getLogger(__name__)
-
-
 class WhyTreeHandlers:
     """Handler class for Why Tree tools."""
-
-    # Cause type mapping by Why Tree depth
-    CAUSE_TYPE_BY_LEVEL: ClassVar[dict[int, dict[str, str]]] = {
-        1: {
-            "type": "Proximate",
-            "chinese": "近端原因",
-            "emoji": "🔴",
-            "hfacs_hint": "通常對應 HFACS Level 1 (Unsafe Acts) 或 Level 2 (Preconditions)",
-        },
-        2: {
-            "type": "Proximate/Intermediate",
-            "chinese": "近端/中間原因",
-            "emoji": "🟠",
-            "hfacs_hint": "通常對應 HFACS Level 2 (Preconditions) 或 Level 3 (Supervision)",
-        },
-        3: {
-            "type": "Intermediate",
-            "chinese": "中間原因",
-            "emoji": "🟡",
-            "hfacs_hint": "通常對應 HFACS Level 3 (Unsafe Supervision)",
-        },
-        4: {
-            "type": "Intermediate/Ultimate",
-            "chinese": "中間/遠端原因",
-            "emoji": "🟢",
-            "hfacs_hint": "通常對應 HFACS Level 3-4 (Supervision/Organizational)",
-        },
-        5: {
-            "type": "Ultimate",
-            "chinese": "遠端/根本原因",
-            "emoji": "💚",
-            "hfacs_hint": "通常對應 HFACS Level 4 (Organizational Influences)",
-        },
-    }
 
     def __init__(
         self,
@@ -86,41 +44,9 @@ class WhyTreeHandlers:
         self._why_repo = why_tree_repository
         self._session_repo = session_repository
         self._progress = progress_tracker
-
-    def _write_export_file(
-        self, session_id: str, export_type: str, export_format: str, content: str
-    ) -> str | None:
-        """Write export content to file and return path."""
-        try:
-            ext = "md" if export_format in ("mermaid", "markdown") else "json"
-            file_path = build_export_path(
-                session_id=session_id,
-                artifact=export_type,
-                extension=ext,
-            )
-            if ext == "md":
-                header = f"# {export_type.title()} Export\n\n"
-                header += f"**Session:** `{session_id}`\n"
-                header += f"**Exported:** {datetime.now().isoformat()}\n\n"
-                content = header + content
-
-            file_path.write_text(content, encoding="utf-8")
-            logger.info("Exported %s to %s", export_type, file_path)
-            return str(file_path)
-        except (OSError, ValueError) as exc:
-            logger.warning("Failed to write export file: %s", exc)
-            return None
-
-    def _get_cause_type_by_level(self, level: int) -> dict[str, str]:
-        """Get cause type information based on Why Tree depth."""
-        return self.CAUSE_TYPE_BY_LEVEL.get(
-            level,
-            {
-                "type": "Unknown",
-                "chinese": "未知",
-                "emoji": "⚪",
-                "hfacs_hint": "無對應資訊",
-            },
+        self._artifacts = WhyTreeArtifactHandlers(
+            why_tree_repository,
+            progress_tracker,
         )
 
     async def handle_ask_why(self, arguments: dict[str, Any]) -> Sequence[TextContent]:
@@ -232,7 +158,7 @@ class WhyTreeHandlers:
             self._why_repo.add_node(session_id, node)
 
             # Determine cause type based on level
-            cause_type_info = self._get_cause_type_by_level(node.level)
+            cause_type_info = get_cause_type_by_level(node.level)
 
             result = (
                 f"✅ **Why {node.level} Added**\n\n"
@@ -245,7 +171,6 @@ class WhyTreeHandlers:
             result += f"\n**Node ID:** `{node.id}`\n"
             result += f"**Cause Type:** {cause_type_info['emoji']} {cause_type_info['type']} ({cause_type_info['chinese']})\n"
             result += f"**HFACS Guidance:** {cause_type_info['hfacs_hint']}\n"
-            result += "**Cause Type:** 🔴 Proximate (近端原因)\n"
 
             if node.is_final_why:
                 result += (
@@ -525,274 +450,11 @@ class WhyTreeHandlers:
     async def handle_export_why_tree(
         self, arguments: dict[str, Any]
     ) -> Sequence[TextContent]:
-        """Handle rc_export_why_tree tool call."""
-        if self._why_repo is None:
-            return [
-                TextContent(
-                    type="text", text="Error: WhyTreeRepository not initialized"
-                )
-            ]
-
-        session_id_str = arguments["session_id"]
-        export_format = arguments.get("format", "mermaid")
-
-        session_id = SessionId.from_string(session_id_str)
-        chain = self._why_repo.get_chain(session_id)
-
-        if chain is None:
-            return [
-                TextContent(
-                    type="text",
-                    text=f"❌ **No Why Tree Found** for session `{session_id_str}`",
-                )
-            ]
-
-        if export_format == "json":
-            result = json.dumps(chain.to_dict(), indent=2, ensure_ascii=False)
-
-        elif export_format == "markdown":
-            lines = [
-                f"# 5-Why Analysis: {chain.initial_problem}\n",
-                f"**Depth:** {chain.depth} | **Complete:** {'Yes' if chain.is_complete else 'No'}\n",
-            ]
-
-            for node in chain.nodes:
-                indent = "  " * (node.level - 1)
-                rc_marker = " 🎯 **ROOT CAUSE**" if node.is_root_cause else ""
-                lines.append(f"\n{indent}**Why {node.level}:** {node.question}")
-                lines.append(f"{indent}→ {node.answer}{rc_marker}")
-                if node.evidence:
-                    lines.append(f"{indent}  Evidence: {', '.join(node.evidence)}")
-
-            if chain.root_causes:
-                lines.append("\n## Root Causes Summary")
-                for rc in chain.root_causes:
-                    lines.append(f"- {rc.answer}")
-
-            result = "\n".join(lines)
-
-        else:  # mermaid
-            result = self._generate_why_tree_mermaid(chain)
-
-        # Write to file for easy preview
-        file_path = self._write_export_file(
-            session_id_str, "why_tree", export_format, result
-        )
-        if file_path:
-            result += f"\n\n---\n📁 **Saved to:** `{file_path}`\n💡 Open in VS Code to preview Mermaid diagram"
-
-        return [TextContent(type="text", text=result)]
+        """Delegate Why Tree artifact generation."""
+        return await self._artifacts.handle_export_why_tree(arguments)
 
     async def handle_build_teaching_case(
         self, arguments: dict[str, Any]
     ) -> Sequence[TextContent]:
-        """Handle rc_build_teaching_case tool call."""
-        if self._why_repo is None:
-            return [
-                TextContent(
-                    type="text", text="Error: WhyTreeRepository not initialized"
-                )
-            ]
-
-        session_id_str = arguments["session_id"]
-        export_format = arguments.get("format", "markdown")
-        learner_level = TeachingLevel(arguments.get("learner_level", "medical_student"))
-
-        session_id = SessionId.from_string(session_id_str)
-        chain = self._why_repo.get_chain(session_id)
-        if chain is None:
-            return [
-                TextContent(
-                    type="text",
-                    text=f"❌ **No Why Tree Found** for session `{session_id_str}`",
-                )
-            ]
-
-        teaching_case = chain.build_teaching_case(learner_level)
-
-        if export_format == "json":
-            file_path = self._write_export_file(
-                session_id_str,
-                "teaching_case",
-                export_format,
-                json.dumps(teaching_case.to_dict(), indent=2, ensure_ascii=False),
-            )
-            result = json.dumps(
-                {
-                    "teaching_case": teaching_case.to_dict(),
-                    "saved_to": file_path,
-                },
-                indent=2,
-                ensure_ascii=False,
-            )
-        else:
-            result = self._format_teaching_case_markdown(chain, teaching_case)
-            file_path = self._write_export_file(
-                session_id_str,
-                "teaching_case",
-                export_format,
-                result,
-            )
-            if file_path:
-                result += (
-                    f"\n\n---\n📁 **Saved to:** `{file_path}`\n"
-                    "💡 Open in VS Code to review or adapt for teaching sessions"
-                )
-
-        if self._progress is not None and export_format != "json":
-            progress = self._progress.update_from_why_tree(session_id_str, chain)
-            result = format_guided_response(result, progress, "rc_build_teaching_case")
-
-        return [TextContent(type="text", text=result)]
-
-    def _format_teaching_case_markdown(
-        self,
-        chain: WhyChain,
-        teaching_case: TeachingCase,
-    ) -> str:
-        """Format a teaching case as Markdown."""
-        lines = [
-            f"# Teaching Case: {chain.initial_problem}",
-            "",
-            f"**Learner Level:** `{teaching_case.learner_level.value}`",
-            "",
-            "## Case Summary",
-            teaching_case.case_summary,
-            "",
-            "## Learning Objectives",
-        ]
-        lines.extend(
-            f"- {objective}" for objective in teaching_case.learning_objectives
-        )
-        lines.extend(["", "## Teaching Flow"])
-        lines.extend(f"- {step}" for step in teaching_case.teaching_flow)
-        lines.extend(["", "## Clinical Pearls"])
-        lines.extend(f"- {pearl}" for pearl in teaching_case.clinical_pearls)
-        lines.extend(["", "## Common Pitfalls"])
-        lines.extend(f"- {pitfall}" for pitfall in teaching_case.common_pitfalls)
-        lines.extend(["", "## Discussion Questions"])
-        lines.extend(f"- {question}" for question in teaching_case.discussion_questions)
-
-        if teaching_case.feedback_loops:
-            lines.extend(["", "## Feedback Loops"])
-            lines.extend(f"- {loop}" for loop in teaching_case.feedback_loops)
-
-        lines.extend(["", "## Reverse Causality Prompts"])
-        lines.extend(
-            f"- {prompt}" for prompt in teaching_case.reverse_causality_prompts
-        )
-        return "\n".join(lines)
-
-    def _generate_why_tree_mermaid(self, chain: WhyChain) -> str:
-        """Generate an enhanced Why Tree diagram in Mermaid format.
-
-        Creates a visually appealing tree structure with:
-        - Problem statement at the top
-        - Progressive deepening with color gradients
-        - Root causes highlighted with special styling
-        - Branch support if multiple analysis paths exist
-        """
-
-        # Escape quotes and limit text length
-        def escape(text: str, max_len: int = 45) -> str:
-            text = text.replace('"', "'").replace("\n", " ")
-            return text[:max_len] + "..." if len(text) > max_len else text
-
-        problem = escape(chain.initial_problem, 60)
-
-        lines = [
-            "```mermaid",
-            "flowchart TB",
-            "",
-            "    %% === 5-WHY ANALYSIS TREE ===",
-            "    %% Deeper levels show progression toward root cause",
-            "",
-            f'    PROBLEM["❓ {problem}"]:::problem',
-            "",
-        ]
-
-        # Color classes for different depth levels
-        level_classes = {
-            1: "why1",
-            2: "why2",
-            3: "why3",
-            4: "why4",
-            5: "why5",
-        }
-
-        # Track nodes by level for better organization
-        nodes_by_level: dict[int, list[WhyNode]] = {}
-        for node in chain.nodes:
-            nodes_by_level.setdefault(node.level, []).append(node)
-
-        # Generate nodes level by level
-        for level in sorted(nodes_by_level.keys()):
-            lines.append(f"    %% --- Why Level {level} ---")
-            nodes = nodes_by_level[level]
-
-            for node in nodes:
-                node_id = f"N{str(node.id)[-8:]}"
-                parent_id = (
-                    f"N{str(node.parent_id)[-8:]}" if node.parent_id else "PROBLEM"
-                )
-
-                answer = escape(node.answer)
-                level_class = level_classes.get(level, "why5")
-
-                # Different node shapes based on status
-                if node.is_root_cause:
-                    # Root cause: stadium shape (rounded)
-                    lines.append(f'    {node_id}(["🎯 ROOT: {answer}"]):::rootcause')
-                elif node.needs_further_analysis:
-                    # Needs analysis: rounded rectangle with question mark
-                    lines.append(f'    {node_id}("❓ {answer}"):::{level_class}')
-                else:
-                    # Normal node: rectangle
-                    lines.append(f'    {node_id}["{answer}"]:::{level_class}')
-
-                # Connection with labeled arrow
-                arrow_label = f"Why {level}"
-                if node.evidence:
-                    # Show first evidence item on arrow
-                    ev_hint = escape(node.evidence[0], 20)
-                    arrow_label = f"{arrow_label}<br/>📋 {ev_hint}"
-
-                lines.append(f'    {parent_id} -->|"{arrow_label}"| {node_id}')
-                lines.append("")
-
-        if chain.causal_links:
-            lines.append("    %% --- Cross Causal Links / Feedback Loops ---")
-            for index, link in enumerate(chain.causal_links, start=1):
-                source_ref = f"N{str(link.source_id)[-8:]}"
-                target_ref = f"N{str(link.target_id)[-8:]}"
-                label = f"{link.relationship.value}<br/>{int(link.strength * 100)}%"
-                lines.append(f'    {source_ref} -. "{label}" .-> {target_ref}')
-                if link.bidirectional:
-                    lines.append(
-                        f'    {target_ref} -. "feedback #{index}" .-> {source_ref}'
-                    )
-            lines.append("")
-
-        # Add depth indicator
-        lines.append(f"    %% Analysis Depth: {chain.depth}")
-        lines.append(f"    %% Root Causes Found: {len(chain.root_causes)}")
-        lines.append(f"    %% Feedback Loops: {len(chain.detect_feedback_loops())}")
-        lines.append("")
-
-        # Enhanced styling with gradient colors showing progression
-        lines.extend(
-            [
-                "    %% === STYLING ===",
-                "    %% Colors progress from red (surface) to green (root)",
-                "    classDef problem fill:#2196F3,stroke:#1565C0,stroke-width:3px,color:#fff,font-weight:bold",
-                "    classDef why1 fill:#FF5722,stroke:#E64A19,stroke-width:2px,color:#fff",
-                "    classDef why2 fill:#FF9800,stroke:#F57C00,stroke-width:2px,color:#fff",
-                "    classDef why3 fill:#FFC107,stroke:#FFA000,stroke-width:2px,color:#000",
-                "    classDef why4 fill:#8BC34A,stroke:#689F38,stroke-width:2px,color:#fff",
-                "    classDef why5 fill:#4CAF50,stroke:#388E3C,stroke-width:2px,color:#fff",
-                "    classDef rootcause fill:#9C27B0,stroke:#7B1FA2,stroke-width:4px,color:#fff,font-weight:bold",
-                "```",
-            ]
-        )
-
-        return "\n".join(lines)
+        """Delegate teaching-case artifact generation."""
+        return await self._artifacts.handle_build_teaching_case(arguments)

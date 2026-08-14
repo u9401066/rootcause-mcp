@@ -24,7 +24,12 @@ def get_contract_tools() -> list[Tool]:
                     },
                     "include_reasoning_chain": {
                         "type": "boolean",
-                        "description": "Include complete reasoning chain",
+                        "description": "Include orchestrator-generated reasoning chain",
+                        "default": True,
+                    },
+                    "include_thinking_chain": {
+                        "type": "boolean",
+                        "description": "Include agent-authored rationale/thinking chain",
                         "default": True,
                     },
                     "include_evidence_graph": {
@@ -39,9 +44,15 @@ def get_contract_tools() -> list[Tool]:
                     },
                     "format": {
                         "type": "string",
-                        "enum": ["json", "fhir", "markdown", "html"],
+                        "enum": ["json", "fhir", "markdown"],
                         "description": "Output format",
                         "default": "json",
+                    },
+                    "detail_level": {
+                        "type": "string",
+                        "enum": ["brief", "standard", "full"],
+                        "description": "Markdown artifact detail; ignored by JSON/FHIR",
+                        "default": "standard",
                     },
                     "finalize": {
                         "type": "boolean",

@@ -7,7 +7,7 @@ name = "rootcause-mcp"
 version = "2.0.0a1"
 description = "Clinical Root Cause Analysis MCP Server - 臨床根因分析工具"
 readme = "README.md"
-license = "MIT"
+license = "Apache-2.0"
 requires-python = ">=3.12"
 authors = [
     { name = "RCA Team" }
@@ -16,7 +16,7 @@ keywords = ["mcp", "root-cause-analysis", "clinical", "fishbone", "5-why", "hfac
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Healthcare Industry",
-    "License :: OSI Approved :: MIT License",
+    "License :: OSI Approved :: Apache Software License",
     "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Medical Science Apps.",
 ]
@@ -71,9 +71,9 @@ dev = [
 rootcause-mcp = "rootcause_mcp.server_v2:main"
 
 [project.urls]
-Documentation = "https://github.com/YOUR_ORG/rootcause-mcp#readme"
-Issues = "https://github.com/YOUR_ORG/rootcause-mcp/issues"
-Source = "https://github.com/YOUR_ORG/rootcause-mcp"
+Documentation = "https://github.com/u9401066/rootcause-mcp#readme"
+Issues = "https://github.com/u9401066/rootcause-mcp/issues"
+Source = "https://github.com/u9401066/rootcause-mcp"
 
 # ============================================================================
 # Tool Configuration

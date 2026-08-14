@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import re
 from enum import Enum
+from typing import Self
 
-from pydantic import BaseModel, Field, ValidationInfo, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class CodingSystem(str, Enum):
@@ -43,43 +44,43 @@ class ClinicalConcept(BaseModel):
     system: CodingSystem = Field(..., description="Coding system used")
     version: str | None = Field(None, description="Coding system version (optional)")
 
-    @field_validator("code")
-    @classmethod
-    def validate_code_format(cls, v: str, info: ValidationInfo) -> str:
+    @model_validator(mode="after")
+    def validate_code_format(self) -> Self:
         """
         Validate code format based on system.
 
         Raises:
             ValueError: If code format is invalid for the specified system
         """
-        system = info.data.get("system")
+        code = self.code
+        system = self.system
 
         if system in {CodingSystem.ICD_10, CodingSystem.ICD_10_CM}:
             # ICD-10 format: Letter + 2 digits + optional decimal + more digits
             # Examples: I21.9, E11.65, S52.501A
-            if not re.match(r"^[A-Z]\d{2}(\.\d{1,4}[A-Z]?)?$", v):
+            if not re.match(r"^[A-Z]\d{2}(\.\d{1,4}[A-Z]?)?$", code):
                 raise ValueError(
-                    f"Invalid ICD-10 code format: {v}. "
+                    f"Invalid ICD-10 code format: {code}. "
                     f"Expected format: Letter + 2 digits + optional decimal (e.g., I21.9)"
                 )
 
         elif system == CodingSystem.SNOMED_CT:
             # SNOMED CT codes are numeric
-            if not v.isdigit():
-                raise ValueError(f"Invalid SNOMED CT code: {v}. Must be numeric.")
+            if not code.isdigit():
+                raise ValueError(f"Invalid SNOMED CT code: {code}. Must be numeric.")
 
         elif system == CodingSystem.RXNORM:
             # RxNorm CUIs are numeric
-            if not v.isdigit():
-                raise ValueError(f"Invalid RxNorm code: {v}. Must be numeric.")
+            if not code.isdigit():
+                raise ValueError(f"Invalid RxNorm code: {code}. Must be numeric.")
 
-        elif system == CodingSystem.LOINC and not re.match(r"^\d+-\d$", v):
+        elif system == CodingSystem.LOINC and not re.match(r"^\d+-\d$", code):
             raise ValueError(
-                f"Invalid LOINC code: {v}. "
+                f"Invalid LOINC code: {code}. "
                 "Expected format: digits-checkdigit (e.g., 10839-9)"
             )
 
-        return v
+        return self
 
     @field_validator("display")
     @classmethod
@@ -92,34 +93,6 @@ class ClinicalConcept(BaseModel):
     def __str__(self) -> str:
         """Human-readable representation."""
         return f"{self.display} ({self.system.value}:{self.code})"
-
-    def to_fhir_coding(self) -> dict[str, str]:
-        """
-        Convert to FHIR Coding format.
-
-        Returns:
-            FHIR Coding dict: {system, code, display, version?}
-        """
-        system_urls = {
-            CodingSystem.SNOMED_CT: "http://snomed.info/sct",
-            CodingSystem.ICD_10: "http://hl7.org/fhir/sid/icd-10",
-            CodingSystem.ICD_10_CM: "http://hl7.org/fhir/sid/icd-10-cm",
-            CodingSystem.RXNORM: "http://www.nlm.nih.gov/research/umls/rxnorm",
-            CodingSystem.LOINC: "http://loinc.org",
-            CodingSystem.CPT: "http://www.ama-assn.org/go/cpt",
-            CodingSystem.CUSTOM: "http://example.org/fhir/custom",
-        }
-
-        coding = {
-            "system": system_urls[self.system],
-            "code": self.code,
-            "display": self.display,
-        }
-
-        if self.version:
-            coding["version"] = self.version
-
-        return coding
 
     model_config = {"frozen": True}  # Immutable value object
 
