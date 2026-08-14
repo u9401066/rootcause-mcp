@@ -1,0 +1,116 @@
+# ============================================================================
+# RootCause MCP - Clinical Reasoning Standard Operating Procedure (SOP)
+# ============================================================================
+# This protocol serves as the verifiable blueprint for any AI Agent (including
+# lightweight Flash/mini models) performing auditable medical reasoning and RCA.
+# Clinicians and hospital committees can edit thresholds, checklists, and rules
+# directly in this file without modifying the Python codebase.
+# ============================================================================
+
+version: "2.0.0"
+protocol_name: "Multi-Loop Medical Reasoning & Diagnostic Root Cause Analysis"
+last_updated: "2026-08-14"
+
+# ----------------------------------------------------------------------------
+# 1. 5-Stage Reasoning Progression Pipeline
+# ----------------------------------------------------------------------------
+stages:
+  - stage_id: "EVIDENCE_COLLECTION"
+    name: "1. Evidence Collection & Physical Grounding"
+    description: "Extract clinical findings verbatim from source documents and anchor with provenance."
+    entry_tool: "rc_add_evidence"
+    required_criteria:
+      min_evidence_count: 2
+      require_physical_verification: true
+      require_verbatim_snippets: true
+    guidance_prompts:
+      - "Extract all critical physiological vitals, lab outliers, medication timings, and waveform morphologies."
+      - "Provide exact literal snippets and document paths so provenance can be cryptographically anchored."
+
+  - stage_id: "DIFFERENTIAL_EXPANSION"
+    name: "2. Differential Expansion (Broad Differential)"
+    description: "Propose a broad differential diagnosis including both common and 'must-not-miss' life threats."
+    entry_tool: "rc_propose_hypothesis"
+    required_criteria:
+      min_hypotheses_count: 3
+      require_must_not_miss_alternatives: true
+    guidance_prompts:
+      - "Propose at least 3 competing differential diagnoses before narrowing down."
+      - "Always include critical emergency alternatives (e.g., Pulmonary Embolism, Anaphylaxis, Sepsis, Tamponade, Dissection)."
+
+  - stage_id: "BAYESIAN_EVALUATION"
+    name: "3. Bayesian Hypothesis Testing & Discriminator Analysis"
+    description: "Link evidence to hypotheses using likelihood ratios and actively test rule-out criteria."
+    entry_tool: "rc_link_evidence_to_hypothesis"
+    required_criteria:
+      unlinked_evidence_allowed: 0
+      require_disconfirming_test: true
+    guidance_prompts:
+      - "Link EVERY extracted evidence item to at least one hypothesis (supports or refutes)."
+      - "Actively test disconfirming evidence (LR < 1.0 or REFUTES direction) to prevent confirmation bias."
+
+  - stage_id: "COGNITIVE_AUDIT"
+    name: "4. Metacognitive & Bias Audit"
+    description: "Audit diagnostic assumptions, identify evidence gaps, and review cognitive biases."
+    entry_tools:
+      - "rc_reflect"
+      - "rc_challenge_assumption"
+      - "rc_identify_gaps"
+    required_criteria:
+      require_uncertainty_declared: true
+      require_bias_reviewed: true
+    guidance_prompts:
+      - "Review for common cognitive traps: Anchoring Bias, Confirmation Bias, Premature Closure, Diagnostic Momentum."
+      - "Explicitly document missing diagnostic tests, unmeasured parameters, or ambiguous timepoints."
+
+  - stage_id: "READY_FOR_SYNTHESIS"
+    name: "5. Deterministic Auditable Synthesis"
+    description: "Generate finalized decision-support contract report and Mermaid graphs with 0 LLM hallucinations."
+    entry_tool: "rc_generate_contract_report"
+    required_criteria:
+      completeness_score_threshold: 0.90
+    guidance_prompts:
+      - "Synthesize the report using rc_generate_contract_report(format='markdown', detail_level='full', finalize=True)."
+      - "Inspect the generated Evidence Graph and automated completeness checks."
+
+# ----------------------------------------------------------------------------
+# 2. Mandatory Must-Not-Miss Categories (Clinical Safety Invariants)
+# ----------------------------------------------------------------------------
+must_not_miss_categories:
+  shock_collapse:
+    - "Dynamic LVOT Obstruction (SAM / HOCM substrate)"
+    - "Massive Pulmonary Embolism (PE)"
+    - "Severe Anaphylactic Shock"
+    - "Tension Pneumothorax / Cardiac Tamponade"
+    - "Acute Myocardial Infarction / Papillary Muscle Rupture"
+  altered_mental_status_icu:
+    - "Propofol Infusion Syndrome (PRIS / Lipid Toxicity)"
+    - "Non-convulsive Status Epilepticus (NCSE)"
+    - "Severe Septic Encephalopathy / Central Nervous System Infection"
+    - "Acute Intracranial Hemorrhage / Ischemia"
+    - "Severe Electrolyte / Metabolic Poisoning"
+  pediatric_sedation_opioid:
+    - "CYP2D6 Ultra-rapid Codeine/Tramadol Opioid Toxicity"
+    - "Obstructive Sleep Apnea Central Hypoventilation"
+    - "Post-tonsillectomy Hemorrhage and Airway Occlusion"
+
+# ----------------------------------------------------------------------------
+# 3. Standard Likelihood Ratio Calibration Reference
+# ----------------------------------------------------------------------------
+likelihood_ratio_guidance:
+  pathognomonic_finding:
+    lr_positive: 15.0
+    lr_negative: 0.05
+    description: "Gold-standard or pathognomonic physical/imaging finding (e.g., TEE Dagger Doppler for SAM, Green urine for PRIS)"
+  strong_finding:
+    lr_positive: 8.0
+    lr_negative: 0.15
+    description: "High-sensitivity/specificity marker (e.g., Normal RV ruling out massive PE)"
+  moderate_finding:
+    lr_positive: 3.0
+    lr_negative: 0.40
+    description: "Supportive or suggestive clinical finding (e.g., Elevated SVV for hypovolemia)"
+  weak_finding:
+    lr_positive: 1.5
+    lr_negative: 0.75
+    description: "Non-specific finding (e.g., Sinus tachycardia, mild fever)"

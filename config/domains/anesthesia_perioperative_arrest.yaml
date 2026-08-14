@@ -1,0 +1,133 @@
+# ============================================================================
+# 麻醉科專科知識庫：圍術期重大危機與 5H5T / 觸發點鑑別 Playbook
+# Anesthesia Critical Crisis & Perioperative Collapse Knowledge Base
+# ============================================================================
+# 供 AI Agent 呼叫與麻醉專科醫師修訂之臨床判讀標準
+# ============================================================================
+
+domain: "Anesthesiology & Perioperative Resuscitation"
+playbook_name: "Perioperative Collapse, Shock & Intraoperative Arrest Differential"
+
+# ----------------------------------------------------------------------------
+# 1. ACLS 5H5T 麻醉專科核心鑑別特徵庫
+# ----------------------------------------------------------------------------
+five_h_five_t_catalog:
+
+  # ---------------- 5H ----------------
+  H1_Hypovolemia:
+    name: "低血容休克 (Hypovolemic Shock / Occult Hemorrhage)"
+    acls_category: "5H"
+    hemodynamic_profile: "HR ↑, BP ↓, CVP ↓, SVV > 13-15%, PPV > 13%"
+    echo_ultrasound: "LV end-diastolic area ↓, IVC collapsible (>50%), 'Kissing walls'"
+    distinguishing_features: "對輸液有暫時性反應；使用 Ephedrine/Phenylephrine 有正常升壓效果（非反常惡化）"
+    surgical_correlates: "骨盆骨折、後腹腔出血、骨水泥置入前骨髓滲血、肝臟/脾臟隱匿撕裂"
+
+  H2_Hypoxia:
+    name: "急性低血氧 / 氣道通氣障礙 (Acute Hypoxia & Airway Crises)"
+    acls_category: "5H"
+    hemodynamic_profile: "早期 HR ↑ + BP ↑ -> 晚期 HR ↓ (Bradycardia) -> PEA / Asystole"
+    respiratory_profile: "SpO2 ↓, PIP (尖峰氣道壓) 驟升或驟降 (脫管), EtCO2 異常"
+    distinguishing_features: "檢查氣道三部曲：1.手動通氣手感 2.聽診雙側呼吸音 3.光纖/視訊喉頭鏡直視"
+    root_triggers: "ETT 誤入食道、單肺插管、痰栓阻塞、支氣管痙攣、通氣迴路斷線或漏氣"
+
+  H3_Hydrogen_Acidosis:
+    name: "嚴重代謝性/呼吸性酸中毒 (Severe Acidosis & Metabolic Derangement)"
+    acls_category: "5H"
+    hemodynamic_profile: "心肌收縮力減弱、血管對兒茶酚胺反應鈍化 (Catecholamine unresponsiveness)"
+    laboratory_profile: "pH < 7.15, Base Excess < -8, Lactate > 4-5 mmol/L"
+    distinguishing_features: "高乳酸血症伴隨原因不明心血管衰竭；若合併綠尿/乳糜血應高度懷疑 PRIS"
+    root_triggers: "組織嚴重缺血灌流不足、PRIS 粒線體代謝毒性、嚴重敗血症、惡性高熱 (MH)"
+
+  H4_Hypo_Hyperkalemia:
+    name: "電解質危象 (Hyperkalemia / Hypokalemia / Hypocalcemia)"
+    acls_category: "5H"
+    hemodynamic_profile: "頑固性緩脈、心律不整 (Sine wave -> Asystole/PEA)"
+    ecg_profile: "高血鉀：Peaked T -> PR 延長 -> QRS 變寬 -> Sine wave；低血鉀：U wave, T 扁平"
+    distinguishing_features: "Succinylcholine 給藥後 5-10 分鐘內驟發高血鉀心搏停止（尤其燒燙傷/神經肌肉病變/廢用性萎縮）"
+    root_triggers: "大失血庫血快速加壓輸注 (庫血含高鉀且缺鈣)、橫紋肌溶解症、創傷壓迫"
+
+  H5_Hypothermia:
+    name: "低體溫 (Hypothermia)"
+    acls_category: "5H"
+    hemodynamic_profile: "核心體溫 < 35°C (輕度) / < 32°C (重度)，凝血功能失常、對除顫與藥物抗性"
+    distinguishing_features: "開腹/開胸暴露時間長、低溫沖洗液、未積極加溫"
+
+  # ---------------- 5T ----------------
+  T1_Tension_Pneumothorax:
+    name: "張力性氣胸 (Tension Pneumothorax)"
+    acls_category: "5T"
+    hemodynamic_profile: "突發性嚴重低血壓 + 頻脈 -> PEA；頸靜脈怒張"
+    respiratory_profile: "PIP 驟升、順應性驟降、患側呼吸音減弱或消失、氣管偏向對側"
+    echo_ultrasound: "Lung sliding 消失、Lung point 出現、B-line 消失"
+    root_triggers: "鎖骨下/內頸靜脈 CVC 穿刺、肋骨骨折、高 PEEP / 氣道氣壓傷 (Barotrauma)、腹腔鏡胸膜破損"
+
+  T2_Tamponade_Cardiac:
+    name: "心包膜填塞 (Cardiac Tamponade)"
+    acls_category: "5T"
+    hemodynamic_profile: "Beck's triad (低血壓、頸靜脈怒張、心音遙遠)、奇脈 (Pulsus paradoxus)"
+    echo_ultrasound: "心包積液、右心室舒張期塌陷 (RV diastolic collapse)、IVC 擴大無呼吸變異"
+    root_triggers: "心臟外科術後、心導管穿刺意外、CVC 置入穿孔、升主動脈剝離 (Type A)"
+
+  T3_Toxins_Drugs:
+    name: "藥物毒性 / 圍術期罕見藥物致命陷阱 (Toxins / Anesthetic Crises)"
+    acls_category: "5T"
+    subtypes:
+      LAST:
+        name: "局部麻醉藥全身毒性 (Local Anesthetic Systemic Toxicity)"
+        clues: "神經阻斷術後或術野浸潤後，突發抽搐、意識喪失、心室頻脈、傳導阻滯、心跳停止"
+        rescue: "立即給予 20% 脂肪乳劑 (Lipid Emulsion / Intralipid: 1.5 ml/kg bolus -> 0.25 ml/kg/min)"
+      SAM_Dynamic_LVOT:
+        name: "動態 LVOT 阻塞 / SAM 反常惡化"
+        clues: "麻醉誘導後低血壓，給予 Ephedrine/Epinephrine 後血壓反常暴跌 (35/15)、A-line 出現 Bisferiens/Spike & dome 脈搏、TEE 出現 Dagger-shaped Doppler"
+        rescue: "停用強心劑、大量灌水 (Volume)、給予 Phenylephrine + Esmolol"
+      PRIS:
+        name: "Propofol 輸注症候群 (Propofol Infusion Syndrome)"
+        clues: "Propofol >4-5 mg/kg/hr 超過 48 小時，難治性代謝性酸中毒、高血鉀、橫紋肌溶解 (CK>10,000)、綠尿、乳糜血、Brugada ECG"
+        rescue: "立即停用 Propofol、換 Midazolam/Dexmedetomidine、血液透析 (CRRT)"
+      Anaphylaxis:
+        name: "嚴重過敏性休克 (Severe Perioperative Anaphylaxis)"
+        clues: "給予神經肌肉阻斷劑、抗生素、乳膠後 5-10 分鐘，突發血管麻痺低血壓、氣管痙攣 (PIP 飆高)、皮膚紅疹 (可能被布單遮蔽)"
+        rescue: "Epinephrine 10-50 mcg IV 滴定、停用致敏原、給予大量輸液 + 抗組織胺 + 類固醇"
+
+  T4_Thrombosis_Pulmonary:
+    name: "肺栓塞 / 骨水泥栓塞 / 氣體栓塞 (Pulmonary & Mechanical Embolism)"
+    acls_category: "5T"
+    subtypes:
+      Massive_PTE:
+        name: "大面積肺動脈栓塞 (Massive Pulmonary Thromboembolism)"
+        clues: "突發 PEA / 休克、EtCO2 斷崖式驟降、TEE 見右心擴大 (RV >> LV) 與 D-sign、McConnell's sign"
+      BCIS:
+        name: "骨水泥植入症候群 (Bone Cement Implantation Syndrome)"
+        clues: "人工關節手術灌注骨水泥 (Methylmethacrylate) 壓入骨髓腔當下，突發低血壓、低血氧、心律不整、心搏停止"
+      Air_CO2_Embolism:
+        name: "空氣 / 氣體栓塞 (Venous Air / Gas Embolism)"
+        clues: "坐姿神經外科、腹腔鏡氣腹針誤入血管、EtCO2 驟降、Mill-wheel murmur、TEE 發現心內氣泡"
+
+  T5_Thrombosis_Coronary:
+    name: "圍術期急性心肌梗塞 (Perioperative Myocardial Infarction)"
+    acls_category: "5T"
+    hemodynamic_profile: "頑固性低血壓、心因性休克、心室心律不整 (VT/VF)"
+    ecg_echo: "ST 節段劇烈位移、TEE 發現新的節段性心室壁運動異常 (New RWMA)"
+    distinguishing_features: "多發生於有冠心病史、術前貧血、術中顯著心搏過速 (Tachycardia ↑ 心肌耗氧) 之病人"
+
+# ----------------------------------------------------------------------------
+# 2. 術中三維觸發流溯源比對矩陣 (Tri-Stream Trigger Matrix)
+# ----------------------------------------------------------------------------
+tri_stream_matrix:
+  stream_A_patient_factors:
+    checklist:
+      - "術前是否有潛在瓣膜疾病（如 AS, MR）或肥厚性心肌（HOCM）？"
+      - "術前是否有未控制高血壓導致之左心室肥厚 (LVH, 腔室容積偏小)？"
+      - "術前禁食 (NPO) 時間是否過長？體液是否極度不足？"
+      - "是否有長期服用降血壓藥物 (ACEI/ARB) 造成誘導後血管麻痺？"
+  stream_B_surgical_events:
+    checklist:
+      - "手術步驟與血壓驟降的時間關聯（如：翻身 Lateral 擺位、灌骨水泥、拉扯腹膜、充氣腹、夾改血管）？"
+      - "是否有非預期的大出血？外科醫師視野是否有隱匿性滲血？"
+      - "手術牽拉是否壓迫下腔靜脈 (IVC) 導致心輸出量斷流？"
+  stream_C_anesthesia_management:
+    checklist:
+      - "誘導藥物（Propofol、Fentanyl、Midazolam）劑量是否相對於脆弱病患過量？"
+      - "是否發生 Syringe Swap（藥物抽錯/標籤混淆）？"
+      - "給予強心升壓劑時，是改善還是反而惡化？"
+      - "通氣設定是否導致高胸內壓（High PEEP/PIP）阻礙回心血流？"

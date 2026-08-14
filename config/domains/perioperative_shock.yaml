@@ -1,0 +1,49 @@
+# Clinical Domain Playbook: Perioperative Shock & Dynamic LVOT Obstruction (SAM)
+# Clinicians can customize discriminators and treatment protocols here.
+
+domain: "Anesthesiology & Critical Care"
+scenario: "Intraoperative Refractory Hypotensive Shock Post-Induction"
+
+pathophysiology:
+  primary_mechanism: "Dynamic Left Ventricular Outflow Tract (LVOT) Obstruction secondary to Systolic Anterior Motion (SAM)"
+  underlying_substrate: "Unrecognized asymmetric septal hypertrophy, small hyperdynamic LV, altered mitral valve geometry"
+  triggers:
+    - "Reduced preload (propofol, blood loss, spinal/epidural block, lateral positioning)"
+    - "Reduced afterload (propofol, volatile anesthetics)"
+    - "Increased contractility / tachycardia (ephedrine, epinephrine, pain)"
+
+pathognomonic_findings:
+  - marker: "Dagger-shaped (late-peaking) CW Doppler across LVOT"
+    modality: "TEE"
+    significance: "Confirms dynamic obstruction gradient >50-80 mmHg"
+  - marker: "Bisferiens Pulse (Spike and Dome pattern)"
+    modality: "Arterial Line Waveform"
+    significance: "Rapid initial ejection followed by mid-systolic obstruction dip"
+  - marker: "Eccentric Posterior Mitral Regurgitation Jet"
+    modality: "TEE Color Doppler"
+    significance: "SAM pulls anterior leaflet away from coaptation plane"
+  - marker: "Paradoxical hemodynamic collapse after Inotropes (Epinephrine/Ephedrine)"
+    modality: "Hemodynamic Monitor"
+    significance: "Inotropy increases LV emptying and Venturi effect, worsening gradient"
+
+diagnostic_rules_to_rule_out:
+  - diagnosis: "Massive Pulmonary Embolism (PE)"
+    discriminator: "TEE shows normal RV size, normal TAPSE, and absence of D-sign or McConnell's sign"
+  - diagnosis: "Severe Anaphylaxis"
+    discriminator: "Absence of bronchospasm/urticaria; blood pressure collapses further with Epinephrine instead of recovering"
+  - diagnosis: "Isolated Hypovolemia"
+    discriminator: "Fluid responsive initially, but inotropes cause paradoxical drop rather than pressure stabilization"
+  - diagnosis: "Fixed Aortic Stenosis"
+    discriminator: "Symmetric early-to-mid peaking Doppler; valve leaflets open normally"
+
+treatment_protocol:
+  strictly_contraindicated:
+    - "Epinephrine / Dobutamine / Ephedrine / Isoproterenol (Positive inotropes ↑ SAM)"
+    - "Vasodilators / Nitrates (↓ Afterload worsens obstruction)"
+    - "Diuretics / Fluid restriction (↓ Preload worsens gradient)"
+  recommended_rescue:
+    - "STOP ALL INOTROPES IMMEDIATELY"
+    - "Aggressive IV volume expansion (fill the hyperdynamic LV)"
+    - "Pure Alpha-1 Vasoconstrictor: Phenylephrine boluses (100-200 mcg) or Noradrenaline"
+    - "Beta-blockade: Esmolol (0.5 mg/kg IV bolus) to slow heart rate and prolong diastolic filling"
+    - "Trendelenburg / Supine positioning"

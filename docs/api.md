@@ -97,6 +97,23 @@ Evaluates the multi-loop reasoning progress for AI agents (especially lightweigh
 
 ### `rc_generate_contract_report`
 
+Generates a finalized CONTRACT report in JSON, FHIR `DiagnosticReport`, or deterministic Markdown format without invoking an LLM. Supports:
+
+- `format`: `"json"`, `"fhir"`, or `"markdown"` (default: `"json"`)
+- `detail_level`: `"brief"`, `"standard"`, or `"full"` (default: `"standard"`)
+- `template_file`: Optional custom Markdown template path (e.g., `"config/templates/anesthesia_mm_rca_report_template.md"`)
+- `finalize`: Boolean flag to make the report immutable and compute a cryptographic SHA-256 content hash
+
+```json
+{
+  "session_id": "case-001",
+  "format": "markdown",
+  "detail_level": "full",
+  "template_file": "config/templates/anesthesia_mm_rca_report_template.md",
+  "finalize": true
+}
+```
+
 ### `rc_propose_hypothesis`
 
 Required fields include the diagnosis plus explicit reasoning controls:

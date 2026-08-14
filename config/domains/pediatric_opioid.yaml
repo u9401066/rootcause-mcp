@@ -1,0 +1,32 @@
+# Clinical Domain Playbook: Pediatric Opioid Safety & Respiratory Depression
+# Clinicians can customize monitoring criteria and pharmacogenomic rules here.
+
+domain: "Pediatric Anesthesiology & Pharmacogenomics"
+scenario: "Postoperative Respiratory Arrest following Tonsillectomy / Adenoidectomy"
+
+pathophysiology:
+  primary_mechanism: "Ultra-rapid CYP2D6 bioactivation of Codeine/Tramadol into active Morphine metabolites"
+  aggravating_factors: "Obstructive Sleep Apnea (OSA) baseline desensitization, post-op airway edema"
+
+pathognomonic_findings:
+  - marker: "Severe Bradypnea / Apnea during unmonitored sleep"
+    modality: "Capnography / Pulse Oximetry"
+    significance: "Opioid-induced depression of medullary respiratory drive"
+  - marker: "CYP2D6 *1xN / *2xN Gene Duplication"
+    modality: "Pharmacogenomic Testing"
+    significance: "Ultra-rapid conversion yielding toxic serum morphine concentrations"
+
+diagnostic_rules_to_rule_out:
+  - diagnosis: "Post-tonsillectomy Secondary Hemorrhage"
+    discriminator: "Absence of hematemesis, clear oral cavity, stable hematocrit"
+  - diagnosis: "Laryngospasm / Airway Obstruction"
+    discriminator: "Absence of stridor or chest wall paradoxical retractions prior to arrest"
+
+treatment_protocol:
+  strictly_contraindicated:
+    - "Administering Codeine, Tramadol, or Hydrocodone in pediatric post-tonsillectomy patients"
+    - "Unmonitored discharge without pulse oximetry in high-risk OSA patients"
+  recommended_rescue:
+    - "Immediate bag-valve-mask ventilation and 100% oxygen"
+    - "Titrated Naloxone IV (0.01 - 0.1 mg/kg)"
+    - "Maintain continuous monitoring for secondary rebound apnea"

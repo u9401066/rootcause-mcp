@@ -1,0 +1,43 @@
+# Clinical Domain Playbook: Propofol Infusion Syndrome (PRIS) & Critical Sedation
+# Clinicians can customize diagnostic criteria and drug toxic thresholds here.
+
+domain: "Critical Care & Clinical Pharmacology"
+scenario: "Refractory Metabolic Shock, AKI, and Rhabdomyolysis in Sedated ICU Patients"
+
+pathophysiology:
+  primary_mechanism: "Uncoupling of mitochondrial oxidative phosphorylation & impaired cellular fatty acid oxidation"
+  risk_threshold: "Propofol infusion rate > 4.0 - 5.0 mg/kg/hr for duration > 48 hours"
+  secondary_factors: "Concomitant vasopressor/steroid use, carbohydrate depletion, acute neurological injury"
+
+pathognomonic_findings:
+  - marker: "Forest Green Urine"
+    modality: "Urine Output Inspection"
+    significance: "Excretion of green phenolic metabolites (quinol derivatives) of propofol"
+  - marker: "Milky / Lipemic Serum"
+    modality: "Blood Sampling / Lab Inspection"
+    significance: "Impaired lipid clearance from 10% lipid emulsion vehicle"
+  - marker: "Brugada-like ECG Pattern (coved ST elevation in V1-V3)"
+    modality: "12-Lead ECG / Telemetry"
+    significance: "Cardiac sodium/calcium channel blockade and severe myocardial failure"
+  - marker: "Severe Unexplained High-Anion-Gap Lactic Acidosis with Refractory Bradycardia"
+    modality: "ABG & Hemodynamics"
+    significance: "Systemic mitochondrial collapse and metabolic failure"
+
+diagnostic_rules_to_rule_out:
+  - diagnosis: "Severe Septic Shock"
+    discriminator: "Persistent profound acidosis despite broad-spectrum antibiotics; green urine and lipemic blood cannot be explained by sepsis"
+  - diagnosis: "Acute Alcoholic Pancreatitis"
+    discriminator: "Hyperlipasemia in PRIS is secondary to hypertriglyceridemic lipid overload; abdominal imaging lacks necrotizing pancreatitis"
+  - diagnosis: "Seizure-Induced Rhabdomyolysis"
+    discriminator: "CPK > 10,000-50,000 continues escalating despite motor cessation under continuous sedation"
+
+treatment_protocol:
+  strictly_contraindicated:
+    - "Continuing Propofol infusion (even at low dose)"
+    - "Escalating catecholamine vasopressors without stopping toxic trigger"
+  recommended_rescue:
+    - "STOP PROPOFOL INFUSION IMMEDIATELY"
+    - "Switch sedation to Dexmedetomidine, Midazolam, or Ketamine"
+    - "Order STAT serum Triglycerides, CPK, Troponin, and Arterial Blood Gas"
+    - "Initiate early Continuous Renal Replacement Therapy (CRRT) / Hemodialysis to clear acidosis and potassium"
+    - "Provide adequate carbohydrate support (10% Dextrose) to suppress lipolysis"

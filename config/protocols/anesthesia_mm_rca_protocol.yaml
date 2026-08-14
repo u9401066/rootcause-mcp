@@ -1,0 +1,116 @@
+# ============================================================================
+# 麻醉科專屬：圍術期心跳停止與重症事件 (M&M / RCA) 4-Tier 倒推因果分析規範
+# Anesthesiology Perioperative Mortality & Morbidity (M&M) Root Cause Protocol
+# ============================================================================
+# 目的：
+# 避免死亡/危急案例檢討僅停留在「終末心臟衰竭/心跳停止 (Terminal Arrest)」表面，
+# 強制 AI Agent 依照麻醉專科思維，進行 4 層結構化「向後逆推 (Backward Reasoning)」：
+# Tier 0 (終末事件) -> Tier 1 (5H5T 可逆機轉) -> Tier 2 (術中誘發觸發點) -> Tier 3 (系統與潛在根因)
+# ============================================================================
+
+version: "2.0.0"
+protocol_name: "Anesthesia Perioperative M&M 4-Tier Backward Causal Protocol"
+specialty: "Anesthesiology, Perioperative Medicine & Critical Care"
+last_updated: "2026-08-14"
+
+# ----------------------------------------------------------------------------
+# 1. 四層倒推因果階層 (4-Tier Backward Reasoning Framework)
+# ----------------------------------------------------------------------------
+tiers:
+  - tier: 0
+    name: "Tier 0: 終末心肺衰竭事件 (Terminal Arrest / Shock)"
+    focus: "記錄最後心跳停止的初始心律與致命表現"
+    rhythms_to_identify:
+      - "PEA (Pulseless Electrical Activity) - 最常見於 5H5T 機轉"
+      - "Asystole (心搏停止) - 嚴重心肌缺氧、嚴重高血鉀、迷走神經反射"
+      - "VF / Pulseless VT (心室顫動/無脈搏心室頻脈) - 缺血、電解質、長 QT、藥物毒性"
+      - "Refractory Vasoplegic / Cardiogenic Collapse (頑固性血管麻痺/心因性休克)"
+
+  - tier: 1
+    name: "Tier 1: ACLS 5H5T 急性可逆生理機轉 (Acute Reversible Mechanisms)"
+    focus: "在 CPR 階段必須系統性鑑別並主動排除的 5H5T 項目"
+    five_h:
+      - code: "H1_Hypovolemia"
+        name: "低血容 (Hypovolemia)"
+        clinical_clues: "出血、禁食過久、SVV > 15%、CVP 低、心臟超音波 LV 塌陷/Kissing walls"
+      - code: "H2_Hypoxia"
+        name: "缺氧 (Hypoxia)"
+        clinical_clues: "ETT 脫落、單肺插管、氣道阻塞、支氣管痙攣、氣胸、通氣機斷線"
+      - code: "H3_Hydrogen_Acidosis"
+        name: "酸中毒 (Hydrogen Ion / Acidosis)"
+        clinical_clues: "嚴重乳酸中毒、低灌流、PRIS 粒線體解偶聯、DKA、重度高碳酸血症"
+      - code: "H4_Hypo_Hyperkalemia"
+        name: "低鉀/高鉀血症 (Hypo/Hyperkalemia)"
+        clinical_clues: "創傷/擠壓傷、庫血大量輸注、Succinylcholine 誘發高血鉀、ECG 尖銳 T 波/QRS 變寬"
+      - code: "H5_Hypothermia"
+        name: "低體溫 (Hypothermia)"
+        clinical_clues: "核心體溫 < 35°C、大手術暴露、冷輸液、凝血功能惡化"
+    five_t:
+      - code: "T1_Tension_Pneumothorax"
+        name: "張力性氣胸 (Tension Pneumothorax)"
+        clinical_clues: "CVC 置放後、胸腔/腹腔鏡手術、氣道尖峰壓 (PIP) 驟升、單側呼吸音消失、氣管偏移"
+      - code: "T2_Tamponade_Cardiac"
+        name: "心包膜填塞 (Cardiac Tamponade)"
+        clinical_clues: "心包積液、Beck's triad (低血壓、頸靜脈怒張、心音遙遠)、TEE RV 舒張期塌陷"
+      - code: "T3_Toxins_Drugs"
+        name: "毒素/藥物反應 (Toxins / Anesthetic Drugs)"
+        clinical_clues: "LAST 局部麻醉藥毒性、過敏性休克 (Anaphylaxis)、PRIS、Inotrope 反常惡化 (SAM)、Syringe Swap"
+      - code: "T4_Thrombosis_Pulmonary"
+        name: "肺栓塞 / 骨水泥栓塞 (Pulmonary / Air / Fat / Cement Embolism)"
+        clinical_clues: "骨科關節置換 BCIS、TEE RV 擴大 + D-sign、EtCO2 驟降、頑固性低血氧"
+      - code: "T5_Thrombosis_Coronary"
+        name: "冠狀動脈血栓 / 心肌梗塞 (Coronary Thrombosis / Perioperative MI)"
+        clinical_clues: "術中 ST 節段上升/下降、TEE 局部心室壁運動異常 (RWMA)、心肌酵素升高"
+
+  - tier: 2
+    name: "Tier 2: 術中觸發點與三方交互作用 (Intraoperative Trigger Streams)"
+    focus: "向上追查究竟是「病人體質」、「外科處置」還是「麻醉給藥/通氣」引爆了 5H5T"
+    streams:
+      patient_stream:
+        name: "A. 病人初始體質與術前漏網之魚 (Patient Baseline & Pre-op Misses)"
+        sub_categories:
+          - "未被診斷的肥厚性心肌病變 (HOCM / Borderline Septal Hypertrophy / SAM substrate)"
+          - "重度主動脈瓣狹窄 (AS) 或嚴重舒張功能不全 (Diastolic Dysfunction)"
+          - "隱匿性心血管疾病、心律不整病史 (Brugada, Long QT, WPW)"
+          - "困難氣道 (Difficult Airway) 解剖特徵未預警"
+          - "長期藥物交互作用 (ACEI/ARB 引發誘導後難治低血壓、抗凝血劑停藥時程問題)"
+      surgical_stream:
+        name: "B. 外科處置與術中意外 (Surgical Events & Mechanical Insults)"
+        sub_categories:
+          - "隱匿性大出血 (Occult Hemorrhage, 骨盆骨折、後腹腔、血管撕裂)"
+          - "骨水泥反應 (BCIS, Bone Cement Implantation Syndrome - 骨髓/脂肪栓塞)"
+          - "氣腹壓過高或下腔靜脈 (IVC) 受壓導致回心血驟降"
+          - "迷走神經強烈反射 (Vagal Reflex, 牽拉腹膜、眼心反射、頸動脈竇刺激)"
+          - "氣體栓塞 (Air/CO2 Embolism, 腹腔鏡開腹靜脈破損、神經外科坐姿手術)"
+      anesthesia_stream:
+        name: "C. 麻醉管理與藥理/通氣失誤 (Anesthesia Management & Pharmacodynamics)"
+        sub_categories:
+          - "麻醉誘導藥物相對過量 (Propofol / Opioid 擴張血管 + 抑制心肌)"
+          - "給藥錯誤 (Medication Error / Syringe Swap / 濃度標示混淆)"
+          - "血管活性藥物選擇錯誤 (如 SAM/HOCM 給予 Epinephrine 導致動態阻塞加劇)"
+          - "高位脊髓麻醉 (High Spinal / Total Spinal Block - 全身交感神經阻斷)"
+          - "通氣設定不當 (PEEP 過高壓迫回心血流、呼吸管扭折/滑脫、未察覺之低容積缺氧)"
+
+  - tier: 3
+    name: "Tier 3: 潛在系統性漏洞與組織根因 (Latent System Factors & HFACS-MES)"
+    focus: "檢討為何防護網沒有攔截到危險（人機界面、溝通、指引、疲勞）"
+    hfacs_alignment:
+      - level: "UA (Unsafe Acts)"
+        examples: "未先查看動脈波形特徵、未在第一時間使用 POCUS/TEE、過早放棄鑑別診斷"
+      - level: "PC (Preconditions for Unsafe Acts)"
+        examples: "外科與麻醉溝通斷層（互推責任）、警報疲勞 (Alarm Fatigue)、值班疲勞、跨科交接不完整"
+      - level: "US (Unsafe Supervision)"
+        examples: "資淺人員未受即時督導、緊急處置未呼叫資深支援 (Early Help Calling)"
+      - level: "OI / EF (Organizational & Environmental Factors)"
+        examples: "急救推車缺少特殊解毒劑/專用藥物、缺少危機處理 Checklists、ICU 缺乏高危藥物超量自動警報"
+
+# ----------------------------------------------------------------------------
+# 2. 麻醉 M&M 倒推分析執行規則 (Execution Constraints for Agents)
+# ----------------------------------------------------------------------------
+rules:
+  - id: "RULE_MANDATORY_5H5T_CHECK"
+    description: "任何術中心跳停止/休克案例，Agent 必須至少對 5H5T 中最可能的三項進行明確支持/排除論證。"
+  - id: "RULE_TRI_STREAM_INVESTIGATION"
+    description: "禁止將責任單一歸咎於單一方面，必須同時橫向檢視 (A)病人基線 (B)外科手術 (C)麻醉處置 三大維度。"
+  - id: "RULE_PARADOXICAL_REACTION_AUDIT"
+    description: "若給予強心劑 (Inotropes) 或輸液後病情反常惡化，強制啟動 Dynamic LVOT Obstruction (SAM) 或 LAST 毒性評估。"
