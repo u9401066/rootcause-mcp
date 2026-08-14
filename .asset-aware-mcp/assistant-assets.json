@@ -1,0 +1,44 @@
+{
+  "version": 1,
+  "files": {
+    ".github/agents/asset-aware-document.agent.md": {
+      "sha256": "37851391b02b15a616a0c374ea5c8b1fb275f18f042c1d0dfc2a7d2e5f6d070c"
+    },
+    ".claude/skills/pdf-asset-extractor/SKILL.md": {
+      "sha256": "a8fa62970f9b91640486f9c1f25e5bc986f4c497fa9da823e8b97b2273a22e16"
+    },
+    ".cline/skills/asset-aware-mcp-harness/SKILL.md": {
+      "sha256": "e5af27a7740a714e99b4ce22f1c5e0ac849f9558d1741b0f5290f607f8be83e6"
+    },
+    ".codex/skills/asset-aware-mcp-harness/SKILL.md": {
+      "sha256": "b3985fbc76586d89786fe9b9b6e51d8266a36dfa99dbd0af7c0b2f8175e93b35"
+    },
+    ".clinerules/00-project.md": {
+      "sha256": "d0fb8c0b8b62ae060b56504873cb9a77ec136d9fac9cca3b54345a2c69bfecff"
+    },
+    ".clinerules/10-python.md": {
+      "sha256": "f144621acc3520b64d6cbb7b27f91a968a012019318f26f230d6eab03dcada7f"
+    },
+    ".clinerules/20-vscode-extension.md": {
+      "sha256": "518ffc6caf98ab5c242e1ed192650e07ed5becab3f02a5b3c25e72a67e2445d0"
+    },
+    ".clinerules/30-citation-ready.md": {
+      "sha256": "a8115f1c63b26219732c86195cd1ec61b631e645e6bc640270d36ece2c1ae5ec"
+    },
+    ".clinerules/40-release.md": {
+      "sha256": "379abe7f693174cf5207dcc6aa6cbdced060e84ea641c80ba368bc1ee9cfe14d"
+    },
+    ".clinerules/workflows/full-check.md": {
+      "sha256": "ef4cd79324941c78270dc07d1ae6cfff915ec2b466d7ead66f738da171b8fe20"
+    },
+    ".clinerules/workflows/mcp-setup.md": {
+      "sha256": "a9a6a9dfd31b33ff42b3f705b2c74787f7c62abbb59b0666b0c0d3615266ecaf"
+    },
+    ".clinerules/workflows/release-publish.md": {
+      "sha256": "4724e0fab419380ae10167da2189d9292baf4f68eb3128bdfdea069491f22aba"
+    },
+    ".clinerules/workflows/skills-audit.md": {
+      "sha256": "992c1137b9d37d2309491a83cb6ef748b570c771d14d66486fd6c0416c9473e2"
+    }
+  }
+}
