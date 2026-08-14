@@ -31,6 +31,7 @@ if TYPE_CHECKING:
     from rootcause_mcp.domain.repositories.session_repository import SessionRepository
     from rootcause_mcp.domain.repositories.why_tree_repository import WhyTreeRepository
 
+
 class WhyTreeHandlers:
     """Handler class for Why Tree tools."""
 

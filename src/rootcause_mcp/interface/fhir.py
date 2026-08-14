@@ -51,9 +51,7 @@ def render_contract_report_fhir(report: ContractReport) -> dict[str, Any]:
             concept = ClinicalConcept.model_validate(diagnosis)
         except ValidationError:
             continue
-        conclusion_codes.append(
-            {"coding": [clinical_concept_to_fhir_coding(concept)]}
-        )
+        conclusion_codes.append({"coding": [clinical_concept_to_fhir_coding(concept)]})
 
     return {
         "resourceType": "DiagnosticReport",

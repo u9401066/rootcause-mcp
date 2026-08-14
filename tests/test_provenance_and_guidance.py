@@ -16,6 +16,7 @@ from rootcause_mcp.domain.services.provenance_verifier import (
     ProvenanceVerifier,
 )
 from rootcause_mcp.domain.value_objects.reasoning_guidance import ReasoningStage
+from rootcause_mcp.interface.handlers.contract_handlers import ContractHandlers
 from rootcause_mcp.interface.handlers.dd_handlers import DDHandlers
 from rootcause_mcp.interface.handlers.evidence_handlers import EvidenceHandlers
 from rootcause_mcp.interface.handlers.reasoning_handlers import ReasoningHandlers
@@ -43,7 +44,9 @@ def test_provenance_verifier_exact_snippet(tmp_path: Path) -> None:
     assert match.line_numbers == (2,)
     assert match.snippet_hash is not None
     assert match.snippet_hash.startswith("sha256:")
-    assert "Line 2" in (match.file_path or "") or "nursing_notes.txt" in (match.file_path or "")
+    assert "Line 2" in (match.file_path or "") or "nursing_notes.txt" in (
+        match.file_path or ""
+    )
 
 
 def test_provenance_verifier_missing_file(tmp_path: Path) -> None:
@@ -152,6 +155,7 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
 
     # Add cognitive transparency reflection
     from rootcause_mcp.domain.entities.thinking_step import ThinkingStep, ThinkingType
+
     orchestrator.thinking_chain.add_step(
         ThinkingStep(
             thinking_type=ThinkingType.UNCERTAINTY_ACKNOWLEDGED,
@@ -167,7 +171,9 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
     assert g_final.current_stage == ReasoningStage.READY_FOR_SYNTHESIS
     assert g_final.completeness_score >= 0.85
     assert g_final.is_ready_for_report is True
-    assert any("rc_generate_contract_report" in act for act in g_final.next_recommended_actions)
+    assert any(
+        "rc_generate_contract_report" in act for act in g_final.next_recommended_actions
+    )
 
 
 @pytest.mark.asyncio
@@ -233,3 +239,64 @@ async def test_handlers_include_guidance_and_audit_tool() -> None:
     assert "stage" in res_audit
     assert "next_recommended_actions" in res_audit
     assert "checklist" in res_audit
+
+
+@pytest.mark.asyncio
+async def test_custom_markdown_report_template_rendering() -> None:
+    """Verify that contract report rendering supports customizable Markdown templates."""
+    state = ServerState()
+    ev_handler = EvidenceHandlers(state)
+    dd_handler = DDHandlers(state)
+    contract_handler = ContractHandlers(state)
+
+    session_id = "template-render-test"
+    ev = await ev_handler.handle(
+        "rc_add_evidence",
+        {
+            "session_id": session_id,
+            "content": "Blood pressure 60/30 mmHg post-induction",
+            "source_document": "examples/dynamic_lvot_obstruction_sam/DATA_SOURCE_02_ANESTHESIA_RECORD_INDUCTION.csv",
+            "raw_snippet": '"08:15","Worsening","60/30","130","98%","25","Ephedrine 10mg IV","**NO RESPONSE**. BP dropping further."',
+        },
+    )
+    h1 = await dd_handler.handle(
+        "rc_propose_hypothesis",
+        {
+            "session_id": session_id,
+            "diagnosis": "Dynamic LVOT Obstruction (SAM)",
+            "clinical_reasoning": "Paradoxical worsening with ephedrine",
+            "prior_probability": 0.4,
+        },
+    )
+    await dd_handler.handle(
+        "rc_link_evidence_to_hypothesis",
+        {
+            "session_id": session_id,
+            "hypothesis_id": h1["hypothesis_id"],
+            "evidence_id": ev["evidence_id"],
+            "likelihood_ratio": 10.0,
+            "supports": True,
+        },
+    )
+
+    template_path = Path("config/templates/clinical_reasoning_report_template.md")
+    assert template_path.exists(), (
+        "Default template file should exist in config/templates"
+    )
+
+    report_res = await contract_handler.handle(
+        "rc_generate_contract_report",
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "standard",
+            "template_file": str(template_path),
+        },
+    )
+    assert report_res["status"] == "success"
+    rendered_md = report_res["content"]
+
+    assert "# 🏥 Clinical Reasoning & Root Cause Report" in rendered_md
+    assert "Dynamic LVOT Obstruction (SAM)" in rendered_md
+    assert "Recommended Clinical Action Plan & Patient Safety Measures" in rendered_md
+    assert "Audit Trail & Cryptographic Provenance" in rendered_md

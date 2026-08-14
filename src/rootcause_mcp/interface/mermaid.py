@@ -114,8 +114,7 @@ def build_evidence_graph(
         }
     )
     nodes.extend(
-        {"id": cause_id, "type": "cause", "label": cause_id}
-        for cause_id in cause_ids
+        {"id": cause_id, "type": "cause", "label": cause_id} for cause_id in cause_ids
     )
     edges = [
         {"source": source, "target": target, "relationship": relationship}
@@ -230,7 +229,9 @@ def render_fishbone_mermaid(fishbone: Fishbone) -> str:
             cause_ref = f"{category_ref}_C{cause_index}"
             label = escape_mermaid_label(cause.description, 64)
             if cause.hfacs_code:
-                label = f"{label}<br/>HFACS: {escape_mermaid_label(cause.hfacs_code, 20)}"
+                label = (
+                    f"{label}<br/>HFACS: {escape_mermaid_label(cause.hfacs_code, 20)}"
+                )
             if cause.verified:
                 label = f"{label}<br/>Verified"
             lines.append(f'    {cause_ref}["{label}"]:::cause')
@@ -298,9 +299,7 @@ def render_why_tree_mermaid(chain: WhyChain) -> str:
 
         edge_parts = [f"Why {node.level}"]
         if node.evidence:
-            edge_parts.append(
-                f"Evidence: {escape_mermaid_label(node.evidence[0], 28)}"
-            )
+            edge_parts.append(f"Evidence: {escape_mermaid_label(node.evidence[0], 28)}")
         direct_key = (parent_key, node_key) if parent_key else None
         if direct_key in direct_links:
             links = direct_links[direct_key]

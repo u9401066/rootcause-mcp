@@ -3,7 +3,7 @@
 from rootcause_mcp.domain.services import HFACSSuggester
 
 
-def test_suggester_loads_rules():
+def test_suggester_loads_rules() -> None:
     """Test that suggester loads rules from YAML files."""
     suggester = HFACSSuggester()
     summary = suggester.get_loaded_rules_summary()
@@ -17,7 +17,7 @@ def test_suggester_loads_rules():
     assert summary["total_rules"] > 0, "Should have loaded some rules"
 
 
-def test_suggester_suggests_anesthesia():
+def test_suggester_suggests_anesthesia() -> None:
     """Test suggestions for anesthesia-related descriptions."""
     suggester = HFACSSuggester()
 
@@ -40,7 +40,7 @@ def test_suggester_suggests_anesthesia():
             print(f"    confidence: {float(s.confidence):.2f}, source: {s.source}")
 
 
-def test_guiding_questions():
+def test_guiding_questions() -> None:
     """Test guiding questions for each HFACS level."""
     from rootcause_mcp.domain.value_objects.hfacs import HFACSLevel
 

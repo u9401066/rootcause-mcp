@@ -130,10 +130,22 @@ def test_session_stage_and_status_lifecycle() -> None:
     session.complete()
     assert session.is_completed
     assert not session.can_advance_to(Stage.CONTEXTUALIZE)
-    session.abandon()
-    assert session.status is SessionStatus.ABANDONED
-    session.archive()
-    assert session.status is SessionStatus.ARCHIVED
+
+    abandoned_session = RCASession.create(
+        case_type=CaseType.NEAR_MISS,
+        case_title="Abandoned Case",
+        initial_description="Testing abandoned lifecycle",
+    )
+    abandoned_session.abandon()
+    assert abandoned_session.status is SessionStatus.ABANDONED
+
+    archived_session = RCASession.create(
+        case_type=CaseType.NEAR_MISS,
+        case_title="Archived Case",
+        initial_description="Testing archived lifecycle",
+    )
+    archived_session.archive()
+    assert archived_session.status is SessionStatus.ARCHIVED
     assert set(session.get_progress()) == {stage.value for stage in Stage}
 
 

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any
 
 from pydantic import ValidationError
@@ -12,11 +13,98 @@ from rootcause_mcp.domain.value_objects.contract_report import ContractReport
 _STRENGTH_RANK = {"STRONG": 3, "MODERATE": 2, "WEAK": 1, "ANECDOTAL": 0}
 
 
+def _render_custom_template(
+    report: ContractReport,
+    detail_level: str,
+    hypotheses: list[dict[str, Any]],
+    evidence: list[dict[str, Any]],
+    evidence_limit: int | None,
+    template_path: str | Path,
+) -> str | None:
+    """Render report using an external Markdown template file if available."""
+    tpl_path = Path(template_path)
+    if not tpl_path.is_file():
+        return None
+
+    template_text = tpl_path.read_text(encoding="utf-8")
+    top_diag = (
+        hypotheses[0].get("diagnosis", {}).get("display", "Unknown")
+        if hypotheses
+        else "None"
+    )
+    top_prob = _percent(_probability(hypotheses[0])) if hypotheses else "N/A"
+    refuted = [
+        h.get("diagnosis", {}).get("display", "Unknown")
+        for h in hypotheses
+        if str(h.get("status", "")).upper() in {"EXCLUDED", "RULED_OUT"}
+        or len(h.get("contradicting_evidence_ids", [])) > 0
+    ]
+    rule_out_summary = ", ".join(refuted) if refuted else "None explicitly refuted"
+
+    reasoning_mermaid = ""
+    if detail_level in {"standard", "full"} and report.reasoning_chain:
+        from rootcause_mcp.domain.entities.reasoning_step import (
+            ReasoningChain,
+            ReasoningStep,
+        )
+        from rootcause_mcp.interface.mermaid import (
+            render_reasoning_chain_mermaid,
+        )
+
+        chain = ReasoningChain(
+            session_id=report.session_id,
+            steps=[ReasoningStep.model_validate(s) for s in report.reasoning_chain],
+        )
+        reasoning_mermaid = render_reasoning_chain_mermaid(chain)
+
+    evidence_mermaid = ""
+    if report.evidence_graph and report.evidence_graph.get("mermaid"):
+        evidence_mermaid = str(report.evidence_graph["mermaid"])
+
+    placeholders: dict[str, str] = {
+        "report_title": "Clinical Reasoning & Root Cause Report",
+        "session_id": _cell(report.session_id),
+        "report_id": _cell(report.report_id),
+        "generated_at": report.generated_at.isoformat(),
+        "report_status": "Final" if report.is_finalized else "Preliminary",
+        "detail_level": detail_level,
+        "executive_summary": "\n".join(
+            _executive_summary(hypotheses, evidence, report)
+        ),
+        "hypothesis_table": "\n".join(_hypothesis_table(hypotheses)),
+        "top_diagnosis": top_diag,
+        "top_probability": top_prob,
+        "rule_out_summary": rule_out_summary,
+        "must_not_miss_evaluated": f"{len(hypotheses)} emergency differential conditions modeled",
+        "evidence_table": "\n".join(_evidence_table(evidence, evidence_limit)),
+        "cognitive_safety_section": "\n".join(_cognitive_safety(report.thinking_chain)),
+        "automated_checks_section": "\n".join(_automated_findings(report)),
+        "quality_metrics_section": "\n".join(_quality_metrics(report)),
+        "reasoning_chain_diagram": reasoning_mermaid
+        or "_No diagram generated for brief mode._",
+        "evidence_graph_diagram": evidence_mermaid or "_No evidence graph generated._",
+        "generated_by": _cell(report.generated_by),
+        "report_version": _cell(report.report_version),
+        "total_evidence_count": str(len(report.evidence)),
+        "verified_evidence_count": str(
+            sum(bool(item.get("verified")) for item in evidence)
+        ),
+        "total_hypotheses_count": str(len(report.hypotheses)),
+        "reasoning_steps_count": str(len(report.reasoning_chain)),
+        "content_hash": report.content_hash or "PRELIMINARY",
+    }
+
+    for key, val in placeholders.items():
+        template_text = template_text.replace(f"{{{{{key}}}}}", val)
+    return template_text.rstrip() + "\n"
+
+
 def render_contract_report_markdown(
     report: ContractReport,
     detail_level: str = "standard",
+    template_path: str | Path | None = None,
 ) -> str:
-    """Render a professional report without invoking an LLM."""
+    """Render a professional report without invoking an LLM, supporting custom template overrides."""
     if detail_level not in {"brief", "standard", "full"}:
         raise ValueError("detail_level must be brief, standard, or full")
 
@@ -26,6 +114,20 @@ def render_contract_report_markdown(
         reverse=True,
     )
     evidence = sorted(report.evidence, key=_evidence_sort_key, reverse=True)
+    evidence_limit = 8 if detail_level == "brief" else None
+
+    if template_path:
+        custom_rendered = _render_custom_template(
+            report=report,
+            detail_level=detail_level,
+            hypotheses=hypotheses,
+            evidence=evidence,
+            evidence_limit=evidence_limit,
+            template_path=template_path,
+        )
+        if custom_rendered is not None:
+            return custom_rendered
+
     lines = [
         "# Clinical Reasoning Report",
         "",
@@ -46,7 +148,6 @@ def render_contract_report_markdown(
     lines.extend(["", "## Ranked Differential Diagnosis", ""])
     lines.extend(_hypothesis_table(hypotheses))
     lines.extend(["", "## Evidence Matrix", ""])
-    evidence_limit = 8 if detail_level == "brief" else None
     lines.extend(_evidence_table(evidence, evidence_limit))
     lines.extend(["", "## Uncertainty and Cognitive Safety", ""])
     lines.extend(_cognitive_safety(report.thinking_chain))
@@ -145,7 +246,9 @@ def _diagnosis_cells(hypothesis: dict[str, Any]) -> tuple[str, str]:
     try:
         concept = ClinicalConcept.model_validate(diagnosis)
     except ValidationError:
-        raw_code = f"{diagnosis.get('system', 'UNKNOWN')}:{diagnosis.get('code', 'unknown')}"
+        raw_code = (
+            f"{diagnosis.get('system', 'UNKNOWN')}:{diagnosis.get('code', 'unknown')}"
+        )
         return display, _cell(f"INVALID CODE: {raw_code}")
     return display, _cell(f"{concept.system.value}:{concept.code}")
 
@@ -240,8 +343,7 @@ def _quality_metrics(report: ContractReport) -> list[str]:
     if reasoning is not None:
         lines.extend(
             [
-                f"- Average reasoning confidence: "
-                f"{_percent(reasoning.avg_confidence)}",
+                f"- Average reasoning confidence: {_percent(reasoning.avg_confidence)}",
                 f"- Evidence-linked reasoning coverage: "
                 f"{_percent(reasoning.evidence_coverage)}",
                 f"- Hypothesis-linked reasoning coverage: "

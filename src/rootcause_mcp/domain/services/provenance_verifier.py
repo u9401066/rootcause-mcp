@@ -140,7 +140,9 @@ class ProvenanceVerifier:
                 diagnostics=f"Could not read source document at {resolved_path}.",
             )
 
-        snippet_to_match = raw_snippet or (content if content and len(content) < 300 else None)
+        snippet_to_match = raw_snippet or (
+            content if content and len(content) < 300 else None
+        )
         if snippet_to_match:
             return self._verify_snippet(resolved_path, file_text, snippet_to_match)
 
@@ -237,7 +239,9 @@ class ProvenanceVerifier:
         return None
 
     @staticmethod
-    def _match_snippet_in_text(file_text: str, snippet: str) -> tuple[list[int], str] | None:
+    def _match_snippet_in_text(
+        file_text: str, snippet: str
+    ) -> tuple[list[int], str] | None:
         clean_snippet = snippet.strip()
         if not clean_snippet:
             return None
@@ -254,7 +258,9 @@ class ProvenanceVerifier:
         return line_numbers, clean_snippet
 
     @staticmethod
-    def _match_normalized_snippet(file_text: str, snippet: str) -> tuple[list[int], str] | None:
+    def _match_normalized_snippet(
+        file_text: str, snippet: str
+    ) -> tuple[list[int], str] | None:
         norm_snippet = " ".join(snippet.split()).casefold()
         if not norm_snippet:
             return None
@@ -268,7 +274,9 @@ class ProvenanceVerifier:
         # Multi-line sliding window
         for window_size in range(2, 6):
             for i in range(len(file_lines) - window_size + 1):
-                chunk = " ".join(" ".join(file_lines[i : i + window_size]).split()).casefold()
+                chunk = " ".join(
+                    " ".join(file_lines[i : i + window_size]).split()
+                ).casefold()
                 if norm_snippet in chunk:
                     return list(range(i + 1, i + window_size + 1)), " ".join(
                         file_lines[i : i + window_size]

@@ -81,18 +81,23 @@ class ReasoningStep(BaseModel):
     # Actor
     agent_id: str = Field(..., description="ID of the AI agent performing reasoning")
     agent_model: str | None = Field(
-        None, description="Model version (e.g., 'claude-sonnet-4.5')"
+        default=None, description="Model version (e.g., 'claude-sonnet-4.5')"
     )
 
     # Metadata
     confidence: float | None = Field(
-        None, ge=0, le=1, description="Agent's confidence in this reasoning step"
+        default=None,
+        ge=0,
+        le=1,
+        description="Agent's confidence in this reasoning step",
     )
-    tokens_used: int | None = Field(None, ge=0, description="LLM tokens consumed")
+    tokens_used: int | None = Field(
+        default=None, ge=0, description="LLM tokens consumed"
+    )
 
     # Structured chain-of-thought (optional, for detailed tracking)
     chain_of_thought: dict[str, Any] | None = Field(
-        None,
+        default=None,
         description="Structured CoT data (e.g., intermediate calculations, alternatives considered)",
     )
 
@@ -125,7 +130,7 @@ class ReasoningChain(BaseModel):
     steps: list[ReasoningStep] = Field(default_factory=list)
 
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    finalized_at: datetime | None = Field(None)
+    finalized_at: datetime | None = Field(default=None)
 
     def add_step(self, step: ReasoningStep) -> None:
         """

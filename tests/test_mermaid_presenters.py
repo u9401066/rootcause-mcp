@@ -166,10 +166,7 @@ def test_why_tree_mermaid_merges_direct_cross_link() -> None:
     diagram = render_why_tree_mermaid(chain)
 
     assert diagram.startswith("```mermaid\nflowchart TB")
-    assert (
-        "N1 -->|\"Why 2<br/>contributes_to 70%<br/>escalates 40%\"| N2"
-        in diagram
-    )
+    assert 'N1 -->|"Why 2<br/>contributes_to 70%<br/>escalates 40%"| N2' in diagram
     assert 'N1 -. "contributes_to<br/>70%" .-> N2' not in diagram
     assert 'N1 -. "escalates<br/>40%" .-> N2' not in diagram
     assert "&quot;shock&quot; &amp; lactate &lt; threshold" in diagram

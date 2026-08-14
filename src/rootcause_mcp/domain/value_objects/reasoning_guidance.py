@@ -35,22 +35,29 @@ class ReasoningGuidance(BaseModel):
     current_stage: ReasoningStage = Field(..., description="Current reasoning stage")
     stage_display: str = Field(..., description="Human-readable stage title")
     completeness_score: float = Field(
-        ..., ge=0.0, le=1.0, description="Overall progress toward defensible reasoning (0.0 - 1.0)"
+        ...,
+        ge=0.0,
+        le=1.0,
+        description="Overall progress toward defensible reasoning (0.0 - 1.0)",
     )
     checklist: dict[str, Any] = Field(
         default_factory=dict, description="Detailed readiness checklist items"
     )
     missing_prerequisites: list[str] = Field(
-        default_factory=list, description="Missing steps required for a complete reasoning chain"
+        default_factory=list,
+        description="Missing steps required for a complete reasoning chain",
     )
     next_recommended_actions: list[str] = Field(
-        default_factory=list, description="Explicit tool call instructions for the agent's next turn"
+        default_factory=list,
+        description="Explicit tool call instructions for the agent's next turn",
     )
     push_questions: list[str] = Field(
-        default_factory=list, description="Socratic clinical push questions to deepen reasoning"
+        default_factory=list,
+        description="Socratic clinical push questions to deepen reasoning",
     )
     is_ready_for_report: bool = Field(
-        False, description="True if the reasoning state fulfills minimal audit requirements"
+        False,
+        description="True if the reasoning state fulfills minimal audit requirements",
     )
 
     model_config = {"frozen": True}

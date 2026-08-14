@@ -57,12 +57,16 @@ class ClinicalGuidanceService:
             linked_evidence_ids.update(h.contradicting_evidence_ids)
 
         unlinked_evidence = [
-            e.id.value for e in evidence_store.values() if e.id.value not in linked_evidence_ids
+            e.id.value
+            for e in evidence_store.values()
+            if e.id.value not in linked_evidence_ids
         ]
 
         has_disconfirming_check = (
             any(bool(h.contradicting_evidence_ids) for h in hypothesis_store.values())
-            or any(h.status == HypothesisStatus.EXCLUDED for h in hypothesis_store.values())
+            or any(
+                h.status == HypothesisStatus.EXCLUDED for h in hypothesis_store.values()
+            )
             or any(
                 lr.lr_negative is not None
                 for h in hypothesis_store.values()
@@ -98,13 +102,15 @@ class ClinicalGuidanceService:
             has_biases=bool(bias_reports),
         )
 
-        stage, stage_display, next_actions, push_questions = cls._determine_stage_and_actions(
-            evidence_count=evidence_count,
-            hypotheses_count=hypotheses_count,
-            unlinked_evidence=unlinked_evidence,
-            has_disconfirming_check=has_disconfirming_check,
-            has_uncertainties=bool(uncertainty_factors),
-            has_biases=bool(bias_reports),
+        stage, stage_display, next_actions, push_questions = (
+            cls._determine_stage_and_actions(
+                evidence_count=evidence_count,
+                hypotheses_count=hypotheses_count,
+                unlinked_evidence=unlinked_evidence,
+                has_disconfirming_check=has_disconfirming_check,
+                has_uncertainties=bool(uncertainty_factors),
+                has_biases=bool(bias_reports),
+            )
         )
 
         checklist = {
@@ -161,7 +167,9 @@ class ClinicalGuidanceService:
         if has_disconfirming_check:
             link_score += 0.10
 
-        meta_score = (0.15 if has_uncertainties else 0.0) + (0.10 if has_biases else 0.0)
+        meta_score = (0.15 if has_uncertainties else 0.0) + (
+            0.10 if has_biases else 0.0
+        )
         return round(min(1.0, ev_score + hyp_score + link_score + meta_score), 2)
 
     @staticmethod
@@ -176,13 +184,21 @@ class ClinicalGuidanceService:
     ) -> list[str]:
         missing: list[str] = []
         if evidence_count < 2:
-            missing.append("At least 2 evidence findings registered from clinical records")
+            missing.append(
+                "At least 2 evidence findings registered from clinical records"
+            )
         if evidence_with_sources < evidence_count:
-            missing.append(f"{evidence_count - evidence_with_sources} evidence item(s) lack source document references")
+            missing.append(
+                f"{evidence_count - evidence_with_sources} evidence item(s) lack source document references"
+            )
         if hypotheses_count < 3:
-            missing.append(f"Differential expansion needed: currently {hypotheses_count}/3 recommended hypotheses")
+            missing.append(
+                f"Differential expansion needed: currently {hypotheses_count}/3 recommended hypotheses"
+            )
         if unlinked_evidence:
-            missing.append(f"{len(unlinked_evidence)} evidence item(s) not yet linked to any hypothesis")
+            missing.append(
+                f"{len(unlinked_evidence)} evidence item(s) not yet linked to any hypothesis"
+            )
         if not has_disconfirming_check:
             missing.append("No disconfirming tests or rule-out criteria evaluated")
         if not has_uncertainties:
@@ -267,4 +283,3 @@ class ClinicalGuidanceService:
                 "Is the reasoning chain complete, verifiable, and defensible for an M&M conference or clinical audit?",
             ],
         )
-

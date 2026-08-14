@@ -36,9 +36,9 @@ def test_tool_profiles_reduce_advertised_schema_context() -> None:
 
     assert len(clinical_tools) == 17
     assert len(rca_tools) == 21
-    assert {tool.name for tool in clinical_tools} & {tool.name for tool in rca_tools} == {
-        "rc_verify_causation"
-    }
+    assert {tool.name for tool in clinical_tools} & {
+        tool.name for tool in rca_tools
+    } == {"rc_verify_causation"}
 
     all_bytes = len(
         json.dumps(

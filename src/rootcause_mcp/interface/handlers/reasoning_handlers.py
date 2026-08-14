@@ -34,7 +34,9 @@ class ReasoningHandlers:
         else:
             raise ValueError(f"Unknown reasoning tool: {tool_name}")
 
-    async def handle_audit_reasoning_state(self, args: dict[str, Any]) -> dict[str, Any]:
+    async def handle_audit_reasoning_state(
+        self, args: dict[str, Any]
+    ) -> dict[str, Any]:
         """Handle rc_audit_reasoning_state tool call for multi-loop guidance."""
         session_id = args["session_id"]
 

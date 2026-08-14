@@ -61,7 +61,13 @@ def get_evidence_tools() -> list[Tool]:
                     },
                     "extraction_method": {
                         "type": "string",
-                        "enum": ["verbatim_quote", "table_cell", "structured_field", "inference", "other"],
+                        "enum": [
+                            "verbatim_quote",
+                            "table_cell",
+                            "structured_field",
+                            "inference",
+                            "other",
+                        ],
                         "description": "Method used to extract this finding",
                         "default": "verbatim_quote",
                     },

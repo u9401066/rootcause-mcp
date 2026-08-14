@@ -46,13 +46,20 @@ class DDHandlers:
         # Get or create orchestrator
         orch = await self._state.get_or_create_orchestrator(session_id)
 
+        rationale = (
+            args.get("clinical_reasoning")
+            or args.get("rationale")
+            or args.get("reasoning")
+            or ""
+        )
+
         # Delegate to orchestrator
         hypothesis = orch.propose_hypothesis(
             diagnosis=args["diagnosis"],
             icd10_code=args.get("icd10_code"),
             snomed_code=args.get("snomed_code"),
             prior_probability=args.get("prior_probability", 0.1),
-            rationale=args["clinical_reasoning"],
+            rationale=rationale,
             inclusion_criteria=args.get("inclusion_criteria"),
             exclusion_criteria=args.get("exclusion_criteria"),
         )
@@ -77,8 +84,21 @@ class DDHandlers:
         session_id = args["session_id"]
         evidence_id = args["evidence_id"]
         hypothesis_id = args["hypothesis_id"]
-        likelihood_ratio = args.get("likelihood_ratio", 1.0)
-        supports = args.get("supports", True)
+
+        likelihood_ratio = args.get("likelihood_ratio")
+        if likelihood_ratio is None:
+            direction = str(args.get("direction", "SUPPORTS")).upper()
+            weight = float(args.get("weight", 1.0))
+            if direction in {"REFUTES", "CONTRADICTS", "RULE_OUT", "EXCLUDE"}:
+                likelihood_ratio = max(0.01, 1.0 - weight * 0.95)
+                supports = False
+            else:
+                likelihood_ratio = max(1.0, 1.0 + weight * 9.0)
+                supports = True
+        else:
+            supports = args.get("supports", likelihood_ratio >= 1.0)
+
+        rationale = args.get("rationale") or args.get("reasoning") or ""
 
         orch = await self._state.get_orchestrator(session_id)
         if not orch:
@@ -94,7 +114,7 @@ class DDHandlers:
                 hypothesis_id=hypothesis_id,
                 likelihood_ratio=likelihood_ratio,
                 supports=supports,
-                rationale=args.get("rationale", ""),
+                rationale=rationale,
             )
             await self._state.persist_orchestrator(session_id)
         except KeyError as e:

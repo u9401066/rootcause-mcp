@@ -35,6 +35,45 @@ class EvidenceType(str, Enum):
     EXPERT_OPINION = "EXPERT_OPINION"  # Expert consultation
     OTHER = "OTHER"
 
+    @classmethod
+    def from_str(cls, val: str | EvidenceType) -> EvidenceType:
+        """Parse or normalize string value to EvidenceType with alias support."""
+        if isinstance(val, cls):
+            return val
+        norm = str(val).strip().upper().replace(" ", "_")
+        aliases = {
+            "DOC": cls.DOCUMENT,
+            "DOCUMENT": cls.DOCUMENT,
+            "FILE": cls.DOCUMENT,
+            "CHART": cls.DOCUMENT,
+            "OBSERVATION": cls.OBSERVATION,
+            "PHYSICAL_EXAM": cls.OBSERVATION,
+            "CLINICAL": cls.OBSERVATION,
+            "LAB": cls.LAB_RESULT,
+            "LABS": cls.LAB_RESULT,
+            "LAB_RESULT": cls.LAB_RESULT,
+            "IMAGE": cls.IMAGING,
+            "IMAGING": cls.IMAGING,
+            "ECHO": cls.IMAGING,
+            "TEE": cls.IMAGING,
+            "CT": cls.IMAGING,
+            "XRAY": cls.IMAGING,
+            "INTERVIEW": cls.INTERVIEW,
+            "LOG": cls.DEVICE_LOG,
+            "DEVICE_LOG": cls.DEVICE_LOG,
+            "WAVEFORM": cls.DEVICE_LOG,
+            "MONITOR": cls.DEVICE_LOG,
+            "MED": cls.MEDICATION_RECORD,
+            "MEDICATION": cls.MEDICATION_RECORD,
+            "MEDICATION_RECORD": cls.MEDICATION_RECORD,
+            "MAR": cls.MEDICATION_RECORD,
+            "LITERATURE": cls.LITERATURE,
+            "GUIDELINE": cls.LITERATURE,
+            "EXPERT": cls.EXPERT_OPINION,
+            "EXPERT_OPINION": cls.EXPERT_OPINION,
+        }
+        return aliases.get(norm, cls.OTHER)
+
 
 class EvidenceSource(BaseModel):
     """
@@ -70,7 +109,8 @@ class EvidenceSource(BaseModel):
         description="When evidence was collected (UTC)",
     )
     source_system: str | None = Field(
-        default=None, description="Source system (e.g., 'Epic', 'Cerner', 'Manual Entry')"
+        default=None,
+        description="Source system (e.g., 'Epic', 'Cerner', 'Manual Entry')",
     )
 
     model_config = {"frozen": True}
@@ -136,10 +176,12 @@ class Evidence(BaseModel):
     )
     verifier: str | None = Field(default=None, description="Who verified this evidence")
     verification_method: str | None = Field(
-        default=None, description="Method of verification (e.g., 'EXACT_SNIPPET_MATCH', 'MANUAL_REVIEWER')"
+        default=None,
+        description="Method of verification (e.g., 'EXACT_SNIPPET_MATCH', 'MANUAL_REVIEWER')",
     )
     matched_lines: list[int] = Field(
-        default_factory=list, description="1-based line numbers in the raw file where snippet was verified"
+        default_factory=list,
+        description="1-based line numbers in the raw file where snippet was verified",
     )
     verification_timestamp: datetime | None = Field(default=None)
 
@@ -211,7 +253,9 @@ class Evidence(BaseModel):
         """
         updated_source = self.source
         if content_hash and self.source.content_hash != content_hash:
-            updated_source = self.source.model_copy(update={"content_hash": content_hash})
+            updated_source = self.source.model_copy(
+                update={"content_hash": content_hash}
+            )
 
         return self.model_copy(
             update={

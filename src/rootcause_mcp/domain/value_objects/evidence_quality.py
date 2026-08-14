@@ -22,6 +22,32 @@ class EvidenceStrength(str, Enum):
     WEAK = "WEAK"  # Case report, expert opinion, hearsay
     ANECDOTAL = "ANECDOTAL"  # Informal observation, unverified claim
 
+    @classmethod
+    def from_str(cls, val: str | EvidenceStrength) -> EvidenceStrength:
+        """Parse or normalize string value to EvidenceStrength with alias support."""
+        if isinstance(val, cls):
+            return val
+        norm = str(val).strip().upper()
+        mapping = {
+            "PATHOGNOMONIC": cls.STRONG,
+            "CRITICAL": cls.STRONG,
+            "HIGH": cls.STRONG,
+            "STRONG": cls.STRONG,
+            "DEFINITIVE": cls.STRONG,
+            "DIRECT": cls.STRONG,
+            "MEDIUM": cls.MODERATE,
+            "MODERATE": cls.MODERATE,
+            "DOCUMENTED": cls.MODERATE,
+            "PROBABLE": cls.MODERATE,
+            "LOW": cls.WEAK,
+            "WEAK": cls.WEAK,
+            "POSSIBLE": cls.WEAK,
+            "ANECDOTAL": cls.ANECDOTAL,
+            "HEARSAY": cls.ANECDOTAL,
+            "UNVERIFIED": cls.ANECDOTAL,
+        }
+        return mapping.get(norm, cls.MODERATE)
+
 
 class EvidenceReliability(str, Enum):
     """Source reliability grading."""
@@ -30,6 +56,33 @@ class EvidenceReliability(str, Enum):
     GRADE_B = "GRADE_B"  # Secondary source, documented
     GRADE_C = "GRADE_C"  # Tertiary source, unverified
     GRADE_D = "GRADE_D"  # Hearsay, rumor, unverifiable
+
+    @classmethod
+    def from_str(cls, val: str | EvidenceReliability) -> EvidenceReliability:
+        """Parse or normalize string value to EvidenceReliability with alias support."""
+        if isinstance(val, cls):
+            return val
+        norm = str(val).strip().upper()
+        mapping = {
+            "GRADE_A": cls.GRADE_A,
+            "A": cls.GRADE_A,
+            "PRIMARY": cls.GRADE_A,
+            "DIRECT": cls.GRADE_A,
+            "HIGH": cls.GRADE_A,
+            "GRADE_B": cls.GRADE_B,
+            "B": cls.GRADE_B,
+            "SECONDARY": cls.GRADE_B,
+            "MODERATE": cls.GRADE_B,
+            "GRADE_C": cls.GRADE_C,
+            "C": cls.GRADE_C,
+            "TERTIARY": cls.GRADE_C,
+            "LOW": cls.GRADE_C,
+            "GRADE_D": cls.GRADE_D,
+            "D": cls.GRADE_D,
+            "UNVERIFIED": cls.GRADE_D,
+            "HEARSAY": cls.GRADE_D,
+        }
+        return mapping.get(norm, cls.GRADE_B)
 
 
 class EvidenceQuality(BaseModel):

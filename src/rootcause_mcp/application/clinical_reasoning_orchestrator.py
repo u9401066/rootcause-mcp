@@ -140,8 +140,8 @@ class ClinicalReasoningOrchestrator:
         """
         # Create quality grading
         quality = EvidenceQuality(
-            strength=EvidenceStrength(clinical_strength),
-            reliability=EvidenceReliability(source_reliability),
+            strength=EvidenceStrength.from_str(clinical_strength),
+            reliability=EvidenceReliability.from_str(source_reliability),
         )
 
         # Compute content hash if snippet provided
@@ -164,7 +164,7 @@ class ClinicalReasoningOrchestrator:
         # Create base evidence
         evidence = Evidence(
             content=content,
-            evidence_type=EvidenceType(evidence_type),
+            evidence_type=EvidenceType.from_str(evidence_type),
             clinical_context=clinical_context,
             quality=quality,
             source=source,

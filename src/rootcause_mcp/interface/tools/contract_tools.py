@@ -54,6 +54,10 @@ def get_contract_tools() -> list[Tool]:
                         "description": "Markdown artifact detail; ignored by JSON/FHIR",
                         "default": "standard",
                     },
+                    "template_file": {
+                        "type": "string",
+                        "description": "Optional path to custom Markdown report template file (e.g. 'config/templates/clinical_reasoning_report_template.md')",
+                    },
                     "finalize": {
                         "type": "boolean",
                         "description": "Finalize report (make immutable)",

@@ -80,8 +80,7 @@ def get_all_tools(profile: str = "all") -> list[Tool]:
         tools = list(tools_by_name.values())
 
     return [
-        tool.model_copy(update={"output_schema": TOOL_OUTPUT_SCHEMA})
-        for tool in tools
+        tool.model_copy(update={"output_schema": TOOL_OUTPUT_SCHEMA}) for tool in tools
     ]
 
 

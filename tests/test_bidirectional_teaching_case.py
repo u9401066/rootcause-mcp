@@ -18,7 +18,7 @@ from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
 from rootcause_mcp.interface.handlers.why_tree_handlers import WhyTreeHandlers
 
 
-def _build_handlers(export_dir: Path) -> tuple[str, WhyTreeHandlers]:
+def _build_handlers(_export_dir: Path) -> tuple[str, WhyTreeHandlers]:
     """Create a lightweight handler stack for testing."""
     database = Database(":memory:")
     database.create_tables()
@@ -40,7 +40,6 @@ def _build_handlers(export_dir: Path) -> tuple[str, WhyTreeHandlers]:
         session_repository=session_repo,
         progress_tracker=progress_tracker,
     )
-    handlers.EXPORT_DIR = export_dir
     return str(session.id), handlers
 
 

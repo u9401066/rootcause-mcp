@@ -52,7 +52,11 @@ class WhyTreeArtifactHandlers:
         elif export_format == "mermaid":
             result = render_why_tree_mermaid(chain)
         else:
-            return [TextContent(type="text", text=f"Error: Unsupported format {export_format}")]
+            return [
+                TextContent(
+                    type="text", text=f"Error: Unsupported format {export_format}"
+                )
+            ]
 
         file_path = self._write_export_file(
             arguments["session_id"], "why_tree", export_format, result
@@ -79,9 +83,7 @@ class WhyTreeArtifactHandlers:
         teaching_case = chain.build_teaching_case(learner_level)
 
         if export_format == "json":
-            artifact = json.dumps(
-                teaching_case.to_dict(), indent=2, ensure_ascii=False
-            )
+            artifact = json.dumps(teaching_case.to_dict(), indent=2, ensure_ascii=False)
             file_path = self._write_export_file(
                 session_id, "teaching_case", export_format, artifact
             )
@@ -101,7 +103,11 @@ class WhyTreeArtifactHandlers:
                     "💡 Open in VS Code to review or adapt for teaching sessions"
                 )
         else:
-            return [TextContent(type="text", text=f"Error: Unsupported format {export_format}")]
+            return [
+                TextContent(
+                    type="text", text=f"Error: Unsupported format {export_format}"
+                )
+            ]
 
         if self._progress is not None and export_format != "json":
             progress = self._progress.update_from_why_tree(session_id, chain)
@@ -191,7 +197,5 @@ def _format_teaching_case_markdown(
         lines.extend(["", "## Feedback Loops"])
         lines.extend(f"- {loop}" for loop in teaching_case.feedback_loops)
     lines.extend(["", "## Reverse Causality Prompts"])
-    lines.extend(
-        f"- {prompt}" for prompt in teaching_case.reverse_causality_prompts
-    )
+    lines.extend(f"- {prompt}" for prompt in teaching_case.reverse_causality_prompts)
     return "\n".join(lines)

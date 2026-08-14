@@ -72,7 +72,7 @@ class ContractReport(BaseModel):
 
     # Timestamps
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
-    finalized_at: datetime | None = Field(None)
+    finalized_at: datetime | None = Field(default=None)
 
     # Content
     hypotheses: list[dict[str, Any]] = Field(default_factory=list)
@@ -92,7 +92,9 @@ class ContractReport(BaseModel):
 
     # Immutability
     is_finalized: bool = Field(default=False)
-    content_hash: str | None = Field(None, description="SHA-256 hash of content")
+    content_hash: str | None = Field(
+        default=None, description="SHA-256 hash of content"
+    )
 
     def finalize(self, finalized_by: str) -> None:
         """

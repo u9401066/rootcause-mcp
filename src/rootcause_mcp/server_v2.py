@@ -420,9 +420,7 @@ def _compact_structured_text(result: dict[str, Any]) -> str:
         value = result.get(key)
         if isinstance(value, str):
             summary[key] = value if len(value) <= 240 else f"{value[:237]}..."
-        elif key in result and (
-            isinstance(value, int | float | bool) or value is None
-        ):
+        elif key in result and (isinstance(value, int | float | bool) or value is None):
             summary[key] = value
 
     for key, value in result.items():

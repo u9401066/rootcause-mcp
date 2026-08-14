@@ -126,8 +126,7 @@ class ContractHandlers:
             session_id=session_id,
             generated_by="agent",
             hypotheses=[
-                hypothesis.model_dump(mode="json")
-                for hypothesis in ranked_hypotheses
+                hypothesis.model_dump(mode="json") for hypothesis in ranked_hypotheses
             ],
             evidence=[e.model_dump(mode="json") for e in orch.evidence_store.values()],
             reasoning_chain=[
@@ -162,10 +161,15 @@ class ContractHandlers:
         )
 
         # Export based on format
+        template_file = args.get("template_file") or args.get("template_path")
         if report_format == "fhir":
             content = json.dumps(render_contract_report_fhir(report), indent=2)
         elif report_format == "markdown":
-            content = render_contract_report_markdown(report, detail_level)
+            content = render_contract_report_markdown(
+                report,
+                detail_level,
+                template_path=template_file,
+            )
         else:
             report_payload = report.model_dump(mode="json")
             if not include_evidence_graph:
@@ -185,6 +189,7 @@ class ContractHandlers:
             "detail_level": detail_level,
             "finalized": report.is_finalized,
             "output_path": str(output_path),
+            "content": content,
             "artifact_bytes": len(content.encode()),
             "generation_mode": "deterministic",
             "llm_tokens_used": 0,
