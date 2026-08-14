@@ -1,0 +1,47 @@
+# Clinical Domain Playbook: Local Anesthetic Systemic Toxicity (LAST) & Lipid Rescue
+# 麻醉科專科知識庫：局部麻醉藥全身毒性與脂肪乳劑急救
+
+domain: "Regional Anesthesia, Acute Pain & Clinical Toxicology"
+scenario: "Seizures, Cardiac Conduction Block, and Collapse following Nerve Block / Wound Infiltration"
+
+pathophysiology:
+  primary_mechanism: "Voltage-gated sodium channel and myocardial mitochondrial enzyme blockade by lipophilic local anesthetics (Bupivacaine, Levobupivacaine, Ropivacaine, Lidocaine)"
+  high_risk_procedures:
+    - "Thoracic Paravertebral Block (TPVB) / Erector Spinae Plane (ESP)"
+    - "Transversus Abdominis Plane (TAP) / Rectus Sheath Block"
+    - "Interscalene / Supraclavicular Brachial Plexus Block"
+    - "High-volume surgical wound infiltration (LIA) / Tumescent anesthesia"
+
+pathognomonic_findings:
+  - marker: "Biphasic progression: Metallic taste, perioral numbness, tinnitus -> Seizures -> Cardiovascular collapse"
+    modality: "Clinical Progression / Awake Patient"
+    significance: "CNS toxicity precedes cardiac toxicity (except with Bupivacaine where cardiac collapse can occur simultaneously)"
+  - marker: "Severe conduction delay: PR prolongation, wide QRS, ventricular tachycardia, refractory asystole/PEA"
+    modality: "12-Lead ECG / Telemetry"
+    significance: "Direct myocardial Na+ channel inhibition"
+  - marker: "Accidental intravascular injection or rapid systemic absorption during block"
+    modality: "Procedural Record / Syringe Aspiration"
+    significance: "Rapid plasma peak above toxic threshold"
+
+diagnostic_rules_to_rule_out:
+  - diagnosis: "Epileptic Seizure / Alcohol Withdrawal"
+    discriminator: "LAST seizures are directly temporal (<15 min) to regional nerve block and accompanied by cardiac conduction delays"
+  - diagnosis: "Vasovagal Syncope"
+    discriminator: "Vasovagal episodes resolve rapidly with supine positioning and atropine; LAST causes progressive refractory shock"
+  - diagnosis: "High Spinal / Total Spinal Anesthesia"
+    discriminator: "High spinal causes sensory level blockade and profound sympathetic loss; LAST causes wide QRS and ventricular arrhythmias"
+
+treatment_protocol:
+  strictly_contraindicated:
+    - "Vasopressin / Calcium channel blockers / Beta-blockers"
+    - "High-dose Epinephrine (>1 mcg/kg bolus impairs lipid resuscitation and induces arrhythmias)"
+    - "Lidocaine or other class Ib antiarrhythmics (worsens local anesthetic load)"
+  recommended_rescue:
+    - "STOP INJECTING LOCAL ANESTHETIC IMMEDIATELY"
+    - "Call for help + Alert for LAST & Bring 20% Lipid Emulsion (Intralipid)"
+    - "Airway management with 100% O2, avoid hypoxia and acidosis (acidosis markedly increases free drug fraction)"
+    - "Control seizures with Benzodiazepines (Midazolam 1-2mg IV); avoid Propofol in hemodynamic instability"
+    - "STAT 20% Lipid Emulsion Bolus: 1.5 ml/kg over 1 minute (~100 ml for 70kg adult)"
+    - "Continuous Lipid Infusion: 0.25 ml/kg/min (~1000 ml/hr)"
+    - "Repeat bolus up to 2 times if circulation remains unstable; max total dose 12 ml/kg"
+    - "CPR: Prolonged resuscitation may be required; alert ECMO/CPB team early"
