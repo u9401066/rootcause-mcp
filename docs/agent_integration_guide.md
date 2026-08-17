@@ -3,6 +3,13 @@
 > **For AI Agents**: Claude Code, Codex, OpenClaw, Cline, Z.ai, etc.  
 > **Purpose**: Transform your medical reasoning into auditable, structured output
 
+The bundled
+[RootCause clinical reasoning harness](../.codex/skills/rootcause-clinical-reasoning-harness/SKILL.md)
+is the canonical operating workflow. Read the live
+`clinical://contracts/case-input-manifest` and
+`clinical://contracts/case-analysis-report` resources before starting or finalizing
+a case; their schemas override copied examples in this guide.
+
 ---
 
 ## 🎯 Core Principle
@@ -15,6 +22,12 @@ RootCause MCP is NOT a diagnostic AI. It's a **reasoning harness** that helps yo
 - Quantify uncertainty
 - Generate auditable reports
 
+The Agent performs the clinical interpretation. MCP has no independent thinking
+ability and does not parse raw PDF, DOCX, image, scan, spreadsheet, or EHR batches.
+The host or an approved extractor must preserve citation-ready text/cells, source
+locations, hashes, time precision, units, negation, OCR corrections, and extraction
+method before registering atomic evidence.
+
 ### Token-efficient operating mode
 
 For diagnosis-focused work, configure `ROOTCAUSE_TOOL_PROFILE=clinical`; use `rca`
@@ -23,20 +36,33 @@ Keep `ROOTCAUSE_RESPONSE_MODE=compact` when your MCP host supports SDK 2.0
 `structuredContent`.
 
 Do not repeatedly retrieve complete evidence, thinking, and reasoning chains merely
-to write the final report. Once the structured state is complete, call:
+to write the report. Generate a preliminary artifact first:
 
 ```json
 {
     "session_id": "sess_001",
     "format": "markdown",
     "detail_level": "standard",
-    "finalize": true
+    "finalize": false
 }
 ```
 
-The server deterministically generates the ranked DDx, evidence matrix, uncertainty
-and bias review, completeness warnings, quality metrics, audit trail, and Evidence
-Graph. Use `brief` for context-efficient checkpoints and `full` for human audit.
+The server deterministically generates the source inventory, ranked DDx, evidence
+matrix, uncertainty/bias review, RCA artifacts, completeness warnings, audit trail,
+Evidence Graph, and machine-readable `conformance_checks[]`. Use `brief` for
+context-efficient checkpoints and `full` for human audit.
+
+`finalize=true` recomputes every hard check and fails closed. It requires a reviewed
+multi-source manifest, complete final sections, no high/critical conflicts, at least
+three unique diagnoses with typed evidence/test dispositions, safe leading and
+must-not-miss challenges, Fishbone/Why artifacts, exact root/audit/evidence lineage,
+safe root dispositions, and an `approved_by` identity in
+`ROOTCAUSE_AUTHORIZED_REVIEWERS`. Finalization adds reviewer/time/hash metadata and
+recursively freezes the domain snapshot. Durable WORM storage still belongs to the
+deployment's approved records system.
+
+An allowlisted reviewer is operator-authorized, not automatically a qualified
+clinician. The deployment must verify the reviewer role independently.
 
 ---
 
@@ -66,13 +92,14 @@ Our tools have **required fields** that force you to expose your reasoning:
   "diagnosis": "Acute MI",
   "icd10_code": "I21.9",
   "prior_probability": 0.3,
+  "must_not_miss": true,
   
   "clinical_reasoning": "65M with acute onset substernal chest pain radiating to left arm, elevated troponin I (2.5 ng/mL), and ST elevation in leads II, III, aVF. Recent CABG 3 days ago increases suspicion for graft failure or perioperative MI.",
   
   "differential_diagnoses_considered": [
     {
       "diagnosis": "Pulmonary Embolism",
-      "reason_rejected": "No dyspnea, no tachycardia out of proportion, no hemoptysis. However, recent surgery is a risk factor, so will order D-dimer to definitively rule out.",
+      "reason_rejected": "No dyspnea, no disproportionate tachycardia, and no right-heart strain. Recent surgery still makes PE a must-not-miss condition, so an adequate definitive imaging plan is required.",
       "likelihood_if_not_rejected": "moderate"
     },
     {
@@ -92,16 +119,6 @@ Our tools have **required fields** that force you to expose your reasoning:
     }
   ],
   
-  "evidence_supporting": [
-    "EVD-001",
-    "EVD-003",
-    "EVD-005"
-  ],
-  
-  "evidence_contradicting": [
-    "EVD-002"
-  ],
-  
   "uncertainty_factors": [
     "Troponin trend pending (only one value available)",
     "No prior ECG for comparison",
@@ -109,9 +126,22 @@ Our tools have **required fields** that force you to expose your reasoning:
     "Recent surgery makes interpretation of inflammatory markers difficult"
   ],
   
-  "confidence_rationale": "Assigned moderate prior probability (0.3) because: (1) Classic presentation with chest pain + troponin elevation, (2) Recent CABG is a strong risk factor, (3) However, atypical features (no diaphoresis, patient on beta-blockers) and pending troponin trend prevent higher confidence."
+  "confidence_rationale": "Assigned moderate prior probability (0.3) because: (1) Classic presentation with chest pain + troponin elevation, (2) Recent CABG is a strong risk factor, (3) However, atypical features (no diaphoresis, patient on beta-blockers) and pending troponin trend prevent higher confidence.",
+  "planned_tests": [
+    {
+      "name": "Serial ECG",
+      "purpose": "DISCONFIRM",
+      "expected_supporting_result": "Persistent territorial ischemic change",
+      "expected_refuting_result": "Adequate serial studies without ischemic change",
+      "status": "PLANNED"
+    }
+  ]
 }
 ```
+
+The legacy `evidence_supporting` and `evidence_contradicting` proposal fields are
+deprecated context-only inputs: they do not create or persist an association. Call
+`rc_link_evidence_to_hypothesis` once for each supporting or contradicting item.
 
 ---
 
@@ -125,8 +155,10 @@ troponin = await rc_add_evidence(
     session_id="sess_001",
     content="Troponin I: 2.5 ng/mL",
     evidence_type="LAB_RESULT",
-    source_document="lab_results.pdf",
-    source_location="Page 1, Table 1",
+    source_document="approved-extract/lab_results.txt",
+    source_location="Line 12",
+    raw_snippet="Troponin I: 2.5 ng/mL",
+    event_timestamp="2026-08-17T10:15:00+08:00",
     clinical_strength="STRONG",
     source_reliability="GRADE_A"
 )
@@ -160,11 +192,25 @@ await rc_propose_hypothesis(
             "reason_rejected": "No hypoxemia or right-heart strain"
         }
     ],
-    evidence_supporting=[troponin.evidence_id],
     uncertainty_factors=["Serial ECG pending"],
-    confidence_rationale="Typical presentation with one important pending test"
+    confidence_rationale="Typical presentation with one important pending test",
+    planned_tests=[
+        {
+            "name": "Serial ECG",
+            "purpose": "DISCONFIRM",
+            "expected_supporting_result": "Persistent territorial ischemic change",
+            "expected_refuting_result": (
+                "Adequate serial studies without ischemic change"
+            ),
+            "status": "PLANNED",
+        }
+    ],
 )
 ```
+
+Repeat the proposal for at least three normalized, non-duplicate diagnoses. The
+server assigns each planned test a stable `test_id` and binds it to the new
+`target_hypothesis_id`; free-text gaps are not equivalent to a typed test.
 
 ---
 
@@ -176,8 +222,9 @@ evidence = await rc_add_evidence(
     session_id="sess_001",
     content="Troponin I: 2.5 ng/mL (normal < 0.04)",
     evidence_type="LAB_RESULT",
-    source_document="lab_results.pdf",
-    source_location="Page 1, Table 1",
+    source_document="approved-extract/lab_results.txt",
+    source_location="Line 12",
+    raw_snippet="Troponin I: 2.5 ng/mL (normal < 0.04)",
     clinical_strength="STRONG",  # Direct lab measurement
     source_reliability="GRADE_A"  # Primary source
 )
@@ -187,11 +234,16 @@ await rc_link_evidence_to_hypothesis(
     session_id="sess_001",
     evidence_id=evidence.id,
     hypothesis_id="HYP-001",
-    likelihood_ratio=10.0,  # Troponin elevation is 10x more likely in MI
+    likelihood_ratio=validated_applied_lr,
     supports=True,
-    rationale="Troponin I > 99th percentile is highly specific for myocardial necrosis. LR+ = 10 based on meta-analysis (PMID: 12345678)."
+    rationale=validated_lr_source_or_case_specific_rationale,
 )
 ```
+
+`validated_applied_lr` must be the direct LR supported by an approved source or a
+documented local calibration. Never invent a value or citation. If no quantitative
+LR is justified, use `1.0` and record the qualitative relationship; note that a
+neutral LR does not count as genuine support or contradiction for final conformance.
 
 ---
 
@@ -210,7 +262,7 @@ await rc_think_aloud(
 # Decision point 2: After ECG
 await rc_think_aloud(
     session_id="sess_001",
-    thinking_type="PATTERN_RECOGNIZED",
+    thinking_type="EVIDENCE_EVALUATED",
     content="Inferior STEMI pattern identified",
     internal_reasoning="ST elevation in II, III, aVF with reciprocal changes supports inferior STEMI.",
     confidence=0.85
@@ -259,6 +311,43 @@ if not audit["is_ready_for_report"]:
     print(f"Next prompt: {audit['next_recommended_actions'][0]}")
     # Flash agent executes the recommended tool in the next loop turn
 ```
+
+### Pattern 6: Conservative Root Audit and Final Preview
+
+For every Why node marked as a root, use the same stable root ID, exact Why answer,
+and evidence ID set in the causation-audit cause event. Effect evidence must also
+resolve to the case evidence ledger. The validator is a conservative proof-obligation
+audit; it has no independent clinical reasoning and does not prove causality.
+
+Interpret the latest audit result as follows:
+
+| Audit result | Final root-cause bucket |
+| --- | --- |
+| `REJECTED` | Omit from `root_causes` |
+| `INSUFFICIENT_DATA` | Retain only as `disposition="PROPOSED"` when disclosed |
+| `VERIFIED` / `VERIFIED_WITH_CAVEATS` | Use `disposition="AUDIT_OBLIGATIONS_PASSED"`; never say causation was proven |
+
+Preview JSON before requesting finalization and inspect every check, not just an
+overall status:
+
+```python
+preview = await rc_generate_contract_report(
+    session_id="sess_001",
+    format="json",
+    detail_level="full",
+    finalize=False,
+)
+
+failed = [
+    check
+    for check in preview["conformance_checks"]
+    if check["status"] == "FAIL"
+]
+```
+
+Resolve hard failures through the corresponding evidence, hypothesis, RCA, or
+review workflow. Do not edit the rendered report or fabricate `PASS` entries. Only
+an operator-authorized, independently qualified reviewer may request `finalize=true`.
 
 ### 1. Always Consider Alternatives
 
@@ -375,10 +464,10 @@ Agent records key decision points with rc_think_aloud
     ↓
 Agent calls rc_reflect (forced to identify biases)
     ↓
-MCP generates ContractReport with complete audit trail
+MCP generates ContractReport with persisted audit records
     ↓
 Human: "Why did you conclude this?"
-System: "Here's the complete reasoning chain, including alternatives considered, 
+System: "Here's the recorded reasoning chain, including alternatives considered,
          uncertainty factors, and potential biases identified."
 ```
 
@@ -388,7 +477,7 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 
 ### ReasoningChain (What You Did)
 
-- Every tool call with timestamp
+- Recorded orchestrator actions with timestamps
 - Evidence added
 - Hypotheses proposed
 - Bayesian updates performed
@@ -403,11 +492,16 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 
 ### ContractReport (Auditable Output)
 
-- Complete evidence graph
-- Differential diagnosis tree with probabilities
+- Source manifest coverage and verification state
+- Typed evidence graph and source-to-claim lineage
+- At least three unique diagnoses with active/test dispositions and must-not-miss flags
 - Reasoning chain
 - Thinking chain
+- Fishbone, Why Tree/root causes, HFACS, and conflict/readiness sections
+- Conservative causation audits with explicit non-proof scope and safe root dispositions
 - Quality metrics (evidence coverage, hypothesis coverage, avg confidence)
+- Machine-readable `conformance_checks[]`
+- Final-only reviewer, timezone-aware finalization time, and recomputable content hash
 
 ---
 
@@ -425,15 +519,40 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 
 ## 🚀 Getting Started
 
-1. Read the case documents
-2. Call `rc_add_evidence` for each traceable finding
-3. Call `rc_think_aloud` to record the explicit decision frame
-4. For each hypothesis, call `rc_propose_hypothesis` with FULL reasoning
-5. Call `rc_link_evidence_to_hypothesis` to perform Bayesian updating
-6. Call `rc_get_differential_diagnosis` to inspect the ranked DDx
-7. Call `rc_reflect` to identify biases
-8. Call `rc_generate_contract_report(format="markdown")` to produce the final
-    auditable artifact without asking the Agent to rewrite structured state
+1. Inventory all de-identified source documents and start one session with a version
+   `1.0` source manifest.
+2. Call `rc_add_evidence` for each atomic traceable finding, preserving exact snippet,
+   source location, and canonical event time when defensible.
+3. Call `rc_think_aloud` to record the explicit decision frame.
+4. Maintain at least three hypotheses, flag applicable must-not-miss conditions, and
+   call `rc_propose_hypothesis` with full explicit rationale and typed
+   `planned_tests` where observed refuting evidence is not yet available.
+5. Call `rc_link_evidence_to_hypothesis` with the direct applied LR for supporting and
+   disconfirming evidence.
+6. Call `rc_reflect`, conflict detection, the conservative causation audit, and the
+   Fishbone/Why/HFACS workflow. Keep root ID/description/evidence exactly aligned;
+   omit rejected claims and keep insufficient-data candidates proposed.
+7. Run `rc_audit_reasoning_state` until every prerequisite is resolved or explicitly
+   left as a preliminary limitation.
+8. Call `rc_generate_contract_report(format="markdown", finalize=false)` for review.
+   Inspect `conformance_checks[]`; only a named, operator-authorized, independently
+   qualified human may approve a gated final artifact.
+
+## Agent MVP Evaluation Status
+
+The public six-case corpus and `scripts/run_agent_eval.py dry-run` exercise runner
+mechanics only. They are not blinded because the public reference rubrics are in the
+same repository. The formal Agent eval remains `AGENT_EVAL_NOT_ESTABLISHED` until
+there are at least three real runtimes, 36 clean-root runs, a repository-external
+private case bundle, separately protected private holdout gold, filesystem isolation
+that prevents adapters from discovering either parent/repository context or gold,
+trusted runtime/server MCP traces, and two blinded qualified clinical reviews per
+job with adjudication of disagreement.
+
+See [MVP conformance and Agent evaluation](mvp_conformance_and_evaluation.md) for the
+fail-closed protocol, artifact requirements, and acceptance thresholds. Until that
+protocol passes, describe the repository as an **engineering alpha**, not a complete
+Agent MVP.
 
 ---
 
@@ -443,6 +562,6 @@ System: "Here's the complete reasoning chain, including alternatives considered,
 
 ---
 
-**Version**: 1.1
-**Last Updated**: 2026-08-09  
+**Version**: 1.3
+**Last Updated**: 2026-08-17
 **For**: All AI Agents (Claude Code, Codex, OpenClaw, Cline, Z.ai, etc.)

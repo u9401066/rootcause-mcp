@@ -7,6 +7,84 @@
 
 ## [Unreleased]
 
+### Added - Multi-source clinical reasoning acceptance (2026-08-17)
+
+- Added the versioned `CaseInputManifest` contract and live MCP JSON Schema
+  resources for multi-document input and unified case-analysis output.
+- Added the RootCause clinical reasoning harness for Codex, Claude, and Cline,
+  with a shared handoff contract, extraction boundary, direct-LR rules, PHI
+  guardrails, readiness gates, and preliminary-first reporting workflow.
+- Added a public MCP transport acceptance test covering three physical sources,
+  exact provenance, canonical event time, a three-item DDx with a must-not-miss
+  diagnosis, direct Bayesian updates, cognitive audit, Fishbone, 5-Why, HFACS,
+  persisted causation review, preview, approval blocking, and unified report
+  generation.
+- Added a PHI/data-handling policy, runtime artifact ignore rules, secure export
+  permissions, and Python 3.12/3.13 CI for quality, security, packaging, and
+  installed-wheel smoke tests.
+- Added typed nested CONTRACT-report sections and machine-readable
+  `conformance_checks[]`, including deterministic source, DDx, root-lineage,
+  disposition, reviewer, and final-integrity checks.
+- Added typed pending diagnostic-test dispositions for active, leading, and
+  must-not-miss hypotheses.
+- Added a neutral six-case public Agent-eval corpus, reference rubrics, schemas,
+  and a fail-closed runner scaffold. Public rubrics are explicitly non-blinded;
+  formal evaluation requires repository-external private case bundles plus
+  separately protected private holdout gold.
+
+### Changed - Release boundaries and standardized output (2026-08-17)
+
+- Unified CONTRACT output now carries the source inventory, DDx/evidence,
+  timeline, reasoning and cognitive audit, Fishbone, Why/root causes, HFACS,
+  causation results, conflicts/readiness, approval state, and artifact hashes.
+- Finalization is now a gated, content-hashed snapshot. It requires complete
+  reasoning readiness, no unresolved high/critical conflict, a reviewed
+  multi-source manifest, persisted RCA artifacts, a causation-review attempt for
+  each proposed root, and an operator-authorized approver. The domain snapshot
+  recursively rejects mutation and carries a recomputable hash; durable WORM
+  retention remains a deployment records-system responsibility.
+- Causation validation is now documented and serialized as a conservative
+  proof-obligation audit with `clinical_causality_established=false`, not as
+  clinical causal proof. Rejected claims are removed from the root bucket and
+  insufficient-data candidates remain proposed.
+- Runtime data defaults to the operating system's user-data directory; packaged
+  configuration is read-only and learned HFACS rules are written to user data.
+- The six-case runner is explicitly a synthetic preliminary regression/demo and
+  no longer claims release acceptance or final clinical validation.
+
+### Fixed - Clinical correctness and provenance (2026-08-17)
+
+- Fixed refuting evidence increasing posterior probability by inverting an
+  already-applied LR; support now uses LR >= 1, contradiction LR <= 1, and
+  omitted LR is neutral at 1.0.
+- Prevented duplicate evidence updates and removed synthetic reciprocal LR
+  metadata that could falsely satisfy disconfirming-test readiness.
+- Removed file-existence, location-only, blank-line, and reverse-containment
+  provenance false positives. Only matched content or an allowlisted human
+  confirmation can mark evidence verified.
+- Filtered excluded/on-hold hypotheses from leading report and FHIR conclusions,
+  while retaining them in the audit record.
+- Fixed the async console entry point, installed-wheel configuration discovery,
+  static-resource and template path traversal, checkpoint confinement/integrity,
+  installer failure propagation, and unsafe package contents.
+
+### Security - Dependency and artifact controls (2026-08-17)
+
+- Raised runtime dependency floors to patched releases identified by the frozen
+  lock audit and added a reproducible dependency-vulnerability gate.
+- Constrained provenance reads, templates, exports, and checkpoints to approved
+  roots; exports/checkpoints use atomic writes and restrictive POSIX permissions.
+- Source distributions no longer ship runtime databases, exports, raw examples,
+  editor configuration, or hook state.
+
+### Quality - Acceptance baseline (2026-08-17)
+
+- Added table-driven mutation probes that require every hard finalization
+  invariant to fail closed, plus nested-schema/hash/immutability coverage.
+- Test count, coverage, typing, security, dependency, packaging, and installed-wheel
+  results are reported by the current CI/release run rather than hard-coded here.
+  These engineering gates do not establish Agent clinical performance.
+
 ### Added - MCP SDK 2.0 Advanced Harness & Tool Condensation (2026-08-14)
 
 - Added **Tool Condensation Profile** (`condensed` / `facade`) consolidating 43 discrete tools
@@ -37,8 +115,8 @@
   automated detection of diagnostic contradictions, paradoxical drug reactions,
   and guideline monitoring omissions (e.g., MTP without K+/ABG, high-dose Propofol without lipids).
 - Added `CaseCheckpointService` and snapshotting MCP tools (`rc_create_checkpoint`,
-  `rc_restore_checkpoint`, `rc_list_checkpoints`) enabling agents to preserve immutable
-  state snapshots and resume/branch cases without context loss.
+  `rc_restore_checkpoint`, `rc_list_checkpoints`) enabling agents to preserve
+  integrity-checked state snapshots and resume/branch cases without context loss.
 - Expanded tool catalog to 43 tools (23 clinical profile, 23 RCA profile, 43 all profile).
 - Added subspecialty perioperative crisis playbooks: `anaphylaxis_crisis.yaml` (Anaphylaxis shock),
   `local_anesthetic_toxicity.yaml` (LAST Lipid rescue), and `difficult_airway_crisis.yaml` (CICO eFONA).
@@ -48,11 +126,11 @@
   - `scripts/install.py` (Universal Python CLI configurator)
 - Added automatic registration across client hosts: VS Code (`.vscode/mcp.json`),
   Claude Desktop (`claude_desktop_config.json`), and Cline (`cline_mcp_settings.json`).
-- Added end-to-end clinical trial runner `scripts/run_case_trial.py` supporting
-  6 realistic multi-file benchmark cases (`dynamic_lvot_obstruction_sam`,
+- Added preliminary regression/demo runner `scripts/run_case_trial.py` supporting
+  6 multi-file case fixtures (`dynamic_lvot_obstruction_sam`,
   `pris_status_epilepticus`, `trauma_hyperkalemia_arrest`, `postop_pe_death`,
-  `lvad_suction_event`, and `realistic_delayed_diagnosis`) with 100% physical
-  provenance verification and 0.039s total execution.
+  `lvad_suction_event`, and `realistic_delayed_diagnosis`). It checks provenance
+  and preview plumbing; it is not a release-acceptance or clinical-validity suite.
 - Added `rc_validate_diagram` MCP tool for auditing, linting, and auto-sanitizing
   custom agent Mermaid diagram syntax with delimiter balancing and label escaping.
 - Added `rc_render_timeline` MCP tool and 5 Clinical Timeline Patterns (`perioperative_sequence`,
@@ -76,7 +154,7 @@
   and subspecialty playbooks (`config/domains/anesthesia_perioperative_arrest.yaml`,
   `perioperative_shock.yaml`, `toxicology_sedation.yaml`, `pediatric_opioid.yaml`).
 
-### Added - Hard-Coded Provenance & Multi-Loop Guidance (2026-08-14)
+### Added - Deterministic Provenance & Multi-Loop Guidance (2026-08-14)
 
 - Added `ProvenanceVerifier` domain service for deterministic, zero-hallucination
   verification of evidence quotes against raw clinical documents (TXT, CSV, HL7, XML)

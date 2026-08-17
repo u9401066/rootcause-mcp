@@ -1,68 +1,85 @@
-# Zotero + PubMed MCP Codex Harness
+# RootCause MCP Clinical Reasoning Harness
 
-These are the workspace instructions for Codex when using Zotero Keeper and
-PubMed Search MCP through the VS Code extension.
+These are the workspace instructions for agents developing or using RootCause MCP to turn multiple de-identified clinical records into an evidence-grounded differential diagnosis and medical root-cause analysis.
 
 ## Goal
 
-Help the user search biomedical literature, inspect papers, and import selected
-articles into Zotero without losing provenance or overwriting user choices.
+Produce one auditable case package with source lineage, canonical timeline, competing DDx, Bayesian evidence links, cognitive audit, Fishbone/Why/HFACS analysis, conservative causation status, limitations, and qualified-human review state.
 
-## Working Style
+## Working style
 
-- Use Traditional Chinese unless the user asks otherwise.
-- Explain search/import steps briefly.
-- Ask before importing anything into Zotero.
-- Keep PubMed search/discovery/export work in PubMed Search MCP.
-- Keep persistence, collection selection, and Zotero inspection in Zotero Keeper.
+- Use Traditional Chinese unless the user requests another language.
+- Treat the system as retrospective decision support, never an autonomous diagnostic or treatment system.
+- Separate source observations, host extraction, clinical interpretation, hypotheses, and causal claims.
+- Prefer explicit `unknown`, `unverified`, or `insufficient data` over a plausible invention.
+- Keep updates concise and state which workflow gate is complete or blocked.
 
-## Core Workflow
+## Required harness
 
-1. Start broad literature discovery with `unified_search`.
-2. Use `parse_pico` and `generate_search_queries` for clinical or comparison questions.
-3. Reuse session state with `get_session_pmids`, `get_cached_article`, and `get_session_summary`.
-4. Use related/citing/reference/fulltext tools for follow-up instead of rerunning the same search.
-5. Use `build_research_chronicle` and `read_research_chronicle` for persistent research-history artifacts.
-6. Before saving to Zotero, call `list_collections` unless the destination is already confirmed.
-7. Check duplicates with `check_articles_owned`.
-8. Use `import_articles` as the default PubMed-to-Zotero handoff.
-9. For Zotero 10+ mutations, first obtain a response-bound `server_id` from a
-   read or authorization, include it as `expected_server_id` in the
-   `confirm=false` preview, and ask the user to approve that complete proposal.
-   Ensure local authorization; if it reports the same identity, repeat the
-   proposal unchanged with `confirm=true`.
+For case analysis, handoff, prompt/resource design, or agent integration, read:
 
-## Repository Work
+- `.codex/skills/rootcause-clinical-reasoning-harness/SKILL.md`
+- `.codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md`
+- `clinical://contracts/case-input-manifest`
+- `clinical://contracts/case-analysis-report`
 
-- Treat `.codex/skills`, `.claude/skills`, `.cline/skills`, and `.clinerules` as bundled assistant harness assets.
-- Run `npm run sync-assets` before packaging the VSIX.
-- Keep `vscode-extension/resources/repo-assets/**` synchronized with its source files.
-- Preserve custom user `AGENTS.md`, Copilot instructions, and Cline settings during extension install/update flows.
+Equivalent copies live under `.cline/skills/rootcause-clinical-reasoning-harness/` and `.claude/skills/rootcause-clinical-reasoning-harness/`. Keep their `SKILL.md` and `references/case-handoff.md` byte-identical to the Codex source.
 
-## Guardrails
+## Mandatory case workflow
 
-- Do not import into the Zotero root collection without explicit confirmation.
-- Set `allow_library_root=true` only after that explicit confirmation.
-- Do not assume the target collection.
-- Do not repeat searches when session state already contains the relevant PMIDs.
-- Distinguish peer-reviewed articles, preprints, and metadata-only records.
-- Keep NCBI email/API-key and institutional access settings intact.
-- Never expose or forward Zotero port 23119, request a Local API key, or retry
-  a `412` version conflict automatically.
-- Every confirmed Local API mutation requires the `expected_server_id` shown in
-  its approved preview. If later authorization reports a different identity,
-  reread, preview, and request approval again; never add identity after preview.
-- Use the response-bound item object version for `update_item_fields`. Use the
-  response-bound library cursor—not an attachment object version—for
-  `set_attachment_fulltext`.
-- Before `attach_file_to_item`, call
-  `authorize_local_writes(require_remembered=true)` and have the user choose
-  **Always Allow** for the three-phase upload.
+1. Start or resume one de-identified case/session; reuse the handed-off session ID.
+2. Read the live input contract and pass a schema-version `1.0` source manifest for every supplied source when creating the session.
+3. Record atomic exact snippets, source locations, whole-file/source-span hashes, and canonical ISO 8601 `event_timestamp` with timezone/precision.
+4. Maintain at least three plausible diagnoses and applicable must-not-miss conditions.
+5. Link supporting and disconfirming evidence using the direct applied LR; use 1.0 when quantitatively unknown.
+6. Record uncertainty, missing data, alternative explanations, and cognitive-bias checks.
+7. Complete Fishbone, Why, HFACS, and conservative causation review.
+8. Run conflicts/readiness checks and obtain named qualified-human review before finalization. Manual confirmation requires reviewer membership in `ROOTCAUSE_AUTHORIZED_REVIEWERS`.
+9. Produce the unified report plus machine-readable case-handoff record and validate the envelope against `clinical://contracts/case-analysis-report`.
 
-## Related Files
+The v1 manifest is pinned and has no amendment tool. When a new source appears,
+keep the case preliminary and use an operator-controlled superseding-session replay
+with a complete replacement manifest; preserve the prior session ID and revisit
+every affected downstream stage.
 
-- `.codex/skills/zotero-keeper-harness/SKILL.md`
-- `.codex/skills/pubmed-search-mcp-harness/SKILL.md`
-- `.github/zotero-research-workflow.md`
-- `.github/agents/research.agent.md`
-- `.claude/skills/pubmed-*`
+## Tool profiles
+
+- `all`: complete 43-tool discrete surface.
+- `condensed`: 8-tool workflow facade; use only advertised action enums and hand off discrete-only operations.
+- `clinical`: partial clinical reasoning surface; hand off for RCA rather than skipping it.
+- `rca`: partial system RCA surface; require the prior evidence/DDx ledger before assigning causes.
+
+Discover tools at runtime. Do not assume JSON Schema defaults are injected, call undocumented facade actions, or parse an error-looking text response as success.
+
+## Host extraction boundary
+
+RootCause MCP currently consumes structured evidence one item at a time; it does not batch-ingest or parse raw PDF, DOCX, image, scan, spreadsheet, or EHR exports. The host agent or an approved extractor must preserve exact text/cells, source locations, hashes, units, negation, OCR corrections, time precision, and extraction method. Do not claim MCP provenance verification for inaccessible or binary sources.
+
+## PHI and clinical guardrails
+
+- Minimize and pseudonymize PHI. Never put direct identifiers in session IDs, prompts, filenames, logs, literature queries, or reports unless explicitly authorized in an approved secure environment.
+- Treat raw snippets, databases, checkpoints, exports, screenshots, and tool responses as PHI-bearing.
+- Never fabricate quotes, timestamps, hashes, codes, probabilities, LRs, citations, reviewer identity, or causal verification.
+- Never normalize a date/time beyond source precision or silently repair OCR.
+- Keep must-not-miss hypotheses visible until evidence-based exclusion.
+- Do not finalize on agent confidence alone. Record the reviewer name/role and unresolved safety issues.
+- Never use manual evidence confirmation for an identity absent from the operator-controlled `ROOTCAUSE_AUTHORIZED_REVIEWERS` allowlist.
+- Escalate urgent active-care concerns to a qualified clinician.
+
+## Repository work
+
+- Preserve unrelated user and concurrent-agent changes in the working tree.
+- Treat `.codex/skills`, `.cline/skills`, `.claude/skills`, `AGENTS.md`, and `.github/copilot-instructions.md` as bundled harness assets.
+- Validate the canonical skill with the skill-creator `quick_validate.py`, then verify the three mirrored files by hash/diff.
+- Use `uv run pytest`, `uv run ruff check .`, and `uv run mypy src --ignore-missing-imports` for proportional Python verification.
+- Keep runtime code, report contracts, and packaging out of a harness-only change unless the user expands scope.
+
+## Optional PubMed and Zotero handoff
+
+Use literature tools only when the user requests evidence lookup or when a quantitative LR/guideline needs a current citation.
+
+- Formulate a de-identified PICO/query; never send raw patient text or identifiers to external literature services.
+- Keep discovery/search/export in PubMed Search MCP. Distinguish peer-reviewed articles, preprints, and metadata-only records.
+- Keep library persistence, collection selection, and duplicate inspection in Zotero Keeper.
+- Ask before importing anything into Zotero, confirm the target collection, and check duplicates first.
+- Literature supports a claim; it never replaces case-specific source provenance or qualified clinical review.
