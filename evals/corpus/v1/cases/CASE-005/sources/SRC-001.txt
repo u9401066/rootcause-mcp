@@ -1,0 +1,13 @@
+TIMESTAMP: 2025-05-19T03:00:00Z
+SETTING: Emergency assessment
+AGE BAND: 50-59 years
+
+History: durable continuous-flow left ventricular assist device implanted three months earlier for dilated cardiomyopathy.
+
+Presenting observations:
+- Repeated low-flow controller alarm, dizziness, fatigue, reduced appetite, and dark urine.
+- Doppler mean arterial pressure approximately 65 mmHg.
+- Cool extremities and continuous device hum.
+- Estimated flow 2.2 L/min at 5400 RPM; power 3.8 W with fluctuation.
+
+The initial plan was crystalloid, hemolysis studies, and bedside echocardiography. Volume depletion and pump thrombus were listed as possibilities.

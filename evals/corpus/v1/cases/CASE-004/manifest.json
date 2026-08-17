@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "patient_key": "EVAL-PATIENT-004",
+  "encounter_key": "EVAL-ENCOUNTER-004",
+  "default_timezone": "UTC",
+  "documents": [
+    {"document_id": "SRC-001", "source_uri": "sources/SRC-001.txt", "sha256": "1c51649c91e226b97c4da3148c21898e674209cdf9bfa764438d09135b79fab4", "media_type": "text/plain", "source_kind": "procedure_orders", "revision": "1", "captured_at": "2025-04-10T14:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-002", "source_uri": "sources/SRC-002.csv", "sha256": "58c53ad4e3f0f4e5eed5d61d4f3b410abad156cb403dc4328d50108422178775", "media_type": "text/csv", "source_kind": "nursing_flowsheet", "revision": "1", "captured_at": "2025-04-12T08:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-003", "source_uri": "sources/SRC-003.txt", "sha256": "a1934e9f4b696bf8cda82de6def393451f9f941a9b92504c7b770f408a51121e", "media_type": "text/plain", "source_kind": "progress_and_event_note", "revision": "1", "captured_at": "2025-04-12T12:10:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-004", "source_uri": "sources/SRC-004.csv", "sha256": "6c693d2c81c9e81dd4d40ecc2fcb6a14f3d53edd12e7cb666724a90ed8af93fe", "media_type": "text/csv", "source_kind": "medication_administration", "revision": "1", "captured_at": "2025-04-12T09:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true}
+  ]
+}

@@ -1,0 +1,6 @@
+timestamp,heart_rate,map_mmHg,temp_c,rhythm,sedation,urine_output_ml,note
+2025-02-03T08:00:00Z,110,85,37.5,sinus tachycardia,propofol 50 mL/hour,50,Agitation with stimulation
+2025-02-03T20:00:00Z,115,82,37.8,sinus tachycardia,propofol 55 mL/hour,45,Infusion increased
+2025-02-04T08:00:00Z,118,78,38.1,sinus tachycardia,propofol 60 mL/hour,35,Infection workup ordered
+2025-02-04T20:00:00Z,125,70,38.4,sinus tachycardia with PVCs,propofol 60 mL/hour,25,Urine described as dark green
+2025-02-05T04:00:00Z,130 then 48,60,37.2,tachycardia then bradycardia,propofol 60 mL/hour,10,Vasopressor started for falling pressure

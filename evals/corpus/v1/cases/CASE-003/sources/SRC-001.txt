@@ -1,0 +1,13 @@
+TIMESTAMP: 2025-03-08T23:30:00Z
+SETTING: Trauma resuscitation
+AGE BAND: 30-39 years
+
+High-speed collision with grade IV liver injury, bilateral femur fractures, and right hemothorax. The patient was intubated before arrival.
+
+Between 23:30 and 01:00:
+- Massive transfusion protocol activated.
+- 6 units packed red cells, 4 units plasma, and 1 unit platelets administered.
+- Tranexamic acid 1 g IV administered.
+- Rapid infuser used.
+
+At 01:15: BP 90/50 mmHg on norepinephrine 0.2 mcg/kg/min; HR 110/min. Lactate decreased from 8.5 to 6.2 mmol/L.

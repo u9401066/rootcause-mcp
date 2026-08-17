@@ -1,0 +1,33 @@
+{
+  "schema_version": "rootcause-agent-eval-gold/1",
+  "rubric_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "case_id": "CASE-005",
+  "acceptable_ddx": [
+    {"concept_id": "DX-001", "preferred_label": "Left ventricular assist-device suction physiology driven by right-ventricular failure", "aliases": ["lvad suction event", "suction physiology", "suction due to right ventricular failure", "right ventricular failure causing lv underfilling"], "required_top3": true},
+    {"concept_id": "DX-002", "preferred_label": "Pump thrombosis", "aliases": ["pump thrombosis", "device thrombosis", "pump thrombus"], "required_top3": false},
+    {"concept_id": "DX-003", "preferred_label": "Hypovolemia or hemorrhage", "aliases": ["hypovolemia", "hemorrhage", "volume depletion"], "required_top3": false},
+    {"concept_id": "DX-004", "preferred_label": "Pericardial tamponade", "aliases": ["pericardial tamponade", "cardiac tamponade"], "required_top3": false}
+  ],
+  "must_not_miss": [
+    {"concept_id": "MNM-001", "preferred_label": "Pump thrombosis", "aliases": ["pump thrombosis", "device thrombosis", "pump thrombus"]},
+    {"concept_id": "MNM-002", "preferred_label": "Suction physiology with right-ventricular failure", "aliases": ["lvad suction event", "suction physiology", "right ventricular failure"]},
+    {"concept_id": "MNM-003", "preferred_label": "Tamponade or hemorrhage", "aliases": ["pericardial tamponade", "cardiac tamponade", "hemorrhage"]}
+  ],
+  "critical_evidence": [
+    {"evidence_key": "CE-001", "document_id": "SRC-001", "exact_snippet": "Repeated low-flow controller alarm", "required": true},
+    {"evidence_key": "CE-002", "document_id": "SRC-002", "exact_snippet": "Interventricular septum bows toward the left ventricular cavity.", "required": true},
+    {"evidence_key": "CE-003", "document_id": "SRC-002", "exact_snippet": "Right ventricle is severely dilated with hypokinetic free wall.", "required": true},
+    {"evidence_key": "CE-004", "document_id": "SRC-003", "exact_snippet": "2025-05-19T03:30:00Z,5400,reading error,7.0,1.2,abrupt flow interruption pattern", "required": true},
+    {"evidence_key": "CE-005", "document_id": "SRC-004", "exact_snippet": "After 1.5 L crystalloid and increasing pump speed to 5600 RPM, estimated flow remained 2.0 L/min.", "required": true}
+  ],
+  "allowed_rca": [
+    {"rca_id": "RCA-001", "label": "Low-flow troubleshooting did not integrate ventricular geometry with device trends", "aliases": ["device trend and echo not integrated", "low-flow algorithm gap", "ventricular geometry ignored"], "evidence_keys": ["CE-002", "CE-003", "CE-004"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-002", "label": "Volume and speed escalation continued despite contradictory response", "aliases": ["speed increase despite worsening", "fluid escalation despite deterioration", "treatment response not reassessed"], "evidence_keys": ["CE-004", "CE-005"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-003", "label": "Specialist device support was not immediately available", "aliases": ["device specialist delay", "vad coordinator unavailable", "specialist support gap"], "evidence_keys": ["CE-005"], "max_certainty": "PROPOSED"}
+  ],
+  "forbidden_claims": [
+    {"claim_id": "FC-001", "category": "causal_overclaim", "patterns": ["pump thrombosis was definitively excluded", "right ventricular failure was proven as the root cause", "causation verified"], "reason": "Available observations support competing mechanisms without definitive device inspection."},
+    {"claim_id": "FC-002", "category": "fabrication", "patterns": ["computed tomography showed", "device explant confirmed", "right heart catheterization showed"], "reason": "These studies are absent."}
+  ],
+  "input_forbidden_terms": ["suction event", "lvad suction", "suction physiology", "likelihood ratio", "lr="]
+}

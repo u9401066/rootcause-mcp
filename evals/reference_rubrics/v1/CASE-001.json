@@ -1,0 +1,32 @@
+{
+  "schema_version": "rootcause-agent-eval-gold/1",
+  "rubric_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "case_id": "CASE-001",
+  "acceptable_ddx": [
+    {"concept_id": "DX-001", "preferred_label": "Dynamic left ventricular outflow tract obstruction due to systolic anterior mitral motion", "aliases": ["dynamic lvot obstruction", "systolic anterior motion", "sam-mediated lvot obstruction", "dynamic outflow obstruction"], "required_top3": true},
+    {"concept_id": "DX-002", "preferred_label": "Massive pulmonary embolism", "aliases": ["massive pulmonary embolism", "high-risk pulmonary embolism", "obstructive shock from pulmonary embolism"], "required_top3": false},
+    {"concept_id": "DX-003", "preferred_label": "Perioperative anaphylaxis", "aliases": ["anaphylaxis", "anaphylactic shock"], "required_top3": false},
+    {"concept_id": "DX-004", "preferred_label": "Occult hemorrhagic or hypovolemic shock", "aliases": ["occult hemorrhage", "hemorrhagic shock", "hypovolemic shock"], "required_top3": false}
+  ],
+  "must_not_miss": [
+    {"concept_id": "MNM-001", "preferred_label": "Massive pulmonary embolism", "aliases": ["massive pulmonary embolism", "high-risk pulmonary embolism"]},
+    {"concept_id": "MNM-002", "preferred_label": "Perioperative anaphylaxis", "aliases": ["anaphylaxis", "anaphylactic shock"]},
+    {"concept_id": "MNM-003", "preferred_label": "Occult hemorrhage", "aliases": ["occult hemorrhage", "hemorrhagic shock"]}
+  ],
+  "critical_evidence": [
+    {"evidence_key": "CE-001", "document_id": "SRC-002", "exact_snippet": "No measurable response", "required": true},
+    {"evidence_key": "CE-002", "document_id": "SRC-003", "exact_snippet": "The anterior mitral leaflet moves toward the septum during systole.", "required": true},
+    {"evidence_key": "CE-003", "document_id": "SRC-003", "exact_snippet": "Continuous-wave Doppler has a late-peaking narrow profile; estimated peak gradient exceeds 80 mmHg.", "required": true},
+    {"evidence_key": "CE-004", "document_id": "SRC-004", "exact_snippet": "Incision had not started and no operative bleeding was present", "required": true}
+  ],
+  "allowed_rca": [
+    {"rca_id": "RCA-001", "label": "Outdated structural-heart assessment was not revisited before urgent surgery", "aliases": ["outdated echocardiogram", "preoperative cardiac reassessment gap", "structural heart risk not reassessed"], "evidence_keys": ["CE-002", "CE-003"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-002", "label": "Escalation relied on a generic inotrope response without integrating contradictory hemodynamics", "aliases": ["generic inotrope escalation", "medication response not integrated", "epinephrine escalation despite deterioration"], "evidence_keys": ["CE-001", "CE-004"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-003", "label": "Team anchoring and fragmented interpretation delayed mechanism recognition", "aliases": ["anchoring", "fragmented interpretation", "communication failure"], "evidence_keys": ["CE-001", "CE-002", "CE-003"], "max_certainty": "PROPOSED"}
+  ],
+  "forbidden_claims": [
+    {"claim_id": "FC-001", "category": "causal_overclaim", "patterns": ["genetic hocm was proven", "epinephrine was the sole cause", "causation verified"], "reason": "The records support a mechanism and contributors, not genetic disease or a single proven cause."},
+    {"claim_id": "FC-002", "category": "fabrication", "patterns": ["septal thickness was", "autopsy confirmed"], "reason": "Neither measurement nor autopsy is present."}
+  ],
+  "input_forbidden_terms": ["dynamic lvot obstruction", "systolic anterior motion", "sam-mediated", "hocm", "likelihood ratio", "lr="]
+}

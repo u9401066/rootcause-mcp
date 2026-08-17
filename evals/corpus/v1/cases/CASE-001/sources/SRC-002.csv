@@ -1,0 +1,8 @@
+timestamp,event,bp_mmHg,heart_rate,spo2_percent,etco2_mmHg,medication,note
+2025-01-14T08:00:00Z,baseline,165/90,85,96,,none,Arterial line connected
+2025-01-14T08:05:00Z,induction,150/85,90,99,,fentanyl 100 mcg; propofol 80 mg; rocuronium 40 mg,Induction described as smooth
+2025-01-14T08:10:00Z,positioning,80/40,100,100,32,none,Blood pressure falling before incision
+2025-01-14T08:12:00Z,hypotension,70/35,110,100,30,ephedrine 10 mg IV,Bolus given
+2025-01-14T08:15:00Z,worsening,60/30,130,98,25,ephedrine 10 mg IV,No measurable response
+2025-01-14T08:16:00Z,crisis,50/unrecorded,145,95,20,epinephrine 10 mcg IV,ST-T depression on V5
+2025-01-14T08:18:00Z,collapse,35/15,160,85,12,epinephrine 50 mcg IV,Carotid pulse weak and arterial trace dampened

@@ -1,0 +1,14 @@
+TIMESTAMP: 2025-02-03T01:00:00Z
+SETTING: Critical-care transfer
+AGE BAND: 30-39 years
+ESTIMATED WEIGHT: 75 kg
+
+Reason for admission: prolonged convulsive activity requiring intubation.
+Relevant history: heavy alcohol use; aspiration was suspected.
+
+Medications at transfer:
+- Propofol 1% infusion at 45 mL/hour, started at 01:00 and titrated for motor activity.
+- Ampicillin/sulbactam 3 g IV.
+- Normal saline 125 mL/hour.
+
+The transfer note contains no cumulative sedative-dose calculation or toxicity-monitoring plan.

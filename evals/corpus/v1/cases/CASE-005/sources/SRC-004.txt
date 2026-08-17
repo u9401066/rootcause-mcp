@@ -1,0 +1,11 @@
+2025-05-19T04:15:00Z laboratory observations:
+- INR 2.8.
+- Creatinine 1.8 mg/dL from baseline 1.1; BUN 45 mg/dL.
+- LDH 3500 U/L; plasma-free hemoglobin 150 mg/dL; haptoglobin below 10 mg/dL.
+- Urine dipstick blood 3+ with 0-2 red cells per high-power field.
+
+2025-05-19T04:30:00Z clinical update:
+- After 1.5 L crystalloid and increasing pump speed to 5600 RPM, estimated flow remained 2.0 L/min.
+- Mean arterial pressure fell to 50 mmHg and confusion developed.
+- Dark urine increased.
+- A device specialist had not yet reached the bedside.

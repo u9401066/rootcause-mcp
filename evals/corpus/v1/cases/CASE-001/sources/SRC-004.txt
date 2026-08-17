@@ -1,0 +1,6 @@
+2025-01-14T08:15:00Z Procedure team: Muscle tension noted before incision; depth of anesthesia questioned.
+2025-01-14T08:16:00Z Anesthesia team: Blood pressure is falling; epinephrine being administered.
+2025-01-14T08:18:00Z Anesthesia team: Larger epinephrine bolus was followed by further deterioration.
+2025-01-14T08:19:00Z Procedure team: Incision had not started and no operative bleeding was present.
+
+No documentation shows that the medication response, Doppler morphology, and arterial waveform were discussed together before the collapse.

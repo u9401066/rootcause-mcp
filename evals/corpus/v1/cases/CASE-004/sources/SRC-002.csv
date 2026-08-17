@@ -1,0 +1,6 @@
+timestamp,temp_c,heart_rate,resp_rate,bp_mmHg,spo2_percent,oxygen,note
+2025-04-10T18:00:00Z,36.8,82,16,115/75,98,room air,Drowsy but arousable
+2025-04-11T08:00:00Z,37.2,88,18,110/70,96,room air,Drain output decreased
+2025-04-11T16:00:00Z,37.8,95,20,105/65,94,room air,Bilateral calf pain and leg swelling documented
+2025-04-12T04:00:00Z,38.2,105,22,98/60,91,nasal cannula 2 L/min,Fever and confusion
+2025-04-12T08:00:00Z,38.5,110,24,95/55,88,face mask 6 L/min,Resident notified

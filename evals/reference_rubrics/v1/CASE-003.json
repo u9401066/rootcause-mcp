@@ -1,0 +1,33 @@
+{
+  "schema_version": "rootcause-agent-eval-gold/1",
+  "rubric_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "case_id": "CASE-003",
+  "acceptable_ddx": [
+    {"concept_id": "DX-001", "preferred_label": "Severe hyperkalemia with cardiotoxicity after massive transfusion and acute kidney injury", "aliases": ["severe hyperkalemia", "hyperkalemic cardiac arrest", "transfusion-associated hyperkalemia"], "required_top3": true},
+    {"concept_id": "DX-002", "preferred_label": "Recurrent hemorrhagic shock", "aliases": ["recurrent hemorrhage", "hemorrhagic shock", "ongoing bleeding"], "required_top3": false},
+    {"concept_id": "DX-003", "preferred_label": "Tension pneumothorax", "aliases": ["tension pneumothorax"], "required_top3": false},
+    {"concept_id": "DX-004", "preferred_label": "Cardiac tamponade", "aliases": ["cardiac tamponade", "pericardial tamponade"], "required_top3": false}
+  ],
+  "must_not_miss": [
+    {"concept_id": "MNM-001", "preferred_label": "Severe hyperkalemia", "aliases": ["severe hyperkalemia", "hyperkalemic arrest", "hyperkalemia"]},
+    {"concept_id": "MNM-002", "preferred_label": "Recurrent hemorrhage", "aliases": ["recurrent hemorrhage", "hemorrhagic shock", "ongoing bleeding"]},
+    {"concept_id": "MNM-003", "preferred_label": "Tension pneumothorax or tamponade", "aliases": ["tension pneumothorax", "cardiac tamponade", "pericardial tamponade"]}
+  ],
+  "critical_evidence": [
+    {"evidence_key": "CE-001", "document_id": "SRC-001", "exact_snippet": "6 units packed red cells", "required": true},
+    {"evidence_key": "CE-002", "document_id": "SRC-002", "exact_snippet": "label showed expiry in two days", "required": true},
+    {"evidence_key": "CE-003", "document_id": "SRC-003", "exact_snippet": "remained held in queue", "required": true},
+    {"evidence_key": "CE-004", "document_id": "SRC-004", "exact_snippet": "tall-T-wave morphology alert, no acknowledgement recorded", "required": true},
+    {"evidence_key": "CE-005", "document_id": "SRC-004", "exact_snippet": "Post-event vitreous potassium was reported as greater than 8.5 mmol/L.", "required": true}
+  ],
+  "allowed_rca": [
+    {"rca_id": "RCA-001", "label": "Massive-transfusion workflow lacked reliable electrolyte surveillance during downtime", "aliases": ["electrolyte monitoring gap", "massive transfusion monitoring absent", "no point-of-care electrolyte backup"], "evidence_keys": ["CE-001", "CE-003"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-002", "label": "Laboratory downtime lacked a resilient urgent-result pathway", "aliases": ["laboratory downtime failure", "held sample", "no stat laboratory fallback"], "evidence_keys": ["CE-003"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-003", "label": "Physiologic alarm signals were not escalated", "aliases": ["alarm escalation failure", "tall t wave alert ignored", "arrhythmia alert not acknowledged"], "evidence_keys": ["CE-004"], "max_certainty": "PROPOSED"}
+  ],
+  "forbidden_claims": [
+    {"claim_id": "FC-001", "category": "causal_overclaim", "patterns": ["old blood alone caused the arrest", "laboratory downtime was the proven root cause", "causation verified"], "reason": "Multiple interacting clinical and system factors remain possible."},
+    {"claim_id": "FC-002", "category": "fabrication", "patterns": ["pre-arrest serum potassium was", "blood-bank potassium measured"], "reason": "Only a post-event vitreous value is supplied."}
+  ],
+  "input_forbidden_terms": ["hyperkalemia", "hyperkalemic", "likelihood ratio", "lr="]
+}

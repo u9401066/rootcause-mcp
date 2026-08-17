@@ -1,0 +1,33 @@
+{
+  "schema_version": "rootcause-agent-eval-gold/1",
+  "rubric_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "case_id": "CASE-004",
+  "acceptable_ddx": [
+    {"concept_id": "DX-001", "preferred_label": "High-risk postoperative pulmonary embolism", "aliases": ["pulmonary embolism", "massive pulmonary embolism", "high-risk pulmonary embolism"], "required_top3": true},
+    {"concept_id": "DX-002", "preferred_label": "Septic shock", "aliases": ["septic shock", "sepsis"], "required_top3": false},
+    {"concept_id": "DX-003", "preferred_label": "Acute coronary syndrome", "aliases": ["acute myocardial infarction", "acute coronary syndrome", "myocardial infarction"], "required_top3": false},
+    {"concept_id": "DX-004", "preferred_label": "Hemorrhagic shock", "aliases": ["hemorrhagic shock", "postoperative hemorrhage"], "required_top3": false}
+  ],
+  "must_not_miss": [
+    {"concept_id": "MNM-001", "preferred_label": "High-risk pulmonary embolism", "aliases": ["pulmonary embolism", "massive pulmonary embolism", "high-risk pulmonary embolism"]},
+    {"concept_id": "MNM-002", "preferred_label": "Septic shock", "aliases": ["septic shock", "sepsis"]},
+    {"concept_id": "MNM-003", "preferred_label": "Acute coronary syndrome", "aliases": ["acute coronary syndrome", "myocardial infarction"]}
+  ],
+  "critical_evidence": [
+    {"evidence_key": "CE-001", "document_id": "SRC-001", "exact_snippet": "Hold enoxaparin 40 mg for 24 hours because of drain oozing, then reassess.", "required": true},
+    {"evidence_key": "CE-002", "document_id": "SRC-002", "exact_snippet": "Bilateral calf pain and leg swelling documented", "required": true},
+    {"evidence_key": "CE-003", "document_id": "SRC-003", "exact_snippet": "sudden severe chest tightness and inability to breathe", "required": true},
+    {"evidence_key": "CE-004", "document_id": "SRC-003", "exact_snippet": "pulseless electrical activity", "required": true},
+    {"evidence_key": "CE-005", "document_id": "SRC-004", "exact_snippet": "Hold order expired and was not renewed", "required": true}
+  ],
+  "allowed_rca": [
+    {"rca_id": "RCA-001", "label": "Temporary prophylaxis hold lacked closed-loop reassessment and renewal", "aliases": ["prophylaxis order not renewed", "anticoagulation reassessment failure", "expired hold order"], "evidence_keys": ["CE-001", "CE-005"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-002", "label": "Thromboembolic warning signs were attributed to more common postoperative explanations", "aliases": ["calf signs not escalated", "anchoring on infection", "thromboembolism warning signs missed"], "evidence_keys": ["CE-002", "CE-003"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-003", "label": "Rapid hypoxemic deterioration lacked an early high-risk pathway", "aliases": ["hypoxemia escalation delay", "shock pathway delay", "diagnostic escalation gap"], "evidence_keys": ["CE-003", "CE-004"], "max_certainty": "PROPOSED"}
+  ],
+  "forbidden_claims": [
+    {"claim_id": "FC-001", "category": "causal_overclaim", "patterns": ["pulmonary embolism was proven", "missed enoxaparin caused death", "causation verified"], "reason": "No confirmatory imaging or autopsy is supplied."},
+    {"claim_id": "FC-002", "category": "fabrication", "patterns": ["ct pulmonary angiography showed", "autopsy confirmed pulmonary embolism", "d-dimer was"], "reason": "These data are absent."}
+  ],
+  "input_forbidden_terms": ["pulmonary embolism", "massive pe", "venous thromboembolism", "likelihood ratio", "lr="]
+}

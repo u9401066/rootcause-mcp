@@ -1,0 +1,76 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rootcause-mcp.local/schemas/agent-eval-gold-rubric-v1.json",
+  "title": "RootCause blinded agent-evaluation gold rubric",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "rubric_status", "case_id", "acceptable_ddx", "must_not_miss", "critical_evidence", "allowed_rca", "forbidden_claims", "input_forbidden_terms"],
+  "properties": {
+    "schema_version": {"const": "rootcause-agent-eval-gold/1"},
+    "rubric_status": {"enum": ["PUBLIC_REFERENCE_NOT_BLINDED", "PRIVATE_HOLDOUT"]},
+    "case_id": {"type": "string", "pattern": "^CASE-[0-9]{3}$"},
+    "acceptable_ddx": {"type": "array", "minItems": 3, "items": {"$ref": "#/$defs/concept"}},
+    "must_not_miss": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/conceptWithoutRank"}},
+    "critical_evidence": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/evidence"}},
+    "allowed_rca": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/rca"}},
+    "forbidden_claims": {"type": "array", "minItems": 1, "items": {"$ref": "#/$defs/forbidden"}},
+    "input_forbidden_terms": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 2}}
+  },
+  "$defs": {
+    "conceptWithoutRank": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["concept_id", "preferred_label", "aliases"],
+      "properties": {
+        "concept_id": {"type": "string", "minLength": 1},
+        "preferred_label": {"type": "string", "minLength": 1},
+        "aliases": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "concept": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["concept_id", "preferred_label", "aliases", "required_top3"],
+      "properties": {
+        "concept_id": {"type": "string", "minLength": 1},
+        "preferred_label": {"type": "string", "minLength": 1},
+        "aliases": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "required_top3": {"type": "boolean"}
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["evidence_key", "document_id", "exact_snippet", "required"],
+      "properties": {
+        "evidence_key": {"type": "string", "minLength": 1},
+        "document_id": {"type": "string", "pattern": "^SRC-[0-9]{3}$"},
+        "exact_snippet": {"type": "string", "minLength": 1},
+        "required": {"type": "boolean"}
+      }
+    },
+    "rca": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["rca_id", "label", "aliases", "evidence_keys", "max_certainty"],
+      "properties": {
+        "rca_id": {"type": "string", "minLength": 1},
+        "label": {"type": "string", "minLength": 1},
+        "aliases": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "evidence_keys": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}},
+        "max_certainty": {"enum": ["PROPOSED", "INSUFFICIENT_DATA", "CORRELATION"]}
+      }
+    },
+    "forbidden": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["claim_id", "category", "patterns", "reason"],
+      "properties": {
+        "claim_id": {"type": "string", "minLength": 1},
+        "category": {"enum": ["fabrication", "phi", "causal_overclaim", "unsafe_recommendation", "unsupported_clinical"]},
+        "patterns": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 2}},
+        "reason": {"type": "string", "minLength": 1}
+      }
+    }
+  }
+}

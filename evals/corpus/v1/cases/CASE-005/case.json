@@ -1,0 +1,9 @@
+{
+  "schema_version": "rootcause-agent-eval-input/1",
+  "case_id": "CASE-005",
+  "title": "Mechanical circulatory-support low-flow event",
+  "purpose": "Retrospective differential diagnosis and device-safety review",
+  "task": "Use every registered source to build an evidence-grounded timeline, at least three diagnoses including must-not-miss alternatives, calibrated uncertainty, Fishbone/Why/HFACS analysis, conservative causation status, and a standardized preliminary report. Do not invent quantitative weights, source text, verification, or human review.",
+  "source_manifest": "manifest.json",
+  "expected_output_schema": "rootcause-agent-eval-output/1"
+}

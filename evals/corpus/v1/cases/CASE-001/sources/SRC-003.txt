@@ -1,0 +1,14 @@
+TIMESTAMP: 2025-01-14T08:20:00Z
+STUDY: Emergency transesophageal echocardiography
+INDICATION: Refractory shock after induction
+
+Observations:
+- Left ventricular cavity is small and hyperdynamic with near-complete end-systolic cavity obliteration.
+- Right ventricular size is normal; septal flattening is not seen.
+- Moderate mitral regurgitation with an eccentric posteriorly directed jet.
+- The anterior mitral leaflet moves toward the septum during systole.
+- Aortic valve opening appears normal.
+- Marked color-flow turbulence is present in the left ventricular outflow region.
+- Continuous-wave Doppler has a late-peaking narrow profile; estimated peak gradient exceeds 80 mmHg.
+
+The mechanism was not documented in the contemporaneous report.

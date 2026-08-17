@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rootcause-mcp.local/schemas/clinical-agent-eval-adjudication-v1.json",
+  "title": "Clinical review adjudication",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "adjudication_id", "run_id", "job_id", "review_ids", "adjudicator_id", "adjudicator_role", "qualified_clinician", "disagreements", "resolution", "decision", "adjudicated_at"],
+  "properties": {
+    "schema_version": {"const": "rootcause-clinical-adjudication/1"},
+    "adjudication_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "job_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "review_ids": {"type": "array", "minItems": 2, "maxItems": 2, "uniqueItems": true, "items": {"type": "string", "minLength": 1}},
+    "adjudicator_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "adjudicator_role": {"type": "string", "minLength": 3},
+    "qualified_clinician": {"const": true},
+    "disagreements": {"type": "array", "items": {"type": "string"}},
+    "resolution": {"type": "string", "minLength": 1},
+    "decision": {"enum": ["ACCEPT", "REVISE", "REJECT"]},
+    "adjudicated_at": {"type": "string", "format": "date-time"}
+  }
+}

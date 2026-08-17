@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "patient_key": "EVAL-PATIENT-001",
+  "encounter_key": "EVAL-ENCOUNTER-001",
+  "default_timezone": "UTC",
+  "documents": [
+    {"document_id": "SRC-001", "source_uri": "sources/SRC-001.txt", "sha256": "d26b5685f78da6db38480b7c09ead524ae9c6ea4ddb74727a9772b77c5c38b33", "media_type": "text/plain", "source_kind": "preprocedure_assessment", "revision": "1", "captured_at": "2025-01-14T00:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-002", "source_uri": "sources/SRC-002.csv", "sha256": "6bc1d7eac82dcfc218cd9920f907cd0e6a6e1f8e294ae6f02a8e04bec64921c6", "media_type": "text/csv", "source_kind": "procedure_record", "revision": "1", "captured_at": "2025-01-14T08:18:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-003", "source_uri": "sources/SRC-003.txt", "sha256": "d25d1a63b9fa72db2333b7536fce33c379188616c7c960e1fada52f5ed57760a", "media_type": "text/plain", "source_kind": "imaging_report", "revision": "1", "captured_at": "2025-01-14T08:20:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-004", "source_uri": "sources/SRC-004.txt", "sha256": "10a4bfaa1f3ec771d72ccc23f1c277148cc37a1e6dd2150aa1468545021bf1ed", "media_type": "text/plain", "source_kind": "team_communication", "revision": "1", "captured_at": "2025-01-14T08:19:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true}
+  ]
+}

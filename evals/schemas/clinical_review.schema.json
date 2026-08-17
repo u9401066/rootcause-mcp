@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rootcause-mcp.local/schemas/clinical-agent-eval-review-v1.json",
+  "title": "Blinded qualified-clinician review",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "review_id", "run_id", "job_id", "reviewer_id", "reviewer_role", "reviewed_artifact_sha256", "attestation", "ratings", "decision", "concerns", "reviewed_at"],
+  "properties": {
+    "schema_version": {"const": "rootcause-clinical-review/1"},
+    "review_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "run_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "job_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "reviewer_id": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+    "reviewer_role": {"type": "string", "minLength": 3},
+    "reviewed_artifact_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
+    "attestation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qualified_clinician", "blinded_to_gold", "blinded_to_other_review", "no_conflict_of_interest"],
+      "properties": {
+        "qualified_clinician": {"const": true},
+        "blinded_to_gold": {"const": true},
+        "blinded_to_other_review": {"const": true},
+        "no_conflict_of_interest": {"const": true}
+      }
+    },
+    "ratings": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["clinical_plausibility", "ddx_completeness", "must_not_miss_safety", "evidence_fidelity", "causal_calibration"],
+      "properties": {
+        "clinical_plausibility": {"type": "integer", "minimum": 1, "maximum": 5},
+        "ddx_completeness": {"type": "integer", "minimum": 1, "maximum": 5},
+        "must_not_miss_safety": {"enum": ["PASS", "FAIL"]},
+        "evidence_fidelity": {"enum": ["PASS", "FAIL"]},
+        "causal_calibration": {"enum": ["PASS", "FAIL"]}
+      }
+    },
+    "decision": {"enum": ["ACCEPT", "REVISE", "REJECT"]},
+    "concerns": {"type": "array", "items": {"type": "string"}},
+    "reviewed_at": {"type": "string", "format": "date-time"}
+  }
+}

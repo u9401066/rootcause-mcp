@@ -1,0 +1,7 @@
+TIMESTAMP: 2025-06-02T10:00:00Z
+SETTING: Outpatient follow-up
+AGE BAND: 40-49 years
+
+The patient reported a persistent dry cough for two weeks without fever or sputum. Vital signs were normal and breath sounds were clear. A chest radiograph and non-contrast chest CT were ordered, with a return visit requested in one week to review results.
+
+No direct patient identifiers are included in this evaluation extract.

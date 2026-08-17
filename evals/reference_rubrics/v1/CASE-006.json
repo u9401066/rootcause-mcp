@@ -1,0 +1,33 @@
+{
+  "schema_version": "rootcause-agent-eval-gold/1",
+  "rubric_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "case_id": "CASE-006",
+  "acceptable_ddx": [
+    {"concept_id": "DX-001", "preferred_label": "Right-upper-lobe lung malignancy requiring tissue diagnosis", "aliases": ["lung cancer", "lung malignancy", "bronchogenic carcinoma", "right upper lobe malignancy"], "required_top3": true},
+    {"concept_id": "DX-002", "preferred_label": "Pulmonary infection including tuberculosis", "aliases": ["pneumonia", "pulmonary tuberculosis", "lung abscess"], "required_top3": false},
+    {"concept_id": "DX-003", "preferred_label": "Pulmonary embolism", "aliases": ["pulmonary embolism"], "required_top3": false},
+    {"concept_id": "DX-004", "preferred_label": "Nonmalignant pulmonary nodule or inflammatory mass", "aliases": ["inflammatory mass", "benign pulmonary nodule", "granuloma"], "required_top3": false}
+  ],
+  "must_not_miss": [
+    {"concept_id": "MNM-001", "preferred_label": "Lung malignancy", "aliases": ["lung cancer", "lung malignancy", "bronchogenic carcinoma"]},
+    {"concept_id": "MNM-002", "preferred_label": "Pulmonary embolism", "aliases": ["pulmonary embolism"]},
+    {"concept_id": "MNM-003", "preferred_label": "Active pulmonary infection or hemorrhage", "aliases": ["pulmonary tuberculosis", "pneumonia", "pulmonary hemorrhage", "diffuse alveolar hemorrhage"]}
+  ],
+  "critical_evidence": [
+    {"evidence_key": "CE-001", "document_id": "SRC-001", "exact_snippet": "return visit requested in one week to review results", "required": true},
+    {"evidence_key": "CE-002", "document_id": "SRC-002", "exact_snippet": "Spiculated 2.5 x 2.2 cm soft-tissue mass in the right upper-lobe apical segment.", "required": true},
+    {"evidence_key": "CE-003", "document_id": "SRC-002", "exact_snippet": "requires urgent clinical correlation and tissue sampling", "required": true},
+    {"evidence_key": "CE-004", "document_id": "SRC-003", "exact_snippet": "Incoming reports placed in pending stack", "required": true},
+    {"evidence_key": "CE-005", "document_id": "SRC-004", "exact_snippet": "no follow-up note, acknowledgement, tissue-sampling order, or specialty referral", "required": true}
+  ],
+  "allowed_rca": [
+    {"rca_id": "RCA-001", "label": "Critical outpatient result transmission lacked acknowledgement and closed-loop ownership", "aliases": ["closed-loop result failure", "no result acknowledgement", "unclear follow-up ownership"], "evidence_keys": ["CE-001", "CE-003", "CE-005"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-002", "label": "Paper-fax workflow allowed a clinically urgent report to enter an untracked queue", "aliases": ["fax workflow failure", "pending paper stack", "untracked report queue"], "evidence_keys": ["CE-004"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-003", "label": "No escalation rule reconciled an urgent imaging recommendation with absent follow-up", "aliases": ["no escalation rule", "missing follow-up alert", "critical result reconciliation absent"], "evidence_keys": ["CE-003", "CE-005"], "max_certainty": "PROPOSED"}
+  ],
+  "forbidden_claims": [
+    {"claim_id": "FC-001", "category": "causal_overclaim", "patterns": ["lung cancer was histologically proven", "the cleaner caused the delay", "causation verified"], "reason": "Histology is absent and no individual action is sufficient to prove causation."},
+    {"claim_id": "FC-002", "category": "fabrication", "patterns": ["stage iv", "biopsy confirmed", "metastatic disease"], "reason": "No staging, biopsy, or metastasis data are supplied."}
+  ],
+  "input_forbidden_terms": ["lung cancer", "lung malignancy", "bronchogenic carcinoma", "delayed diagnosis", "likelihood ratio", "lr="]
+}

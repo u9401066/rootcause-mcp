@@ -1,0 +1,13 @@
+TIMESTAMP: 2025-05-19T03:45:00Z
+STUDY: Bedside echocardiography; image quality limited
+
+Observations:
+- Left ventricular cavity is small and underfilled.
+- Interventricular septum bows toward the left ventricular cavity.
+- Inflow cannula appears aligned; turbulence is difficult to assess.
+- Right ventricle is severely dilated with hypokinetic free wall.
+- Severe tricuspid regurgitation.
+- Inferior vena cava measures 2.4 cm and is non-collapsible.
+- No significant pericardial effusion.
+
+The contemporaneous recommendation was continued volume administration and consideration of a higher pump speed.
