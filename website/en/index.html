@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="RootCause MCP turns multiple clinical records into traceable, inspectable, transferable differential diagnoses, systems RCA, and standardized review packages."
+    >
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#ffffff">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:locale:alternate" content="zh_TW">
+    <meta property="og:title" content="RootCause MCP | Inspectable clinical reasoning infrastructure">
+    <meta
+      property="og:description"
+      content="Multi-source evidence, differential diagnosis, systems RCA, conservative causation audit, and standardized human-review artifacts."
+    >
+    <meta property="og:url" content="https://u9401066.github.io/rootcause-mcp/en/">
+    <link rel="canonical" href="https://u9401066.github.io/rootcause-mcp/en/">
+    <link rel="alternate" hreflang="zh-Hant" href="https://u9401066.github.io/rootcause-mcp/">
+    <link rel="alternate" hreflang="en" href="https://u9401066.github.io/rootcause-mcp/en/">
+    <link rel="alternate" hreflang="x-default" href="https://u9401066.github.io/rootcause-mcp/">
+    <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="../assets/styles.css">
+    <script src="../assets/site.js" defer></script>
+    <title>RootCause MCP | Make clinical reasoning inspectable</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "name": "RootCause MCP",
+        "description": "Evidence-grounded infrastructure for multi-source clinical reasoning and systems root-cause analysis.",
+        "codeRepository": "https://github.com/u9401066/rootcause-mcp",
+        "programmingLanguage": "Python",
+        "softwareVersion": "2.0.0a1",
+        "license": "https://github.com/u9401066/rootcause-mcp/blob/master/LICENSE"
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">Skip to main content</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./" aria-label="RootCause MCP home">
+          <span class="brand-mark" aria-hidden="true">RC</span>RootCause MCP
+        </a>
+        <button
+          class="menu-button"
+          type="button"
+          aria-label="Open navigation menu"
+          aria-controls="site-navigation"
+          aria-expanded="false"
+          data-menu-open-label="Open navigation menu"
+          data-menu-close-label="Close navigation menu"
+          data-menu-button
+        ><span></span></button>
+        <nav id="site-navigation" class="site-nav" aria-label="Primary navigation" data-navigation>
+          <a href="#overview">Overview</a>
+          <a href="#workflow">How it works</a>
+          <a href="#output">Standard output</a>
+          <a href="#developers">Developers</a>
+          <a href="#validation">Validation</a>
+          <a href="#safety">Safety &amp; limits</a>
+          <a class="language-link" href="../" lang="zh-Hant" hreflang="zh-Hant">繁中</a>
+          <a
+            class="external"
+            href="https://github.com/u9401066/rootcause-mcp"
+            target="_blank"
+            rel="noopener noreferrer"
+          >GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="boundary-line">Traceable infrastructure for multi-source clinical reasoning</p>
+            <h1 id="hero-title" class="hero-title-en">
+              <span class="hero-title-line">Clinical reasoning</span>
+              <span class="hero-title-line">you can inspect.</span>
+            </h1>
+            <p>
+              Turn multiple clinical records into source-grounded differential diagnoses,
+              systems RCA, and a standardized review package.
+            </p>
+            <div class="actions">
+              <a class="button primary" href="#workflow">Start with the workflow</a>
+              <a class="button" href="#developers">Read the architecture</a>
+            </div>
+            <p class="boundary-line">Engineering alpha · Not a medical device · Qualified human review required</p>
+          </div>
+
+          <div class="hero-system" aria-label="Data flow from sources to review artifact">
+            <div class="flow-column">
+              <div class="flow-node">
+                <strong>Emergency record</strong><span>document + SHA-256</span>
+              </div>
+              <div class="flow-node">
+                <strong>Labs &amp; imaging</strong><span>snippet + location</span>
+              </div>
+              <div class="flow-node">
+                <strong>Inpatient timeline</strong><span>timestamp + precision</span>
+              </div>
+            </div>
+            <div class="flow-node flow-hub">
+              <strong>Verifiable evidence ledger</strong>
+              <span>manifest · provenance · conflicts</span>
+            </div>
+            <div class="branch-column">
+              <div class="flow-node">
+                <strong>Differential diagnosis</strong><span>support · refute · direct LR</span>
+              </div>
+              <div class="flow-node">
+                <strong>Systems RCA</strong><span>Fishbone · 5-Why · HFACS</span>
+              </div>
+            </div>
+            <div class="flow-node review-node">
+              <strong>Review artifact</strong>
+              <span>PRELIMINARY → human approval</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="overview" class="section" aria-labelledby="overview-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="overview-title">One case. One traceable ledger.</h2>
+            <p>
+              RootCause MCP is not a diagnostic model. It lets different Agents work from the same session,
+              source contract, and output format while retaining every reasoning input, disconfirming item,
+              limitation, and approval state.
+            </p>
+          </div>
+
+          <div class="stage-rail" aria-label="Core data chain">
+            <article class="stage">
+              <span class="stage-number">01</span>
+              <strong>Source inventory</strong>
+              <p>Stable document IDs, hashes, time ranges, and de-identification state.</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">02</span>
+              <strong>Atomic evidence</strong>
+              <p>Verbatim snippets, source locations, event times, and verification methods.</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">03</span>
+              <strong>Differential reasoning</strong>
+              <p>At least three candidate hypotheses, supporting and disconfirming evidence, and direct LRs.</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">04</span>
+              <strong>Systems analysis</strong>
+              <p>Fishbone, 5-Why, HFACS, and conservative causation audit.</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">05</span>
+              <strong>Human review</strong>
+              <p>Preview first, approve later; retain reviewer identity and content hash.</p>
+            </article>
+          </div>
+
+          <div class="audience-links">
+            <a class="audience-link" href="#workflow">
+              <span>For users and reviewers</span>
+              <strong>See who is responsible for what →</strong>
+              <p>Understand why the Agent, MCP, and qualified reviewer cannot replace one another.</p>
+            </a>
+            <a class="audience-link" href="#developers">
+              <span>For Agent and MCP developers</span>
+              <strong>Go straight to contracts and gates →</strong>
+              <p>Integrate with live schemas, tool profiles, and a preliminary-first workflow.</p>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" class="section wash" aria-labelledby="workflow-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="workflow-title">The Agent reasons; the MCP constrains and audits.</h2>
+            <p>
+              A conformant artifact comes from explicit handoffs of responsibility—not from dropping raw records
+              into the MCP and expecting it to interpret them on its own.
+            </p>
+          </div>
+
+          <div class="responsibility-grid">
+            <article class="responsibility">
+              <span class="responsibility-index">01 · INPUT</span>
+              <h3>Host / approved extractor</h3>
+              <p>Reads raw PDFs, DOCX files, images, or EHR exports and emits atomic text, page or line locations, hashes, and time precision.</p>
+            </article>
+            <article class="responsibility">
+              <span class="responsibility-index">02 · REASON</span>
+              <h3>Reasoning Agent</h3>
+              <p>Proposes DDx, direct LRs, alternative explanations, uncertainty, disconfirming evidence, and systems-cause hypotheses.</p>
+            </article>
+            <article class="responsibility">
+              <span class="responsibility-index">03 · GOVERN</span>
+              <h3>RootCause MCP</h3>
+              <p>Checks schemas, source lineage, probability updates, state transitions, readiness gates, and standardized output.</p>
+            </article>
+            <article class="responsibility">
+              <span class="responsibility-index">04 · APPROVE</span>
+              <h3>Qualified human reviewer</h3>
+              <p>Reviews sources, medical plausibility, causal language, and corrective actions, then decides whether to approve a final snapshot.</p>
+            </article>
+          </div>
+
+          <div class="nine-stage" aria-label="Nine-stage reasoning workflow">
+            <div><span>01</span><strong>Create session</strong></div>
+            <div><span>02</span><strong>Register manifest</strong></div>
+            <div><span>03</span><strong>Add evidence</strong></div>
+            <div><span>04</span><strong>Build DDx</strong></div>
+            <div><span>05</span><strong>Test both ways</strong></div>
+            <div><span>06</span><strong>Biases / gaps</strong></div>
+            <div><span>07</span><strong>Systems RCA</strong></div>
+            <div><span>08</span><strong>Preview report</strong></div>
+            <div><span>09</span><strong>Human approval</strong></div>
+          </div>
+
+          <aside class="notice" aria-label="Important capability boundary">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>
+              <strong>Important:</strong> The MCP does not parse raw PDFs, DOCX files, or images; it does not generate
+              medical reasoning on its own; and it does not prove clinical causation. The causation validator is a
+              conservative auditor of proof obligations submitted by the Agent.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="output" class="section" aria-labelledby="output-title">
+        <div class="container output-grid">
+          <div>
+            <div class="section-intro">
+              <h2 id="output-title">The standard output is not a conclusion. It is a set of inspectable relationships.</h2>
+              <p>The same case can be represented as JSON, Markdown, or a FHIR DiagnosticReport; canonical JSON is the handoff baseline.</p>
+            </div>
+            <div class="output-list">
+              <article class="output-item">
+                <h3>Sources and timeline</h3>
+                <p>Manifest coverage, document hashes, event times, precision, and cross-source conflicts.</p>
+              </article>
+              <article class="output-item">
+                <h3>Evidence and differential diagnosis</h3>
+                <p>Item-level provenance, support and contradiction, direct LRs, probability history, and must-not-miss disposition.</p>
+              </article>
+              <article class="output-item">
+                <h3>Systems RCA</h3>
+                <p>Fishbone, 5-Why, HFACS, and causation audit; an audit status is not proof of causation.</p>
+              </article>
+              <article class="output-item">
+                <h3>Limits, readiness, and review</h3>
+                <p>Unresolved gaps, cognitive biases, approver, approval scope, finalization blockers, and content hash.</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="code-window" aria-label="Example standard report JSON">
+            <div class="code-header">
+              <span>case-analysis-report.json · abridged</span>
+              <button
+                class="copy-button"
+                type="button"
+                data-copy-target="report-example"
+                data-copied-label="Copied"
+                data-error-label="Copy failed"
+              >Copy</button>
+            </div>
+            <pre id="report-example"><code>{
+  <span class="code-key">"source_inventory"</span>: [
+    {
+      <span class="code-key">"document"</span>: <span class="code-string">"SRC-001"</span>,
+      <span class="code-key">"sha256"</span>: <span class="code-string">"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"</span>,
+      <span class="code-key">"evidence_count"</span>: 3,
+      <span class="code-key">"verified_count"</span>: 3,
+      <span class="code-key">"coverage_status"</span>: <span class="code-string">"reviewed"</span>
+    }
+  ],
+  <span class="code-key">"hypotheses"</span>: [
+    {
+      <span class="code-key">"id"</span>: <span class="code-string">"HYP-001"</span>,
+      <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate A"</span>},
+      <span class="code-key">"current_probability"</span>: 0.55,
+      <span class="code-key">"must_not_miss"</span>: false,
+      <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-001"</span>],
+      <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-004"</span>],
+      <span class="code-key">"planned_tests"</span>: [],
+      <span class="code-key">"status"</span>: <span class="code-string">"ACTIVE"</span>,
+      <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Auditable rationale for Candidate A"</span>
+    },
+    {
+      <span class="code-key">"id"</span>: <span class="code-string">"HYP-002"</span>,
+      <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate B"</span>},
+      <span class="code-key">"current_probability"</span>: 0.30,
+      <span class="code-key">"must_not_miss"</span>: false,
+      <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-002"</span>],
+      <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-005"</span>],
+      <span class="code-key">"planned_tests"</span>: [],
+      <span class="code-key">"status"</span>: <span class="code-string">"ACTIVE"</span>,
+      <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Auditable rationale for Candidate B"</span>
+    },
+    {
+      <span class="code-key">"id"</span>: <span class="code-string">"HYP-003"</span>,
+      <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Must-not-miss C"</span>},
+      <span class="code-key">"current_probability"</span>: 0.15,
+      <span class="code-key">"must_not_miss"</span>: true,
+      <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-003"</span>],
+      <span class="code-key">"contradicting_evidence_ids"</span>: [],
+      <span class="code-key">"planned_tests"</span>: [{
+        <span class="code-key">"test_id"</span>: <span class="code-string">"TST-001"</span>,
+        <span class="code-key">"name"</span>: <span class="code-string">"Definitive local diagnostic study"</span>,
+        <span class="code-key">"purpose"</span>: <span class="code-string">"RULE_OUT"</span>,
+        <span class="code-key">"target_hypothesis_id"</span>: <span class="code-string">"HYP-003"</span>,
+        <span class="code-key">"expected_supporting_result"</span>: <span class="code-string">"Predefined positive pattern"</span>,
+        <span class="code-key">"expected_refuting_result"</span>: <span class="code-string">"Predefined adequate negative pattern"</span>,
+        <span class="code-key">"status"</span>: <span class="code-string">"PLANNED"</span>
+      }],
+      <span class="code-key">"status"</span>: <span class="code-string">"ACTIVE"</span>,
+      <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Must-not-miss until ruled out"</span>
+    }
+  ],
+  <span class="code-key">"root_causes"</span>: [{
+    <span class="code-key">"id"</span>: <span class="code-string">"WHY-003"</span>,
+    <span class="code-key">"answer"</span>: <span class="code-string">"Escalation trigger absent"</span>,
+    <span class="code-key">"evidence"</span>: [<span class="code-string">"EVD-006"</span>],
+    <span class="code-key">"causation_verification_id"</span>: <span class="code-string">"AUDIT-001"</span>,
+    <span class="code-key">"causation_result"</span>: <span class="code-string">"INSUFFICIENT_DATA"</span>,
+    <span class="code-key">"disposition"</span>: <span class="code-string">"PROPOSED"</span>
+  }],
+  <span class="code-key">"causation_verifications"</span>: [{
+    <span class="code-key">"verification_id"</span>: <span class="code-string">"AUDIT-001"</span>,
+    <span class="code-key">"cause_event"</span>: {<span class="code-key">"id"</span>: <span class="code-string">"WHY-003"</span>, <span class="code-key">"description"</span>: <span class="code-string">"Escalation trigger absent"</span>, <span class="code-key">"evidence"</span>: [<span class="code-string">"EVD-006"</span>]},
+    <span class="code-key">"effect_event"</span>: {<span class="code-key">"description"</span>: <span class="code-string">"Escalation was delayed"</span>, <span class="code-key">"evidence"</span>: [<span class="code-string">"EVD-007"</span>]},
+    <span class="code-key">"overall_result"</span>: <span class="code-string">"INSUFFICIENT_DATA"</span>,
+    <span class="code-key">"audit_scope"</span>: <span class="code-string">"CONSERVATIVE_CAUSATION_AUDIT"</span>,
+    <span class="code-key">"clinical_causality_established"</span>: false
+  }],
+  <span class="code-key">"conformance_checks"</span>: [{
+    <span class="code-key">"code"</span>: <span class="code-string">"ROOT_CAUSATION_AUDIT_LINEAGE"</span>,
+    <span class="code-key">"status"</span>: <span class="code-string">"PASS"</span>,
+    <span class="code-key">"severity"</span>: <span class="code-string">"HARD"</span>,
+    <span class="code-key">"message"</span>: <span class="code-string">"Root audit lineage is exact"</span>,
+    <span class="code-key">"refs"</span>: [<span class="code-string">"WHY-003"</span>],
+    <span class="code-key">"details"</span>: {}
+  }],
+  <span class="code-key">"is_finalized"</span>: false,
+  <span class="code-key">"content_hash"</span>: null
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="developers" class="section wash" aria-labelledby="developers-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="developers-title">Treat it as a reasoning ledger, not a diagnostic model.</h2>
+            <p>
+              The MCP surface accepts structured actions; the application layer orchestrates the workflow; the
+              domain layer protects medical-reasoning invariants; and the infrastructure layer persists sessions and artifacts.
+            </p>
+          </div>
+
+          <div class="architecture" aria-label="System architecture data flow">
+            <div class="architecture-column">
+              <span>Agent surface</span>
+              <div class="architecture-node"><strong>Tools</strong><small>structured actions</small></div>
+              <div class="architecture-node"><strong>Resources</strong><small>live contracts</small></div>
+              <div class="architecture-node"><strong>Prompts</strong><small>workflow guidance</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Application</span>
+              <div class="architecture-node"><strong>ServerState</strong><small>session aggregate</small></div>
+              <div class="architecture-node"><strong>Handlers</strong><small>validation + orchestration</small></div>
+              <div class="architecture-node"><strong>Readiness</strong><small>preview-first gates</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Domain</span>
+              <div class="architecture-node"><strong>Evidence graph</strong><small>provenance + links</small></div>
+              <div class="architecture-node"><strong>Clinical reasoning</strong><small>DDx + Bayesian updates</small></div>
+              <div class="architecture-node"><strong>Systems RCA</strong><small>Fishbone + Why + HFACS</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Persistence</span>
+              <div class="architecture-node"><strong>SQLite</strong><small>local operational store</small></div>
+              <div class="architecture-node"><strong>Checkpoints</strong><small>confined recovery files</small></div>
+              <div class="architecture-node"><strong>Exports</strong><small>JSON + Markdown + FHIR</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Review boundary</span>
+              <div class="architecture-node"><strong>PRELIMINARY</strong><small>inspect and revise</small></div>
+              <div class="architecture-node"><strong>Approval gate</strong><small>identity + scope + time</small></div>
+              <div class="architecture-node"><strong>Snapshot</strong><small>content-hashed handoff</small></div>
+            </div>
+          </div>
+
+          <p class="dependency-line">Interface → Application → Domain ← Infrastructure</p>
+
+          <div class="technical-grid">
+            <article class="technical-column">
+              <h3>Live contracts are authoritative</h3>
+              <p>Do not guess schemas by copying the website. The Agent should first read these MCP resources:</p>
+              <ul class="technical-list">
+                <li><code>clinical://contracts/case-input-manifest</code></li>
+                <li><code>clinical://contracts/case-analysis-report</code></li>
+                <li><code>tools/list</code> for the current tool schemas</li>
+              </ul>
+            </article>
+            <article class="technical-column">
+              <h3>Choose the tool profile for the task</h3>
+              <div class="profile-row"><strong>condensed</strong><strong>8</strong></div>
+              <div class="profile-row"><strong>clinical</strong><strong>23</strong></div>
+              <div class="profile-row"><strong>rca</strong><strong>23</strong></div>
+              <div class="profile-row"><strong>all</strong><strong>43</strong></div>
+              <p>Counts are the 2.0.0a1 release snapshot; runtime <code>tools/list</code> takes precedence.</p>
+            </article>
+            <article class="technical-column">
+              <h3>P0 deterministic conformance</h3>
+              <ul class="technical-list">
+                <li>A <code>typed nested schema</code> validates stable sections; the report carries <code>conformance_checks[]</code></li>
+                <li>Root-audit ID, description, and evidence must exactly match the Why and evidence ledger</li>
+                <li><code>REJECTED</code> entries cannot remain in the root-cause bucket; <code>INSUFFICIENT_DATA</code> is only <code>PROPOSED</code></li>
+                <li>At least three unique DDx entries; every active DDx needs evidence or a typed test disposition</li>
+                <li>The leading and every must-not-miss diagnosis need genuine support plus contradiction or a typed planned test</li>
+                <li>Final requires an authorized reviewer, time, and recomputable hash, then becomes an immutable final snapshot</li>
+                <li>23/23 targeted hard-mutation regressions block unsafe finalization</li>
+              </ul>
+            </article>
+          </div>
+
+          <aside class="notice notice-spaced" aria-label="Configuration limitation">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>
+              <strong>Current limitation:</strong> Protocol and pattern YAML files are primarily read by the Agent;
+              most runtime readiness and finalization gates are still implemented in Python. Editing YAML does not
+              mean runtime behavior changed with it.
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="validation" class="section" aria-labelledby="validation-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="validation-title">Engineering-alpha deterministic P0 passed; Agent MVP is not established.</h2>
+            <p>
+              Contracts and targeted regressions show that nonconforming reports cannot finalize; the public cases
+              and runner are engineering references only. They cannot establish DDx or root-cause correctness on unseen cases.
+            </p>
+          </div>
+
+          <div class="validation-table-wrap">
+            <table class="validation-table">
+              <caption>RootCause MCP 2.0.0a1 validation maturity</caption>
+              <thead>
+                <tr><th scope="col">Validation layer</th><th scope="col">Current status</th><th scope="col">What it demonstrates</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Engineering-alpha deterministic P0</td>
+                  <td class="status-passed">Passed</td>
+                  <td>Typed nested report schema, machine-readable <code>conformance_checks[]</code>, and 23/23 targeted hard-mutation regressions.</td>
+                </tr>
+                <tr>
+                  <td>Native multi-source MCP flow</td>
+                  <td class="status-passed">Passed</td>
+                  <td>Multi-source manifest, exact provenance, DDx, RCA, approval gate, and unified report.</td>
+                </tr>
+                <tr>
+                  <td>Public six-case corpus / runner</td>
+                  <td class="status-pending">Engineering reference</td>
+                  <td>Public cases scrubbed of filename, diagnosis, and LR leakage, plus a public rubric and runner scaffold; public gold is not a blinded evaluation.</td>
+                </tr>
+                <tr>
+                  <td>Formal cross-Agent evaluation</td>
+                  <td class="status-pending">NOT_ESTABLISHED</td>
+                  <td>Requires 3 runtimes × 6 cases × 2 repeats = 36 runs, a repo-external private corpus, private holdout gold, clean data roots, and trusted server traces.</td>
+                </tr>
+                <tr>
+                  <td>Two-clinician blinded review</td>
+                  <td class="status-pending">NOT_ESTABLISHED</td>
+                  <td>Requires two clinical reviewers to score DDx, must-not-miss, RCA, and causal language blindly, with adjudication of disagreements.</td>
+                </tr>
+                <tr>
+                  <td>Production security / governance</td>
+                  <td class="status-pending">NOT_ESTABLISHED</td>
+                  <td>Identity, authorization, multi-tenancy, encryption, audit, and retention controls required in real deployments.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="validation-columns">
+            <p class="validation-statement">
+              Finalized means “an immutable final snapshot that passed deterministic gates and carries an authorized reviewer,
+              time, and recomputable hash.” It does not mean the diagnosis is clinically confirmed or causation is established.
+            </p>
+            <div>
+              <h3>What the engineering alpha establishes</h3>
+              <ul class="validation-list">
+                <li>typed nested contracts and fail-closed finalization</li>
+                <li>root, Why, evidence, and audit lineage with safe dispositions</li>
+                <li>at least three DDx entries plus active, leading, and must-not-miss dispositions</li>
+                <li>the public six-case corpus, rubric, and runner as engineering references</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Formal Agent MVP: NOT_ESTABLISHED</h3>
+              <ul class="validation-list">
+                <li>a repo-external private corpus and private holdout gold</li>
+                <li>trusted runtime / MCP server traces and the 36-run matrix</li>
+                <li>blinded scoring by two clinical reviewers plus adjudication</li>
+                <li>PHI, IAM, audit, and retention controls</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="quickstart" class="section wash" aria-labelledby="quickstart-title">
+        <div class="container quickstart-grid">
+          <div>
+            <div class="section-intro">
+              <h2 id="quickstart-title">Start an engineering trial in five minutes.</h2>
+              <p>Use synthetic or de-identified data first. Do not treat GitHub, CI, or public Pages as a secure clinical-data environment.</p>
+            </div>
+            <ol class="quickstart-steps">
+              <li><strong>Install the locked environment</strong><span>Synchronize runtime, development, and test dependencies.</span></li>
+              <li><strong>Start with the condensed profile</strong><span>Let the Agent discover the 8 facade tools first.</span></li>
+              <li><strong>Read the live contracts</strong><span>Then create the session and source manifest.</span></li>
+              <li><strong>PRELIMINARY first</strong><span>Preview blockers first; finalize only after qualified human review.</span></li>
+            </ol>
+          </div>
+          <div class="code-window" aria-label="Install and launch commands">
+            <div class="code-header">
+              <span>terminal</span>
+              <button
+                class="copy-button"
+                type="button"
+                data-copy-target="quickstart-code"
+                data-copied-label="Copied"
+                data-error-label="Copy failed"
+              >Copy</button>
+            </div>
+            <pre id="quickstart-code"><code><span class="code-string"># 1. Install the locked environment</span>
+uv sync --all-extras --all-groups --locked
+
+<span class="code-string"># 2. Start the MCP server over stdio</span>
+ROOTCAUSE_TOOL_PROFILE=condensed uv run rootcause-mcp
+
+<span class="code-string"># 3. The client should read these live resources first</span>
+clinical://contracts/case-input-manifest
+clinical://contracts/case-analysis-report</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="safety" class="section" aria-labelledby="safety-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="safety-title">Safety boundaries should appear before the feature list.</h2>
+            <p>This is an engineering alpha. The public repository, CI, and GitHub Pages are not environments for receiving or retaining real clinical records.</p>
+          </div>
+          <div class="safety-grid">
+            <article>
+              <h3>Currently built in</h3>
+              <ul class="plain-list">
+                <li>stable source IDs, SHA-256, snippet, and location verification</li>
+                <li>data-path and checkpoint confinement</li>
+                <li>DDx, disconfirming evidence, conflict, readiness, and approval gates</li>
+                <li>PRELIMINARY / final state and content hash</li>
+                <li>JSON, Markdown, and FHIR DiagnosticReport output</li>
+              </ul>
+            </article>
+            <article>
+              <h3>Not built in / cannot be claimed</h3>
+              <ul class="plain-list">
+                <li>a built-in extractor for raw PDFs, DOCX files, images, or EHR exports</li>
+                <li>authentication, RBAC, multi-tenant isolation, at-rest encryption, or retention enforcement</li>
+                <li>guarantees of Agent clinical ability, error-free output, or regulatory compliance</li>
+                <li>proof of clinical causation from a causation audit</li>
+                <li>direct use in care decisions without human review</li>
+              </ul>
+            </article>
+          </div>
+          <aside class="notice notice-spaced" aria-label="PHI warning">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>
+              <strong>PHI warning:</strong> Use only synthetic or de-identified data for trials. Before production adoption,
+              the deployer must independently implement identity, least privilege, encryption, audit, backup, retention,
+              and incident-response controls.
+            </p>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <p class="footer-brand">RootCause MCP</p>
+            <p class="footer-note">
+              Open-source MCP infrastructure that preserves sources, disconfirming evidence, uncertainty, and review responsibility in multi-source clinical reasoning.
+            </p>
+          </div>
+          <nav class="footer-links" aria-label="Related documentation">
+            <a href="https://github.com/u9401066/rootcause-mcp/blob/master/README.md">English README</a>
+            <a href="https://github.com/u9401066/rootcause-mcp/blob/master/docs/api.md">API reference</a>
+            <a href="https://github.com/u9401066/rootcause-mcp/blob/master/docs/PHI_DATA_POLICY.md">PHI policy</a>
+            <a href="https://github.com/u9401066/rootcause-mcp/tree/master/.codex/skills/rootcause-clinical-reasoning-harness">Agent harness</a>
+          </nav>
+        </div>
+        <p class="meta-line">
+          v2.0.0a1 · Engineering alpha · Documentation verified 2026-08-17 ·
+          This site does not accept clinical records ·
+          <a href="https://github.com/u9401066/rootcause-mcp/commits/master">View version history</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>
