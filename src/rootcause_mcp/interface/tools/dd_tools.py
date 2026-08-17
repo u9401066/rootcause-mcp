@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from mcp.types import Tool
 
+from rootcause_mcp.interface.tools.schema_fragments import (
+    planned_diagnostic_test_input_schema,
+)
+
 
 def get_dd_tools() -> list[Tool]:
     """Get all differential diagnosis tools."""
@@ -41,6 +45,11 @@ def get_dd_tools() -> list[Tool]:
                         "description": "Prior probability P(H) before evidence (0-1)",
                         "default": 0.1,
                     },
+                    "must_not_miss": {
+                        "type": "boolean",
+                        "description": "Mark an explicitly reviewed high-harm diagnosis that must be ruled out",
+                        "default": False,
+                    },
                     "clinical_reasoning": {
                         "type": "string",
                         "description": "REQUIRED: Detailed clinical reasoning for why this diagnosis is being considered (e.g., 'Patient has chest pain + elevated troponin + ECG changes')",
@@ -64,12 +73,20 @@ def get_dd_tools() -> list[Tool]:
                     "evidence_supporting": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "REQUIRED: Evidence IDs supporting this hypothesis",
+                        "description": (
+                            "DEPRECATED context-only input; it is not persisted and does "
+                            "not create evidence links. Use rc_link_evidence_to_hypothesis "
+                            "once per supporting evidence association."
+                        ),
                     },
                     "evidence_contradicting": {
                         "type": "array",
                         "items": {"type": "string"},
-                        "description": "Evidence IDs that contradict this hypothesis (if any)",
+                        "description": (
+                            "DEPRECATED context-only input; it is not persisted and does "
+                            "not create evidence links. Use rc_link_evidence_to_hypothesis "
+                            "once per contradicting evidence association."
+                        ),
                     },
                     "uncertainty_factors": {
                         "type": "array",
@@ -90,13 +107,20 @@ def get_dd_tools() -> list[Tool]:
                         "items": {"type": "string"},
                         "description": "Criteria that would rule out this diagnosis",
                     },
+                    "planned_tests": {
+                        "type": "array",
+                        "items": planned_diagnostic_test_input_schema(),
+                        "description": (
+                            "Typed pending tests bound by the server to the newly "
+                            "created hypothesis; free-text gaps are not equivalent"
+                        ),
+                    },
                 },
                 "required": [
                     "session_id",
                     "diagnosis",
                     "clinical_reasoning",
                     "differential_diagnoses_considered",
-                    "evidence_supporting",
                     "uncertainty_factors",
                     "confidence_rationale",
                 ],
@@ -104,7 +128,10 @@ def get_dd_tools() -> list[Tool]:
         ),
         Tool(
             name="rc_link_evidence_to_hypothesis",
-            description="Link evidence to hypothesis with Bayesian updating",
+            description=(
+                "Link one evidence item to one hypothesis with Bayesian updating. "
+                "The supplied LR is applied directly: normally >1 for supports and <1 for contradicts."
+            ),
             input_schema={
                 "type": "object",
                 "properties": {
@@ -124,7 +151,10 @@ def get_dd_tools() -> list[Tool]:
                         "type": "number",
                         "minimum": 0.01,
                         "maximum": 100,
-                        "description": "Likelihood ratio (LR+ if supports, LR- if contradicts)",
+                        "description": (
+                            "Applied likelihood ratio: LR+ (>1) if supports, "
+                            "LR- (<1) if contradicts; it is never inverted by the server"
+                        ),
                         "default": 1.0,
                     },
                     "supports": {

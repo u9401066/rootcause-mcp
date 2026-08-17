@@ -1,16 +1,17 @@
 # Learned Rules - Agent 確認後學習的分類規則
 # 
-# 此檔案由系統自動維護，記錄經過確認的分類規則。
-# 可被 Agent 透過 MCP Tool 寫入，也可以人工編輯。
+# 此檔案是隨套件發布的唯讀基準，記錄經專家策展的分類規則。
+# MCP runtime 會將 Agent 確認的規則寫入 OS user-data 目錄下的
+# hfacs/learned_rules.yaml，不會修改安裝套件或原始碼內的基準檔。
 #
 # ═══════════════════════════════════════════════════════════════
 # 學習方式說明：
 # ═══════════════════════════════════════════════════════════════
 #
-# 方式 1: Agent 主動學習 (透過 MCP Tool)
+# 方式 1: Agent 主動學習 (透過 MCP Tool，寫入 user-data)
 #   - Agent 建議 HFACS 分類後，用戶確認
 #   - Agent 呼叫 rc_confirm_classification 工具
-#   - 系統自動寫入此檔案
+#   - 系統自動寫入 user-data 的 learned_rules.yaml
 #
 # 方式 2: Session 分析學習 (批次)
 #   - 從已完成的 RCA Session 中提取

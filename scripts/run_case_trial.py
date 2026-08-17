@@ -1,16 +1,22 @@
-"""
-End-to-End Trial Simulation Script for RootCause MCP.
+"""Synthetic preview regression script for RootCause MCP.
 
-Simulates complete real-world clinical reasoning cycles on god-level cases:
+Exercises clinical reasoning flows on six synthetic cases:
 1. 'dynamic_lvot_obstruction_sam': Intraoperative shock worsening with Epinephrine.
 2. 'pris_status_epilepticus': Propofol Infusion Syndrome misdiagnosed as sepsis/pancreatitis.
+3. 'trauma_hyperkalemia_arrest': Hyperkalemia during massive transfusion.
+4. 'postop_pe_death': Post-operative pulmonary embolism after prophylaxis delay.
+5. 'lvad_suction_event': LVAD suction and mechanical hemolysis.
+6. 'realistic_delayed_diagnosis': Closed-loop radiology communication failure.
 
-Verifies:
+Checks:
 - Physical provenance anchoring across heterogeneous files (TXT, CSV, XML).
 - Socratic guidance state transitions (Evidence -> Differential -> Bayesian -> Audit -> Synthesis).
 - Bayesian hypothesis evaluation and rule-out logic.
 - Cognitive audit & bias detection.
-- Deterministic Markdown report & Mermaid export generation.
+- Deterministic preliminary Markdown preview & Mermaid export generation.
+
+This script is not a release-acceptance or report-finalization workflow. The
+native multi-source release gates are covered by tests/test_native_case_acceptance.py.
 """
 
 from __future__ import annotations
@@ -35,6 +41,88 @@ from rootcause_mcp.interface.mermaid import (
     build_evidence_graph,
     render_reasoning_chain_mermaid,
 )
+
+
+def _record_preview_result(
+    report_response: dict[str, Any],
+    results: dict[str, Any],
+    guidance: Any,
+) -> str | None:
+    """Validate and record an explicitly preliminary report response."""
+    status = str(report_response.get("status", "missing"))
+    finalized = report_response.get("finalized")
+    missing_prerequisites = list(guidance.missing_prerequisites)
+    results["readiness"] = {
+        "is_ready_for_report": guidance.is_ready_for_report,
+        "completeness_score": guidance.completeness_score,
+        "missing_prerequisites": missing_prerequisites,
+    }
+    results["report"] = {
+        "status": status,
+        "mode": "PRELIMINARY",
+        "finalized": finalized,
+    }
+
+    if status != "success":
+        message = str(
+            report_response.get("message", "report handler returned no error message")
+        )
+        error = f"Preliminary report generation failed ({status}): {message}"
+        results["errors"].append(error)
+        print(f" -> ❌ {error}")
+        return None
+
+    content = report_response.get("content")
+    if not isinstance(content, str) or not content.strip():
+        error = "Preliminary report response did not contain non-empty text content"
+        results["errors"].append(error)
+        print(f" -> ❌ {error}")
+        return None
+
+    if finalized is not False:
+        error = "Preview request unexpectedly returned a finalized report"
+        results["errors"].append(error)
+        print(f" -> ❌ {error}")
+        return None
+
+    readiness_label = "READY" if guidance.is_ready_for_report else "NOT_READY"
+    print(
+        " -> Report status: PRELIMINARY "
+        f"(readiness={readiness_label}, missing={len(missing_prerequisites)})"
+    )
+    return content
+
+
+def _failed_preview_case(results: dict[str, Any], start_time: float) -> dict[str, Any]:
+    """Finish a case whose preliminary report could not be generated."""
+    results["elapsed_seconds"] = time.perf_counter() - start_time
+    results["success"] = False
+    return results
+
+
+def _complete_preview_case(
+    results: dict[str, Any],
+    start_time: float,
+    guidance: Any,
+    case_label: str,
+    top_hypothesis: Any,
+) -> dict[str, Any]:
+    """Record the outcome without conflating preview success with readiness."""
+    elapsed = time.perf_counter() - start_time
+    success = not results["errors"] and not results["warnings"]
+    results["elapsed_seconds"] = elapsed
+    results["success"] = success
+    readiness_label = "READY" if guidance.is_ready_for_report else "NOT_READY"
+    outcome = "PASSED" if success else "FAILED"
+    icon = "✅" if success else "❌"
+    print(
+        f"\n{icon} {case_label} PREVIEW REGRESSION {outcome} in {elapsed:.3f}s: "
+        f"Status=PRELIMINARY, Readiness={readiness_label}, "
+        f"Top={top_hypothesis.diagnosis} "
+        f"(P={top_hypothesis.current_probability:.3f})"
+    )
+    return results
+
 
 # ============================================================================
 # Case 1: Dynamic LVOT Obstruction (SAM)
@@ -375,19 +463,21 @@ async def run_sam_case() -> dict[str, Any]:
     )
 
     # Step 6 & 7: Synthesis
-    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Report...")
+    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Preview...")
     report_res = await contract_handlers.handle(
         "rc_generate_contract_report",
         {
             "session_id": session_id,
             "format": "markdown",
             "detail_level": "full",
-            "finalize": True,
+            "finalize": False,
         },
     )
-    report_md = str(report_res["content"])
+    report_md = _record_preview_result(report_res, results, g5)
+    if report_md is None:
+        return _failed_preview_case(results, start_time)
     print(
-        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+        f" -> Generated Preliminary Markdown Preview ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
     )
 
     print("\n[Step 7] Generating Verified Mermaid Presenters...")
@@ -400,14 +490,8 @@ async def run_sam_case() -> dict[str, Any]:
     print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
     print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
 
-    elapsed = time.perf_counter() - start_time
     top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-    print(
-        f"\n✅ SAM CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
-    )
-    results["elapsed_seconds"] = elapsed
-    results["success"] = True
-    return results
+    return _complete_preview_case(results, start_time, g5, "SAM", top_h)
 
 
 # ============================================================================
@@ -699,19 +783,21 @@ async def run_pris_case() -> dict[str, Any]:
     )
 
     # Step 6 & 7: Synthesis
-    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Report...")
+    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Preview...")
     report_res = await contract_handlers.handle(
         "rc_generate_contract_report",
         {
             "session_id": session_id,
             "format": "markdown",
             "detail_level": "full",
-            "finalize": True,
+            "finalize": False,
         },
     )
-    report_md = str(report_res["content"])
+    report_md = _record_preview_result(report_res, results, g5)
+    if report_md is None:
+        return _failed_preview_case(results, start_time)
     print(
-        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+        f" -> Generated Preliminary Markdown Preview ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
     )
 
     print("\n[Step 7] Generating Verified Mermaid Presenters...")
@@ -724,14 +810,8 @@ async def run_pris_case() -> dict[str, Any]:
     print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
     print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
 
-    elapsed = time.perf_counter() - start_time
     top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-    print(
-        f"\n✅ PRIS CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
-    )
-    results["elapsed_seconds"] = elapsed
-    results["success"] = True
-    return results
+    return _complete_preview_case(results, start_time, g5, "PRIS", top_h)
 
 
 # ============================================================================
@@ -1017,19 +1097,21 @@ async def run_trauma_case() -> dict[str, Any]:
     )
 
     # Step 6 & 7: Synthesis
-    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Report...")
+    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Preview...")
     report_res = await contract_handlers.handle(
         "rc_generate_contract_report",
         {
             "session_id": session_id,
             "format": "markdown",
             "detail_level": "full",
-            "finalize": True,
+            "finalize": False,
         },
     )
-    report_md = str(report_res["content"])
+    report_md = _record_preview_result(report_res, results, g5)
+    if report_md is None:
+        return _failed_preview_case(results, start_time)
     print(
-        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+        f" -> Generated Preliminary Markdown Preview ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
     )
 
     print("\n[Step 7] Generating Verified Mermaid Presenters...")
@@ -1042,14 +1124,8 @@ async def run_trauma_case() -> dict[str, Any]:
     print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
     print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
 
-    elapsed = time.perf_counter() - start_time
     top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-    print(
-        f"\n✅ TRAUMA CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
-    )
-    results["elapsed_seconds"] = elapsed
-    results["success"] = True
-    return results
+    return _complete_preview_case(results, start_time, g5, "TRAUMA", top_h)
 
 
 # ============================================================================
@@ -1343,19 +1419,21 @@ async def run_pe_case() -> dict[str, Any]:
     )
 
     # Step 6 & 7: Synthesis
-    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Report...")
+    print("\n[Step 6] Synthesizing Deterministic Zero-LLM Markdown Preview...")
     report_res = await contract_handlers.handle(
         "rc_generate_contract_report",
         {
             "session_id": session_id,
             "format": "markdown",
             "detail_level": "full",
-            "finalize": True,
+            "finalize": False,
         },
     )
-    report_md = str(report_res["content"])
+    report_md = _record_preview_result(report_res, results, g5)
+    if report_md is None:
+        return _failed_preview_case(results, start_time)
     print(
-        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+        f" -> Generated Preliminary Markdown Preview ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
     )
 
     print("\n[Step 7] Generating Verified Mermaid Presenters...")
@@ -1368,14 +1446,8 @@ async def run_pe_case() -> dict[str, Any]:
     print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
     print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
 
-    elapsed = time.perf_counter() - start_time
     top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-    print(
-        f"\n✅ PE CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
-    )
-    results["elapsed_seconds"] = elapsed
-    results["success"] = True
-    return results
+    return _complete_preview_case(results, start_time, g5, "PE", top_h)
 
 
 # ============================================================================
@@ -1671,7 +1743,7 @@ async def run_lvad_case() -> dict[str, Any]:
     )
 
     # Step 6 & 7: Synthesis using Near Miss / Non-Death Template
-    print("\n[Step 6] Synthesizing Deterministic Non-Death RCA Markdown Report...")
+    print("\n[Step 6] Synthesizing Deterministic Non-Death RCA Markdown Preview...")
     template_file = "config/templates/near_miss_adverse_event_rca_template.md"
     report_res = await contract_handlers.handle(
         "rc_generate_contract_report",
@@ -1680,12 +1752,14 @@ async def run_lvad_case() -> dict[str, Any]:
             "format": "markdown",
             "detail_level": "full",
             "template_file": template_file,
-            "finalize": True,
+            "finalize": False,
         },
     )
-    report_md = str(report_res["content"])
+    report_md = _record_preview_result(report_res, results, g5)
+    if report_md is None:
+        return _failed_preview_case(results, start_time)
     print(
-        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+        f" -> Generated Preliminary Markdown Preview ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
     )
 
     print("\n[Step 7] Generating Verified Mermaid Presenters...")
@@ -1698,14 +1772,8 @@ async def run_lvad_case() -> dict[str, Any]:
     print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
     print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
 
-    elapsed = time.perf_counter() - start_time
     top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-    print(
-        f"\n✅ LVAD CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
-    )
-    results["elapsed_seconds"] = elapsed
-    results["success"] = True
-    return results
+    return _complete_preview_case(results, start_time, g5, "LVAD", top_h)
 
 
 # ============================================================================
@@ -2003,7 +2071,7 @@ async def run_delayed_diag_case() -> dict[str, Any]:
     )
 
     # Step 6 & 7: Synthesis using Near Miss / Non-Death Template
-    print("\n[Step 6] Synthesizing Deterministic Non-Death RCA Markdown Report...")
+    print("\n[Step 6] Synthesizing Deterministic Non-Death RCA Markdown Preview...")
     template_file = "config/templates/near_miss_adverse_event_rca_template.md"
     report_res = await contract_handlers.handle(
         "rc_generate_contract_report",
@@ -2012,12 +2080,14 @@ async def run_delayed_diag_case() -> dict[str, Any]:
             "format": "markdown",
             "detail_level": "full",
             "template_file": template_file,
-            "finalize": True,
+            "finalize": False,
         },
     )
-    report_md = str(report_res["content"])
+    report_md = _record_preview_result(report_res, results, g5)
+    if report_md is None:
+        return _failed_preview_case(results, start_time)
     print(
-        f" -> Generated Markdown Report ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
+        f" -> Generated Preliminary Markdown Preview ({len(report_md)} chars, {len(report_md.splitlines())} lines)"
     )
 
     print("\n[Step 7] Generating Verified Mermaid Presenters...")
@@ -2030,14 +2100,8 @@ async def run_delayed_diag_case() -> dict[str, Any]:
     print(f" -> Reasoning Chain Mermaid ({len(reasoning_mermaid)} chars)")
     print(f" -> Evidence Graph Mermaid ({len(evidence_mermaid)} chars)")
 
-    elapsed = time.perf_counter() - start_time
     top_h = max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-    print(
-        f"\n✅ DELAYED DIAGNOSIS CASE COMPLETED in {elapsed:.3f}s: Top={top_h.diagnosis} (P={top_h.current_probability:.3f})"
-    )
-    results["elapsed_seconds"] = elapsed
-    results["success"] = True
-    return results
+    return _complete_preview_case(results, start_time, g5, "DELAYED DIAGNOSIS", top_h)
 
 
 # ============================================================================
@@ -2045,8 +2109,10 @@ async def run_delayed_diag_case() -> dict[str, Any]:
 # ============================================================================
 
 
-async def main() -> None:
-    parser = argparse.ArgumentParser(description="RootCause MCP Clinical Trial Runner")
+async def main() -> int:
+    parser = argparse.ArgumentParser(
+        description="RootCause MCP synthetic preliminary-preview regression runner"
+    )
     parser.add_argument(
         "--case",
         choices=["sam", "pris", "trauma", "pe", "lvad", "delay", "all"],
@@ -2081,14 +2147,35 @@ async def main() -> None:
         r_delay = await run_delayed_diag_case()
         overall_results.append(r_delay)
 
+    failed_results = [result for result in overall_results if not result["success"]]
     print("\n" + "=" * 75)
-    print(f"🏁 ALL {len(overall_results)} CLINICAL TRIALS EXECUTED SUCCESSFULLY")
-    for r in overall_results:
-        print(
-            f"   - {r['case']}: {r['elapsed_seconds']:.3f}s (Warnings: {len(r['warnings'])}, Errors: {len(r['errors'])})"
+    print(f"🏁 SYNTHETIC PREVIEW REGRESSION SUMMARY ({len(overall_results)} cases)")
+    for result in overall_results:
+        outcome = "PASS" if result["success"] else "FAIL"
+        report = result.get("report", {})
+        report_mode = (
+            report.get("mode", "PRELIMINARY")
+            if report.get("status") == "success"
+            else "UNAVAILABLE"
         )
+        readiness = result.get("readiness", {})
+        readiness_label = (
+            "READY" if readiness.get("is_ready_for_report") else "NOT_READY"
+        )
+        print(
+            f"   - {result['case']}: Regression={outcome}, "
+            f"Report={report_mode}, Readiness={readiness_label}, "
+            f"{result['elapsed_seconds']:.3f}s "
+            f"(Warnings: {len(result['warnings'])}, Errors: {len(result['errors'])})"
+        )
+    print("   Release acceptance/finalization: NOT EVALUATED by this script")
+    if failed_results:
+        print(f"❌ {len(failed_results)} synthetic preview regression case(s) failed")
+    else:
+        print("✅ Synthetic preview regressions passed; reports remain preliminary")
     print("=" * 75)
+    return 1 if failed_results else 0
 
 
 if __name__ == "__main__":
-    asyncio.run(main())
+    raise SystemExit(asyncio.run(main()))

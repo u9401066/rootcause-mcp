@@ -90,7 +90,7 @@ def get_reasoning_tools() -> list[Tool]:
         Tool(
             name="rc_create_checkpoint",
             description=(
-                "Create an immutable, timestamped snapshot of active clinical reasoning state "
+                "Create an integrity-checked, timestamped snapshot of active clinical reasoning state "
                 "(evidence, hypotheses, Bayesian history, thinking steps, reasoning chain) "
                 "to prevent context loss or enable branching investigation."
             ),
@@ -134,7 +134,10 @@ def get_reasoning_tools() -> list[Tool]:
                     },
                     "checkpoint_file": {
                         "type": "string",
-                        "description": "Path to checkpoint JSON file (optional)",
+                        "description": (
+                            "Checkpoint JSON filename or path inside this session's "
+                            "checkpoint directory (optional)"
+                        ),
                     },
                 },
                 "required": ["session_id"],

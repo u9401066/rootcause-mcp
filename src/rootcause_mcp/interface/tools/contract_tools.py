@@ -60,8 +60,12 @@ def get_contract_tools() -> list[Tool]:
                     },
                     "finalize": {
                         "type": "boolean",
-                        "description": "Finalize report (make immutable)",
+                        "description": "Finalize only after readiness, conflict, manifest, and reviewer gates pass",
                         "default": False,
+                    },
+                    "approved_by": {
+                        "type": "string",
+                        "description": "Explicit reviewer identity from ROOTCAUSE_AUTHORIZED_REVIEWERS; required when finalize=true",
                     },
                 },
                 "required": ["session_id"],

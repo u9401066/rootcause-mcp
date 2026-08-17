@@ -16,6 +16,7 @@ from rootcause_mcp.domain.entities.hypothesis import (
     HypothesisStatus,
     HypothesisStatusChange,
     LikelihoodRatio,
+    PlannedDiagnosticTest,
 )
 from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept
 from rootcause_mcp.domain.value_objects.identifiers import HypothesisId
@@ -34,10 +35,20 @@ class SQLiteHypothesisRepository:
 
     async def save(self, session_id: str, hypothesis: Hypothesis) -> None:
         """Save hypothesis to database."""
+        diagnosis_data = hypothesis.diagnosis.model_dump(mode="json")
+        diagnosis_data["_hypothesis_context"] = {
+            "must_not_miss": hypothesis.must_not_miss,
+            "alternatives_considered": hypothesis.alternatives_considered,
+            "uncertainty_factors": hypothesis.uncertainty_factors,
+            "confidence_rationale": hypothesis.confidence_rationale,
+            "planned_tests": [
+                item.model_dump(mode="json") for item in hypothesis.planned_tests
+            ],
+        }
         model = HypothesisModel(
             id=hypothesis.id.value,
             session_id=session_id,
-            diagnosis_data=hypothesis.diagnosis.model_dump(mode="json"),
+            diagnosis_data=diagnosis_data,
             prior_probability=hypothesis.prior_probability,
             current_probability=hypothesis.current_probability,
             inclusion_criteria=hypothesis.inclusion_criteria,
@@ -99,6 +110,7 @@ class SQLiteHypothesisRepository:
     @staticmethod
     def _to_entity(model: HypothesisModel) -> Hypothesis:
         """Convert a persistence model into a domain entity."""
+        context = model.diagnosis_data.get("_hypothesis_context", {})
         return Hypothesis(
             id=HypothesisId(model.id),
             diagnosis=ClinicalConcept.model_validate(model.diagnosis_data),
@@ -106,6 +118,14 @@ class SQLiteHypothesisRepository:
             current_probability=model.current_probability,
             inclusion_criteria=model.inclusion_criteria,
             exclusion_criteria=model.exclusion_criteria,
+            must_not_miss=bool(context.get("must_not_miss", False)),
+            alternatives_considered=list(context.get("alternatives_considered", [])),
+            uncertainty_factors=list(context.get("uncertainty_factors", [])),
+            confidence_rationale=str(context.get("confidence_rationale", "")),
+            planned_tests=[
+                PlannedDiagnosticTest.model_validate(item)
+                for item in context.get("planned_tests", [])
+            ],
             likelihood_ratios=[
                 LikelihoodRatio.model_validate(item) for item in model.likelihood_ratios
             ],

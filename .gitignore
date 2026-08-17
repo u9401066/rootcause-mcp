@@ -38,12 +38,34 @@ logs/
 *.temp
 *.cache
 
-# Runtime-generated reports and diagrams
-data/exports/**
+# RootCause runtime clinical data (ignore rules do not untrack existing files)
+data/*.db
+data/*.db-wal
+data/*.db-shm
+data/*.db-journal
+data/**/*.db
+data/**/*.db-wal
+data/**/*.db-shm
+data/**/*.db-journal
+data/*.sqlite
+data/*.sqlite-wal
+data/*.sqlite-shm
+data/*.sqlite-journal
+data/**/*.sqlite
+data/**/*.sqlite-wal
+data/**/*.sqlite-shm
+data/**/*.sqlite-journal
+data/exports/
+data/**/exports/
+data/**/checkpoints/
+
+# Local agent hook state
+.github/hooks/_state/
 
 # 測試覆蓋率
 coverage/
 .coverage
+coverage.xml
 htmlcov/
 
 # 敏感資料

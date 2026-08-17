@@ -22,7 +22,10 @@ from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.fishbone import Fishbone, FishboneCause
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
-from rootcause_mcp.infrastructure.export_paths import build_export_path
+from rootcause_mcp.infrastructure.export_paths import (
+    build_export_path,
+    write_export_text,
+)
 from rootcause_mcp.interface.mermaid import render_fishbone_mermaid
 
 if TYPE_CHECKING:
@@ -64,7 +67,7 @@ class FishboneHandlers:
                 header += f"**Exported:** {datetime.now().isoformat()}\n\n"
                 content = header + content
 
-            file_path.write_text(content, encoding="utf-8")
+            write_export_text(file_path, content)
             logger.info("Exported %s to %s", export_type, file_path)
             return str(file_path)
         except (OSError, ValueError) as exc:

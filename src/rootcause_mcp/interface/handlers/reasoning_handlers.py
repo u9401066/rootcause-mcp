@@ -11,7 +11,10 @@ from typing import TYPE_CHECKING, Any
 
 from rootcause_mcp.application.checkpoint_service import CaseCheckpointService
 from rootcause_mcp.domain.services.gap_analyzer import ClinicalGapAnalyzer
-from rootcause_mcp.infrastructure.export_paths import build_export_path
+from rootcause_mcp.infrastructure.export_paths import (
+    build_export_path,
+    write_export_text,
+)
 from rootcause_mcp.interface.mermaid import render_reasoning_chain_mermaid
 
 if TYPE_CHECKING:
@@ -216,7 +219,7 @@ class ReasoningHandlers:
                     content += f"**Confidence**: {step.confidence:.0%}\n\n"
 
         # Write to file
-        output_path.write_text(content, encoding="utf-8")
+        write_export_text(output_path, content)
 
         return {
             "status": "success",

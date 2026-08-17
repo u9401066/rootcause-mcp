@@ -16,8 +16,9 @@ def get_verification_tools() -> list[Tool]:
         Tool(
             name="rc_verify_causation",
             description=(
-                "Verify causal relationship between cause and effect using "
-                "the Counterfactual Testing Framework. Tests: "
+                "Compatibility name for a conservative causation audit; this tool "
+                "does not establish clinical causality. It checks submitted "
+                "obligations using the Counterfactual Testing Framework. Tests: "
                 "1) Temporality - Did cause precede effect? "
                 "2) Necessity - Would effect occur without cause? "
                 "3) Mechanism - Is there a plausible causal pathway? "
@@ -32,35 +33,74 @@ def get_verification_tools() -> list[Tool]:
                     },
                     "cause": {
                         "type": "object",
-                        "description": "The cause event",
+                        "description": (
+                            "Proposed root event. For a durable/final-eligible audit, "
+                            "id, description, and evidence must exactly match the "
+                            "persisted Why root and clinical evidence ledger."
+                        ),
                         "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "Stable Why/root-cause node ID when applicable",
+                            },
                             "description": {
                                 "type": "string",
                                 "description": "Description of the cause",
                             },
                             "timestamp": {
                                 "type": "string",
-                                "description": "When the cause occurred (ISO format)",
+                                "format": "date-time",
+                                "description": (
+                                    "Canonical cause datetime containing 'T' and required "
+                                    "Z or numeric timezone offset; omit for date-only or "
+                                    "unknown/local time"
+                                ),
                                 "default": None,
                             },
+                            "evidence": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "uniqueItems": True,
+                                "description": "Evidence IDs supporting the proposed cause event",
+                            },
                         },
-                        "required": ["description"],
+                        "required": ["id", "description", "evidence"],
                     },
                     "effect": {
                         "type": "object",
-                        "description": "The effect event",
+                        "description": (
+                            "Effect event; every evidence reference must resolve in "
+                            "the clinical evidence ledger"
+                        ),
                         "properties": {
+                            "id": {
+                                "type": "string",
+                                "description": "Stable effect/event ID when available",
+                            },
                             "description": {
                                 "type": "string",
                                 "description": "Description of the effect",
                             },
                             "timestamp": {
                                 "type": "string",
-                                "description": "When the effect occurred (ISO format)",
+                                "format": "date-time",
+                                "description": (
+                                    "Canonical effect datetime containing 'T' and required "
+                                    "Z or numeric timezone offset; omit for date-only or "
+                                    "unknown/local time"
+                                ),
                                 "default": None,
                             },
+                            "evidence": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "uniqueItems": True,
+                                "description": "Evidence IDs supporting the effect event",
+                            },
                         },
-                        "required": ["description"],
+                        "required": ["description", "evidence"],
                     },
                     "verification_level": {
                         "type": "string",

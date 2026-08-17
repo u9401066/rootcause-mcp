@@ -14,7 +14,10 @@ from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.why_node import TeachingCase, WhyChain
 from rootcause_mcp.domain.value_objects.enums import TeachingLevel
 from rootcause_mcp.domain.value_objects.identifiers import SessionId
-from rootcause_mcp.infrastructure.export_paths import build_export_path
+from rootcause_mcp.infrastructure.export_paths import (
+    build_export_path,
+    write_export_text,
+)
 from rootcause_mcp.interface.mermaid import render_why_tree_mermaid
 
 if TYPE_CHECKING:
@@ -143,7 +146,7 @@ class WhyTreeArtifactHandlers:
                     f"**Session:** `{session_id}`\n"
                     f"**Exported:** {datetime.now().isoformat()}\n\n{content}"
                 )
-            file_path.write_text(content, encoding="utf-8")
+            write_export_text(file_path, content)
             return str(file_path)
         except (OSError, ValueError) as exc:
             logger.warning("Failed to write export file: %s", exc)

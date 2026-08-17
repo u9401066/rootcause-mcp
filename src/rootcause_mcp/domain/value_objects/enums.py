@@ -102,11 +102,11 @@ class FishboneCategoryType(str, Enum):
 
 
 class VerificationResult(str, Enum):
-    """Causation Verification Result."""
+    """Conservative causation-audit disposition (not clinical proof)."""
 
-    VERIFIED = "VERIFIED"  # 因果關係已驗證
+    VERIFIED = "VERIFIED"  # Submitted audit obligations passed
     VERIFIED_WITH_CAVEATS = "VERIFIED_WITH_CAVEATS"  # 有條件驗證
-    REJECTED = "REJECTED"  # 因果關係被拒絕
+    REJECTED = "REJECTED"  # Submitted relationship failed an audit obligation
     INSUFFICIENT_DATA = "INSUFFICIENT_DATA"  # 資料不足
 
 

@@ -35,7 +35,9 @@ def test_unsubstantiated_counterfactual_is_not_fully_verified() -> None:
         level=VerificationLevel.COMPREHENSIVE,
     )
 
-    assert result.overall_result is VerificationResult.VERIFIED_WITH_CAVEATS
+    assert result.overall_result is VerificationResult.INSUFFICIENT_DATA
+    assert result.tests.temporality is not None
+    assert not result.tests.temporality.passed
     assert result.tests.necessity is not None
     assert not result.tests.necessity.passed
     assert result.tests.mechanism is not None
@@ -54,6 +56,6 @@ async def test_mcp_handler_uses_domain_validator() -> None:
     )
 
     text = content[0].text
-    assert "VERIFIED_WITH_CAVEATS" in text
+    assert "INSUFFICIENT_DATA" in text
     assert "**Necessity:** False" in text
     assert "**Mechanism:** False" in text

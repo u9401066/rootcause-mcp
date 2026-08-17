@@ -63,15 +63,23 @@ class LearnedRulesService:
     提供對 learned_rules.yaml 的 CRUD 操作。
     """
 
-    def __init__(self, config_dir: Path | str | None = None):
+    def __init__(
+        self,
+        config_dir: Path | str | None = None,
+        *,
+        baseline_file: Path | str | None = None,
+    ):
         """
         初始化服務.
 
         Args:
             config_dir: config/hfacs 目錄路徑
+            baseline_file: 唯讀的基準 learned_rules.yaml。可寫檔尚未建立時，
+                先從此檔載入；任何變更仍只會寫入 ``config_dir``。
         """
         self.config_dir = self._resolve_config_dir(config_dir)
         self.rules_file = self.config_dir / "learned_rules.yaml"
+        self.baseline_file = Path(baseline_file) if baseline_file else None
         self._data: dict[str, Any] = {}
         self._load()
 
@@ -90,8 +98,12 @@ class LearnedRulesService:
 
     def _load(self) -> None:
         """載入學習規則檔案."""
-        if self.rules_file.exists():
-            with self.rules_file.open(encoding="utf-8") as f:
+        load_path = self.rules_file
+        if not load_path.exists() and self.baseline_file is not None:
+            load_path = self.baseline_file
+
+        if load_path.exists():
+            with load_path.open(encoding="utf-8") as f:
                 self._data = yaml.safe_load(f) or {}
         else:
             self._data = {

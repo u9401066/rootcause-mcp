@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from typing import Any
 
 from rootcause_mcp.domain.entities.evidence import Evidence
@@ -62,6 +63,31 @@ def _extract_time_key(text: str) -> str:
     )
     match = re.search(pattern, text, flags=re.IGNORECASE)
     return match.group(1) if match else ""
+
+
+def _absolute_time_key(value: object) -> float | None:
+    """Return a chronological key only when a full calendar date is available."""
+    parsed: datetime | None = None
+    if isinstance(value, datetime):
+        parsed = value
+    elif value:
+        candidate = str(value).strip().replace("Z", "+00:00")
+        try:
+            parsed = datetime.fromisoformat(candidate)
+        except ValueError:
+            for pattern in ("%Y/%m/%d %H:%M", "%Y/%m/%d"):
+                try:
+                    parsed = datetime.strptime(candidate, pattern)
+                    break
+                except ValueError:
+                    continue
+    if parsed is None:
+        return None
+    if parsed.tzinfo is None:
+        # The source timezone remains unresolved, but a deterministic calendar
+        # order is still safer than lexicographic phase ordering.
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.timestamp()
 
 
 def _detect_pattern_from_text(text: str) -> str:
@@ -415,7 +441,8 @@ def build_timeline(
     # 1. Ingest custom events if provided
     if custom_events:
         for ev in custom_events:
-            t_str = str(ev.get("time") or ev.get("timestamp") or "T_Event")
+            raw_time = ev.get("timestamp") or ev.get("time")
+            t_str = str(raw_time or "T_Event")
             content = str(ev.get("content") or ev.get("description") or "")
             phase = ev.get("phase") or _infer_phase(t_str, content, pattern)
             events.append(
@@ -431,6 +458,7 @@ def build_timeline(
                     "evidence_type": str(
                         ev.get("evidence_type") or ev.get("type") or "OBSERVATION"
                     ),
+                    "_sort_instant": _absolute_time_key(raw_time),
                 }
             )
 
@@ -463,10 +491,22 @@ def build_timeline(
                     "source_document": item.source.document_id,
                     "verified": item.verified,
                     "evidence_type": item.evidence_type.value,
+                    "_sort_instant": _absolute_time_key(item.event_timestamp),
                 }
             )
 
-    events.sort(key=lambda x: (x["phase"], x["time"], x["id"]))
+    events.sort(
+        key=lambda event: (
+            0 if event["_sort_instant"] is not None else 1,
+            event["_sort_instant"]
+            if event["_sort_instant"] is not None
+            else event["phase"],
+            "" if event["_sort_instant"] is not None else event["time"],
+            event["id"],
+        )
+    )
+    for event in events:
+        event.pop("_sort_instant", None)
     diagram_title = (
         title or f"Clinical Chronology ({pattern.replace('_', ' ').title()})"
     )

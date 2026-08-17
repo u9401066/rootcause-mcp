@@ -81,10 +81,95 @@ def test_bayesian_update_handles_probability_boundaries() -> None:
         evidence_id="EVD-one",
         likelihood_ratio=0.2,
         updated_by="test-agent",
+        supports=False,
     )
 
     assert impossible.current_probability == 0.0
     assert certain.current_probability == 1.0
+
+
+def test_contradicting_likelihood_ratio_reduces_probability() -> None:
+    contradicted = _hypothesis(0.3).bayesian_update(
+        evidence_id="EVD-refutes",
+        likelihood_ratio=0.145,
+        updated_by="test-agent",
+        supports=False,
+    )
+
+    assert contradicted.current_probability < 0.3
+    assert contradicted.bayesian_history[-1].likelihood_ratio == pytest.approx(0.145)
+    assert contradicted.contradicting_evidence_ids == ["EVD-refutes"]
+
+
+@pytest.mark.parametrize(
+    ("supports", "likelihood_ratio"),
+    [(True, 0.5), (False, 2.0)],
+)
+def test_bayesian_update_rejects_directionally_inconsistent_lr(
+    supports: bool,
+    likelihood_ratio: float,
+) -> None:
+    with pytest.raises(ValueError, match="likelihood ratio"):
+        _hypothesis(0.3).bayesian_update(
+            evidence_id="EVD-inconsistent",
+            likelihood_ratio=likelihood_ratio,
+            updated_by="test-agent",
+            supports=supports,
+        )
+
+
+def test_orchestrator_rejects_duplicate_evidence_update() -> None:
+    orchestrator = ClinicalReasoningOrchestrator("no-double-counting")
+    evidence = orchestrator.add_evidence("A source-grounded finding", auto_verify=False)
+    hypothesis = orchestrator.propose_hypothesis(
+        diagnosis="Test diagnosis",
+        prior_probability=0.2,
+        rationale="A sufficiently detailed clinical rationale.",
+    )
+    orchestrator.link_evidence_to_hypothesis(
+        evidence.id.value,
+        hypothesis.id.value,
+        likelihood_ratio=3.0,
+    )
+
+    with pytest.raises(ValueError, match="duplicate Bayesian updates"):
+        orchestrator.link_evidence_to_hypothesis(
+            evidence.id.value,
+            hypothesis.id.value,
+            likelihood_ratio=3.0,
+        )
+
+
+def test_likelihood_metadata_does_not_invent_reciprocal_test_values() -> None:
+    orchestrator = ClinicalReasoningOrchestrator("lr-metadata")
+    supporting = orchestrator.add_evidence("Supporting finding", auto_verify=False)
+    contradicting = orchestrator.add_evidence("Refuting finding", auto_verify=False)
+    hypothesis = orchestrator.propose_hypothesis(
+        diagnosis="Test diagnosis",
+        prior_probability=0.4,
+        rationale="A sufficiently detailed clinical rationale.",
+    )
+
+    after_support = orchestrator.link_evidence_to_hypothesis(
+        supporting.id.value,
+        hypothesis.id.value,
+        likelihood_ratio=5.0,
+        supports=True,
+    )
+    after_refute = orchestrator.link_evidence_to_hypothesis(
+        contradicting.id.value,
+        hypothesis.id.value,
+        likelihood_ratio=0.2,
+        supports=False,
+    )
+
+    support_assessment, refute_assessment = after_refute.likelihood_ratios
+    assert after_support.likelihood_ratios[0].lr_negative is None
+    assert support_assessment.applied_likelihood_ratio == 5.0
+    assert support_assessment.supports is True
+    assert refute_assessment.lr_positive is None
+    assert refute_assessment.applied_likelihood_ratio == 0.2
+    assert refute_assessment.supports is False
 
 
 def test_hypothesis_status_transition_is_auditable() -> None:

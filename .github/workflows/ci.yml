@@ -1,0 +1,194 @@
+name: CI
+
+"on":
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  dependency-audit:
+    name: Frozen production dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-suffix: dependency-audit
+
+      - name: Audit frozen production dependencies
+        run: |
+          uv export --frozen --no-dev --no-emit-project --no-hashes --quiet \
+            --output-file "${RUNNER_TEMP}/requirements.txt"
+          uvx --from "pip-audit==2.9.0" pip-audit --strict \
+            --requirement "${RUNNER_TEMP}/requirements.txt"
+
+  quality:
+    name: Quality (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.12", "3.13"]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-suffix: py${{ matrix.python-version }}
+
+      - name: Install all dependency groups and extras
+        run: >-
+          uv sync --all-extras --all-groups --locked
+          --python "${{ matrix.python-version }}"
+
+      - name: Ruff lint
+        run: uv run --no-sync ruff check .
+
+      - name: Ruff format check
+        run: uv run --no-sync ruff format --check .
+
+      - name: Mypy
+        run: uv run --no-sync mypy src
+
+      - name: Pytest with branch coverage
+        run: >-
+          uv run --no-sync pytest
+          -W error::ResourceWarning
+          --cov-report=term-missing
+          --cov-report=xml
+
+      - name: Bandit security scan
+        run: >-
+          uv run --no-sync bandit -c pyproject.toml -r src scripts
+          --severity-level low --confidence-level medium
+
+  package:
+    name: Build and installed-wheel smoke
+    needs: [dependency-audit, quality]
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-suffix: package-py313
+
+      - name: Install all dependency groups and extras
+        run: uv sync --all-extras --all-groups --locked --python "3.13"
+
+      - name: Build wheel and source distribution
+        run: uv build
+
+      - name: Validate distribution metadata
+        run: uvx --from "twine==6.2.0" twine check dist/*
+
+      - name: Smoke-test installed wheel resources and entry point
+        run: |
+          shopt -s nullglob
+          wheels=(dist/*.whl)
+          if [[ "${#wheels[@]}" -ne 1 ]]; then
+            echo "Expected exactly one wheel, found ${#wheels[@]}" >&2
+            exit 1
+          fi
+
+          WHEEL_PATH="${GITHUB_WORKSPACE}/${wheels[0]}"
+          SMOKE_VENV="${RUNNER_TEMP}/rootcause-wheel-smoke"
+          uv venv "${SMOKE_VENV}" --python "3.13"
+          uv pip install --python "${SMOKE_VENV}/bin/python" "${WHEEL_PATH}"
+
+          cd "${RUNNER_TEMP}"
+          "${SMOKE_VENV}/bin/python" - <<'PY'
+          import asyncio
+          import os
+          from importlib.metadata import entry_points
+
+          from rootcause_mcp.interface.resources import (
+              get_static_resources,
+              read_clinical_resource,
+          )
+          from rootcause_mcp.server_v2 import _get_config_path
+
+          console_scripts = [
+              item
+              for item in entry_points(group="console_scripts")
+              if item.name == "rootcause-mcp"
+          ]
+          assert len(console_scripts) == 1, console_scripts
+          assert console_scripts[0].value == "rootcause_mcp.server_v2:main"
+          assert callable(console_scripts[0].load())
+
+          config_root = _get_config_path()
+          expected_files = (
+              "protocols/clinical_reasoning_sop.yaml",
+              "domains/anesthesia_perioperative_arrest.yaml",
+              "templates/clinical_reasoning_report_template.md",
+          )
+          for relative_path in expected_files:
+              assert config_root.joinpath(relative_path).is_file(), relative_path
+
+          os.environ["ROOTCAUSE_CONFIG_DIR"] = str(config_root)
+          resource_uris = {str(item.uri) for item in get_static_resources()}
+          required_uris = {
+              "clinical://contracts/case-input-manifest",
+              "clinical://contracts/case-analysis-report",
+              "clinical://protocols/clinical-reasoning-sop",
+              "clinical://templates/clinical-reasoning-report-template",
+          }
+          assert required_uris <= resource_uris, required_uris - resource_uris
+
+          manifest = asyncio.run(
+              read_clinical_resource("clinical://contracts/case-input-manifest")
+          )
+          assert '"schema_version"' in manifest.contents[0].text
+          PY

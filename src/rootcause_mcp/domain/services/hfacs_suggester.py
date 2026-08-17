@@ -85,6 +85,8 @@ class HFACSSuggester:
         self,
         config_dir: Path | str | None = None,
         active_domains: list[str] | None = None,
+        learned_rules_path: Path | str | None = None,
+        fallback_learned_rules_path: Path | str | None = None,
     ):
         """
         Initialize the suggester.
@@ -93,9 +95,23 @@ class HFACSSuggester:
             config_dir: Path to config/hfacs directory. If None, auto-detect.
             active_domains: List of active domains (e.g., ["anesthesia"]).
                            If None, all domains are active.
+            learned_rules_path: Writable learned-rules file. When omitted, the
+                baseline file under ``config_dir`` is used for compatibility.
+            fallback_learned_rules_path: Read-only baseline learned-rules file
+                used until ``learned_rules_path`` has been created.
         """
         self.config_dir = self._resolve_config_dir(config_dir)
         self.active_domains = active_domains
+        self.learned_rules_path = (
+            Path(learned_rules_path)
+            if learned_rules_path is not None
+            else self.config_dir / "learned_rules.yaml"
+        )
+        self.fallback_learned_rules_path = (
+            Path(fallback_learned_rules_path)
+            if fallback_learned_rules_path is not None
+            else None
+        )
         self.rules: list[KeywordRule] = []
         self.config = MatchingConfig()
         # Cache code info from YAML (avoids dependency on HFACS_CODE_TABLE)
@@ -131,7 +147,12 @@ class HFACSSuggester:
         self._load_base_rules_from_frameworks()
 
         # 3. Load learned rules
-        learned_rules_path = self.config_dir / "learned_rules.yaml"
+        learned_rules_path = self.learned_rules_path
+        if (
+            not learned_rules_path.exists()
+            and self.fallback_learned_rules_path is not None
+        ):
+            learned_rules_path = self.fallback_learned_rules_path
         if learned_rules_path.exists():
             self._load_learned_rules(learned_rules_path)
 

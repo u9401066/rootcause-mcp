@@ -8,6 +8,7 @@ as inspectable MCP resources and resource templates.
 from __future__ import annotations
 
 import os
+import re
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -20,6 +21,7 @@ from mcp.types import (
 
 if TYPE_CHECKING:
     from rootcause_mcp.application.server_state import ServerState
+    from rootcause_mcp.interface.handlers.contract_handlers import ContractHandlers
 
 
 def _get_config_root() -> Path:
@@ -30,10 +32,46 @@ def _get_config_root() -> Path:
     return (Path(__file__).resolve().parent.parent.parent.parent / "config").resolve()
 
 
+_RESOURCE_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+
+
+def _resolve_static_resource(
+    config_root: Path,
+    category: str,
+    slug: str,
+    suffix: str,
+) -> Path | None:
+    """Resolve an enumerated static resource without allowing URI traversal."""
+    if not _RESOURCE_SLUG.fullmatch(slug):
+        return None
+    base = (config_root / category).resolve()
+    target = (base / f"{slug.replace('-', '_')}{suffix}").resolve()
+    if not target.is_relative_to(base) or not target.is_file():
+        return None
+    return target
+
+
 def get_static_resources() -> list[Resource]:
     """Return all static clinical playbooks, protocols, and templates as MCP Resources."""
     config_root = _get_config_root()
     resources: list[Resource] = []
+
+    resources.extend(
+        [
+            Resource(
+                uri="clinical://contracts/case-input-manifest",
+                name="Case Input Manifest JSON Schema",
+                description="Versioned multi-source raw-record handoff contract",
+                mime_type="application/schema+json",
+            ),
+            Resource(
+                uri="clinical://contracts/case-analysis-report",
+                name="Case Analysis Report JSON Schema",
+                description="Canonical DDx and root-cause analysis output contract",
+                mime_type="application/schema+json",
+            ),
+        ]
+    )
 
     # 1. Protocols
     protocols_dir = config_root / "protocols"
@@ -89,7 +127,7 @@ def get_resource_templates() -> list[ResourceTemplate]:
         ResourceTemplate(
             uri_template="clinical://sessions/{session_id}/report",
             name="Session Clinical Reasoning Report",
-            description="Dynamic finalized or preliminary clinical reasoning contract report for a session",
+            description="Current preliminary unified DDx and RCA preview from live session state",
             mime_type="text/markdown",
         ),
         ResourceTemplate(
@@ -113,9 +151,47 @@ def get_resource_templates() -> list[ResourceTemplate]:
     ]
 
 
+async def _read_unified_report_preview(
+    uri: str,
+    session_id: str,
+    contract_handler: ContractHandlers,
+) -> ReadResourceResult:
+    """Render the current unified report without creating an export artifact."""
+    preview = await contract_handler.handle_generate_contract_report(
+        {
+            "session_id": session_id,
+            "format": "markdown",
+            "detail_level": "standard",
+            "finalize": False,
+        },
+        persist_export=False,
+    )
+    if preview.get("status") == "success":
+        return ReadResourceResult(
+            contents=[
+                TextResourceContents(
+                    uri=uri,
+                    mime_type="text/markdown",
+                    text=str(preview["content"]),
+                )
+            ]
+        )
+    message = preview.get("message", "Unified report preview failed")
+    return ReadResourceResult(
+        contents=[
+            TextResourceContents(
+                uri=uri,
+                mime_type="text/plain",
+                text=f"Report preview unavailable: {message}",
+            )
+        ]
+    )
+
+
 async def read_clinical_resource(
     uri: str,
     server_state: ServerState | None = None,
+    contract_handler: ContractHandlers | None = None,
 ) -> ReadResourceResult:
     """
     Read a clinical resource by URI.
@@ -127,11 +203,41 @@ async def read_clinical_resource(
     config_root = _get_config_root()
     clean_uri = uri.strip()
 
+    if clean_uri == "clinical://contracts/case-input-manifest":
+        import json
+
+        from rootcause_mcp.domain.value_objects.case_manifest import CaseInputManifest
+
+        return ReadResourceResult(
+            contents=[
+                TextResourceContents(
+                    uri=clean_uri,
+                    mime_type="application/schema+json",
+                    text=json.dumps(CaseInputManifest.model_json_schema(), indent=2),
+                )
+            ]
+        )
+
+    if clean_uri == "clinical://contracts/case-analysis-report":
+        import json
+
+        from rootcause_mcp.domain.value_objects.contract_report import ContractReport
+
+        return ReadResourceResult(
+            contents=[
+                TextResourceContents(
+                    uri=clean_uri,
+                    mime_type="application/schema+json",
+                    text=json.dumps(ContractReport.model_json_schema(), indent=2),
+                )
+            ]
+        )
+
     # 1. Handle Protocols
     if clean_uri.startswith("clinical://protocols/"):
-        slug = clean_uri.replace("clinical://protocols/", "").replace("-", "_")
-        target = config_root / "protocols" / f"{slug}.yaml"
-        if target.is_file():
+        slug = clean_uri.removeprefix("clinical://protocols/")
+        target = _resolve_static_resource(config_root, "protocols", slug, ".yaml")
+        if target is not None:
             text = target.read_text(encoding="utf-8")
             return ReadResourceResult(
                 contents=[
@@ -145,9 +251,9 @@ async def read_clinical_resource(
 
     # 2. Handle Domains
     if clean_uri.startswith("clinical://domains/"):
-        slug = clean_uri.replace("clinical://domains/", "").replace("-", "_")
-        target = config_root / "domains" / f"{slug}.yaml"
-        if target.is_file():
+        slug = clean_uri.removeprefix("clinical://domains/")
+        target = _resolve_static_resource(config_root, "domains", slug, ".yaml")
+        if target is not None:
             text = target.read_text(encoding="utf-8")
             return ReadResourceResult(
                 contents=[
@@ -161,9 +267,9 @@ async def read_clinical_resource(
 
     # 3. Handle Templates
     if clean_uri.startswith("clinical://templates/"):
-        slug = clean_uri.replace("clinical://templates/", "").replace("-", "_")
-        target = config_root / "templates" / f"{slug}.md"
-        if target.is_file():
+        slug = clean_uri.removeprefix("clinical://templates/")
+        target = _resolve_static_resource(config_root, "templates", slug, ".md")
+        if target is not None:
             text = target.read_text(encoding="utf-8")
             return ReadResourceResult(
                 contents=[
@@ -180,17 +286,27 @@ async def read_clinical_resource(
         parts = clean_uri.replace("clinical://sessions/", "").split("/")
         if len(parts) == 2:
             session_id, artifact = parts[0], parts[1]
+            if artifact == "report" and contract_handler is not None:
+                return await _read_unified_report_preview(
+                    clean_uri,
+                    session_id,
+                    contract_handler,
+                )
+
             orch = await server_state.get_orchestrator(session_id)
             if orch is not None:
                 if artifact == "guidance":
                     import json
+
                     guidance = orch.get_guidance()
                     return ReadResourceResult(
                         contents=[
                             TextResourceContents(
                                 uri=clean_uri,
                                 mime_type="application/json",
-                                text=json.dumps(guidance.model_dump(mode="json"), indent=2),
+                                text=json.dumps(
+                                    guidance.model_dump(mode="json"), indent=2
+                                ),
                             )
                         ]
                     )
@@ -200,6 +316,7 @@ async def read_clinical_resource(
                     from rootcause_mcp.domain.services.gap_analyzer import (
                         ClinicalGapAnalyzer,
                     )
+
                     gap_rep = ClinicalGapAnalyzer.analyze(
                         session_id=session_id,
                         evidence_store=orch.evidence_store,
@@ -218,6 +335,7 @@ async def read_clinical_resource(
                     )
                 elif artifact == "timeline":
                     from rootcause_mcp.interface.mermaid import build_timeline
+
                     tl_data = build_timeline(orch.evidence_store.values())
                     content = f"{tl_data['table']}\n\n{tl_data['mermaid']}"
                     return ReadResourceResult(
@@ -237,22 +355,46 @@ async def read_clinical_resource(
                         render_contract_report_markdown,
                     )
                     from rootcause_mcp.interface.mermaid import build_evidence_graph
+
                     ranked_hypotheses = sorted(
                         orch.hypothesis_store.values(),
                         key=lambda h: h.current_probability,
                         reverse=True,
                     )
-                    rep = ContractReport(
-                        report_id=f"RPT-{session_id[:8]}",
-                        session_id=session_id,
-                        generated_by="resource_reader",
-                        hypotheses=[h.model_dump(mode="json") for h in ranked_hypotheses],
-                        evidence=[e.model_dump(mode="json") for e in orch.evidence_store.values()],
-                        reasoning_chain=[s.model_dump(mode="json") for s in orch.reasoning_chain.steps],
-                        thinking_chain=[s.model_dump(mode="json") for s in orch.thinking_chain.steps],
-                        evidence_graph=build_evidence_graph(orch.evidence_store.values(), orch.hypothesis_store.values()),
+                    rep = ContractReport.model_validate(
+                        {
+                            "report_id": f"RPT-{session_id[:8]}",
+                            "session_id": session_id,
+                            "generated_by": "resource_reader",
+                            "hypotheses": [
+                                h.model_dump(mode="json") for h in ranked_hypotheses
+                            ],
+                            "evidence": [
+                                e.model_dump(mode="json")
+                                for e in orch.evidence_store.values()
+                            ],
+                            "reasoning_chain": [
+                                s.model_dump(mode="json")
+                                for s in orch.reasoning_chain.steps
+                            ],
+                            "thinking_chain": [
+                                s.model_dump(mode="json")
+                                for s in orch.thinking_chain.steps
+                            ],
+                            "evidence_graph": build_evidence_graph(
+                                orch.evidence_store.values(),
+                                orch.hypothesis_store.values(),
+                            ),
+                        }
                     )
-                    md_text = render_contract_report_markdown(rep, detail_level="standard")
+                    md_text = render_contract_report_markdown(
+                        rep, detail_level="standard"
+                    )
+                    md_text = (
+                        "> Limited clinical-only fallback: ContractHandlers was not "
+                        "supplied, so source-manifest and RCA artifacts are omitted.\n\n"
+                        f"{md_text}"
+                    )
                     return ReadResourceResult(
                         contents=[
                             TextResourceContents(

@@ -10,6 +10,7 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
+from rootcause_mcp.domain.value_objects.case_manifest import CaseInputManifest
 from rootcause_mcp.domain.value_objects.enums import (
     CaseType,
     SessionStatus,
@@ -154,6 +155,23 @@ class RCASession:
         """Update (merge) data for a specific stage."""
         self.stage_records[stage].data.update(data)
         self._touch()
+
+    def set_source_manifest(self, manifest: CaseInputManifest) -> None:
+        """Pin the versioned multi-source handoff manifest to the gather stage."""
+        self.update_stage_data(
+            Stage.GATHER,
+            {
+                "source_manifest": manifest.model_dump(mode="json"),
+                "source_manifest_digest": manifest.digest,
+            },
+        )
+
+    def get_source_manifest(self) -> CaseInputManifest | None:
+        """Return the pinned source manifest, if this session has one."""
+        payload = self.get_stage_data(Stage.GATHER).get("source_manifest")
+        if not payload:
+            return None
+        return CaseInputManifest.model_validate(payload)
 
     # === Problem Statement ===
 

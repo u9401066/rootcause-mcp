@@ -45,7 +45,10 @@ def get_evidence_tools() -> list[Tool]:
                     },
                     "source_document": {
                         "type": "string",
-                        "description": "Source document ID (e.g., file path, record ID)",
+                        "description": (
+                            "Stable document_id from the session source manifest; "
+                            "legacy sessions without a manifest may use a local path"
+                        ),
                     },
                     "source_location": {
                         "type": "string",
@@ -92,6 +95,16 @@ def get_evidence_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Clinical context (e.g., 'Post-op Day 1 hypotension')",
                     },
+                    "event_timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": (
+                            "Canonical ISO 8601/RFC3339 clinical event datetime containing "
+                            "'T' and required Z or numeric timezone offset; omit for "
+                            "date-only or unknown/local time. Kept separate from "
+                            "extraction/ingestion time"
+                        ),
+                    },
                     "auto_verify": {
                         "type": "boolean",
                         "description": "Automatically verify snippet against physical file on disk if available",
@@ -135,8 +148,16 @@ def get_evidence_tools() -> list[Tool]:
                     },
                     "verified_by": {
                         "type": "string",
-                        "description": "Who verified this evidence",
+                        "description": "Named reviewer or deterministic verifier actor",
                         "default": "agent",
+                    },
+                    "manual_confirmation": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": (
+                            "Explicitly assert independent human review. The reviewer must be "
+                            "present in the operator-controlled ROOTCAUSE_AUTHORIZED_REVIEWERS allowlist."
+                        ),
                     },
                     "raw_snippet": {
                         "type": "string",
@@ -144,7 +165,11 @@ def get_evidence_tools() -> list[Tool]:
                     },
                     "document_id": {
                         "type": "string",
-                        "description": "Optional file path override if not previously set on evidence",
+                        "description": (
+                            "Optional stable document_id. Manifest-bound evidence cannot "
+                            "be rebound to a different source; legacy sessions may use a "
+                            "local file path override"
+                        ),
                     },
                 },
                 "required": ["session_id", "evidence_id"],

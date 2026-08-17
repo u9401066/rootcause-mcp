@@ -124,11 +124,11 @@ class GuidedResponseBuilder:
         ],
         "root_cause_found": [
             "這個根本原因符合 HFACS 的哪個分類？",
-            "需要驗證這個因果關係的強度嗎？",
+            "需要執行保守因果稽核並保留未證明限制嗎？",
             "有沒有其他的根本原因也需要標記？",
         ],
         "verification_needed": [
-            "這個因果關係的 temporality (時間順序) 是否明確？",
+            "提議關係的 temporality (時間順序) 是否有證據？",
             "有沒有其他可能的解釋 (alternative explanation)？",
             "證據的強度足夠嗎？",
         ],
@@ -193,7 +193,7 @@ class GuidedResponseBuilder:
             },
             "root_causes": {
                 "identified": progress.root_causes_identified,
-                "verified": progress.root_causes_verified,
+                "causation_audit_obligations_passed": progress.root_causes_verified,
             },
             "hfacs": {
                 "causes_tagged": progress.causes_with_hfacs,
@@ -305,14 +305,14 @@ class GuidedResponseBuilder:
                 hint="如果已找到根本原因，請標記它",
             )
 
-        # Stage 6: Root cause not verified
+        # Stage 6: Root claim has not passed the conservative audit obligations
         if progress.root_causes_verified == 0:
             push_q = self._get_push_question("verification_needed")
             return NextAction(
                 required=False,  # Optional but recommended
                 tool="rc_verify_causation",
                 question=push_q,
-                hint="建議驗證因果關係的強度",
+                hint="建議執行保守因果稽核；結果不等同臨床因果證明",
             )
 
         # Stage 7: Analysis complete
@@ -328,7 +328,8 @@ class GuidedResponseBuilder:
         import random
 
         questions = self.PUSH_QUESTIONS.get(category, ["請繼續分析"])
-        return random.choice(questions)
+        # Pseudo-randomness only varies non-security guidance text.
+        return random.choice(questions)  # nosec B311
 
 
 def format_guided_response(
