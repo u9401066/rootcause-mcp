@@ -1,0 +1,10 @@
+Device events:
+- 2025-03-09T02:12:30Z: tall-T-wave morphology alert, no acknowledgement recorded.
+- 2025-03-09T02:25:00Z: low-heart-rate alert acknowledged.
+- 2025-03-09T02:30:45Z: ventricular-arrhythmia alert, no acknowledgement recorded.
+
+Post-event observations:
+- Resuscitation rhythm progressed from a sine-wave appearance to asystole.
+- Surgical packing remained intact; approximately 200 mL of fresh intra-abdominal blood was found.
+- Acute tubular injury was described in both kidneys.
+- Post-event vitreous potassium was reported as greater than 8.5 mmol/L.

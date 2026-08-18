@@ -10,6 +10,8 @@ Defines 4 Session management MCP tools:
 
 from mcp.types import Tool
 
+from rootcause_mcp.interface.tools.schema_fragments import case_input_manifest_schema
+
 
 def get_session_tools() -> list[Tool]:
     """Return Session management tool definitions."""
@@ -43,6 +45,13 @@ def get_session_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Initial description of the incident",
                         "default": "",
+                    },
+                    "source_manifest": {
+                        **case_input_manifest_schema(),
+                        "description": (
+                            "Versioned manifest for every raw record in scope. Register all "
+                            "sources, including documents from which no finding was extracted."
+                        ),
                     },
                 },
                 "required": ["case_type", "case_title"],

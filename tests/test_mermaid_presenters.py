@@ -1,5 +1,7 @@
 """Regression tests for generated Mermaid analysis artifacts."""
 
+from datetime import UTC, datetime
+
 import pytest
 
 from rootcause_mcp.application.clinical_reasoning_orchestrator import (
@@ -53,7 +55,7 @@ def test_evidence_graph_tracks_contradictions_causes_and_safe_labels() -> None:
     orchestrator.link_evidence_to_hypothesis(
         evidence_id=evidence.id.value,
         hypothesis_id=hypothesis.id.value,
-        likelihood_ratio=5.0,
+        likelihood_ratio=0.2,
         supports=False,
         rationale="Normal serial tests argue against acute myocardial infarction.",
     )
@@ -245,6 +247,27 @@ def test_timeline_mermaid_handles_empty_evidence() -> None:
     assert len(tl_data["events"]) == 0
     assert "No timeline events recorded" in tl_data["mermaid"]
     assert "No timeline events recorded" in tl_data["table"]
+
+
+def test_timeline_uses_canonical_event_timestamp_for_cross_source_order() -> None:
+    orchestrator = ClinicalReasoningOrchestrator("cross-source-time")
+    later = orchestrator.add_evidence(
+        content="Baseline label should not override the actual event time",
+        source_document="late-note.txt",
+        event_timestamp=datetime(2026, 8, 17, 8, 20, tzinfo=UTC),
+    )
+    earlier = orchestrator.add_evidence(
+        content="Collapse label should not override the actual event time",
+        source_document="early-device.log",
+        event_timestamp=datetime(2026, 8, 17, 8, 5, tzinfo=UTC),
+    )
+
+    timeline = build_timeline(orchestrator.evidence_store.values())
+
+    assert [event["id"] for event in timeline["events"]] == [
+        earlier.id.value,
+        later.id.value,
+    ]
 
 
 def test_validate_mermaid_syntax_auto_fix_and_diagnostics() -> None:

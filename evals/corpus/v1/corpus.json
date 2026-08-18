@@ -1,0 +1,14 @@
+{
+  "schema_version": "rootcause-agent-eval-corpus/1",
+  "corpus_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "corpus_id": "rootcause-six-case-blinded-v1",
+  "de_identification": "Synthetic, date-shifted, neutral identifiers; no direct identifiers",
+  "cases": [
+    {"case_id": "CASE-001", "input_directory": "cases/CASE-001", "title": "Peri-induction hemodynamic collapse"},
+    {"case_id": "CASE-002", "input_directory": "cases/CASE-002", "title": "Critical deterioration during ICU sedation"},
+    {"case_id": "CASE-003", "input_directory": "cases/CASE-003", "title": "Cardiac arrest after trauma resuscitation"},
+    {"case_id": "CASE-004", "input_directory": "cases/CASE-004", "title": "Postoperative respiratory and circulatory deterioration"},
+    {"case_id": "CASE-005", "input_directory": "cases/CASE-005", "title": "Mechanical circulatory-support low-flow event"},
+    {"case_id": "CASE-006", "input_directory": "cases/CASE-006", "title": "Emergency return after outpatient imaging"}
+  ]
+}

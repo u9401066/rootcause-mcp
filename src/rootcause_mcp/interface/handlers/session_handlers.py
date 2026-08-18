@@ -15,9 +15,11 @@ from collections.abc import Sequence
 from typing import TYPE_CHECKING, Any
 
 from mcp.types import TextContent
+from pydantic import ValidationError
 
 from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.session import RCASession
+from rootcause_mcp.domain.value_objects.case_manifest import CaseInputManifest
 from rootcause_mcp.domain.value_objects.enums import CaseType, SessionStatus
 
 if TYPE_CHECKING:
@@ -65,21 +67,46 @@ class SessionHandlers:
                 )
             ]
 
+        source_manifest: CaseInputManifest | None = None
+        if raw_manifest := arguments.get("source_manifest"):
+            try:
+                source_manifest = CaseInputManifest.model_validate(raw_manifest)
+            except ValidationError:
+                return [
+                    TextContent(
+                        type="text",
+                        text=(
+                            "Error: Invalid source_manifest. Each document requires a "
+                            "unique document_id, source_uri, whole-file sha256, media_type, "
+                            "and source_kind."
+                        ),
+                    )
+                ]
+
         session = RCASession.create(
             case_type=case_type,
             case_title=case_title,
             initial_description=initial_description,
         )
+        if source_manifest is not None:
+            session.set_source_manifest(source_manifest)
 
         self._repo.save(session)
 
+        source_summary = (
+            f"- **Registered Sources:** {len(source_manifest.documents)}\n"
+            f"- **Source Manifest Digest:** `{source_manifest.digest}`\n\n"
+            if source_manifest is not None
+            else "- **Registered Sources:** 0 (source coverage is unknown)\n\n"
+        )
         result = (
             "✅ **Session Created Successfully**\n\n"
             f"- **Session ID:** `{session.id}`\n"
             f"- **Case Type:** {case_type.value}\n"
             f"- **Title:** {case_title}\n"
             f"- **Current Stage:** {session.current_stage.value}\n\n"
-            "**Next Steps:**\n"
+            + source_summary
+            + "**Next Steps:**\n"
             "1. Use `rc_init_fishbone` to create a Fishbone diagram\n"
             "2. Use `rc_suggest_hfacs` to get classification suggestions\n"
             "3. Use `rc_add_cause` to document causes"
@@ -132,6 +159,15 @@ class SessionHandlers:
 
         if session.problem_statement:
             result += f"\n\n**Problem Statement:**\n{session.problem_statement}"
+
+        source_manifest = session.get_source_manifest()
+        if source_manifest is not None:
+            result += (
+                "\n\n**Source Manifest:**\n"
+                f"- Documents: {len(source_manifest.documents)}\n"
+                f"- Digest: `{source_manifest.digest}`\n"
+                f"- Statuses: {', '.join(document.status.value for document in source_manifest.documents)}"
+            )
 
         return [TextContent(type="text", text=result)]
 

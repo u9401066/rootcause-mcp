@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "patient_key": "EVAL-PATIENT-006",
+  "encounter_key": "EVAL-ENCOUNTER-006",
+  "default_timezone": "UTC",
+  "documents": [
+    {"document_id": "SRC-001", "source_uri": "sources/SRC-001.txt", "sha256": "49f78a9034d148ce2d3a38744b778407b2c3f3f388946ae6c405eee67cad920b", "media_type": "text/plain", "source_kind": "outpatient_note", "revision": "1", "captured_at": "2025-06-02T10:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-002", "source_uri": "sources/SRC-002.txt", "sha256": "394d62cc979eb5cb686ff7aea6390bc1c9a4fa4bac5a1472257f479c6182ff63", "media_type": "text/plain", "source_kind": "imaging_report", "revision": "1", "captured_at": "2025-06-04T14:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-003", "source_uri": "sources/SRC-003.csv", "sha256": "aab2ec61b664fed55360781d9fa092acc62f3bd130c269ff0db5674e3d78b3a7", "media_type": "text/csv", "source_kind": "office_workflow_log", "revision": "1", "captured_at": "2025-06-04T17:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-004", "source_uri": "sources/SRC-004.txt", "sha256": "8795ffff4cf3467d767eef563f525d39ba171ee0010f3b4461e9e4874edf08cb", "media_type": "text/plain", "source_kind": "emergency_return_note", "revision": "1", "captured_at": "2025-07-18T19:42:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true}
+  ]
+}

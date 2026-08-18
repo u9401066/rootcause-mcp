@@ -1,7 +1,7 @@
 """
-Causation Validator Domain Service.
+Causation Audit Domain Service.
 
-Validates causal relationships using the Counterfactual Testing Framework.
+Audits submitted causal obligations without proving clinical causality.
 """
 
 from __future__ import annotations
@@ -26,6 +26,7 @@ class CauseEvent:
     """An event in a causal relationship."""
 
     description: str
+    event_id: str | None = None
     timestamp: datetime | None = None
     evidence: list[str] | None = None
 
@@ -101,7 +102,7 @@ class CausationVerificationResult:
 
 class CausationValidator:
     """
-    Domain service for validating causal relationships.
+    Conservative audit service for submitted causal relationships.
 
     Implements the Counterfactual Testing Framework with 4 tests:
     1. Temporality: Cause must precede effect
@@ -117,7 +118,7 @@ class CausationValidator:
         level: VerificationLevel = VerificationLevel.STANDARD,
     ) -> CausationVerificationResult:
         """
-        Validate a causal relationship between two events.
+        Audit a proposed causal relationship between two events.
 
         Args:
             cause: The proposed cause event
@@ -135,8 +136,9 @@ class CausationValidator:
         # Always run temporality check
         tests.temporality = self._check_temporality(cause, effect)
 
-        # If temporality fails, return early
-        if not tests.temporality.passed:
+        # A known reverse chronology rejects the claim. Missing timestamps are
+        # insufficient data, not evidence that chronology was satisfied.
+        if cause.timestamp and effect.timestamp and not tests.temporality.passed:
             return CausationVerificationResult(
                 verification_id=verification_id,
                 verification_level=level,
@@ -145,7 +147,9 @@ class CausationValidator:
                 tests=tests,
                 overall_result=VerificationResult.REJECTED,
                 confidence=ConfidenceScore(0.95),
-                interpretation="時序性測試失敗：原因必須在結果之前發生",
+                interpretation=(
+                    "提交的時序義務未通過；此結果不建立或否定完整臨床因果關係"
+                ),
                 next_steps=["檢查事件時間順序", "確認事件描述是否正確"],
             )
 
@@ -185,11 +189,10 @@ class CausationValidator:
                 ),
             )
 
-        # Without timestamps, we can't verify temporality precisely
-        # Return a "needs more info" result
+        # Without timestamps, temporality cannot be verified.
         return TemporalityResult(
-            passed=True,  # Assume correct if no timestamps
-            conclusion="無法精確驗證時序（缺少時間戳），假設時序正確",
+            passed=False,
+            conclusion="無法驗證時序（缺少原因或結果時間戳）",
         )
 
     def _check_necessity(
@@ -293,28 +296,24 @@ class CausationValidator:
                 passed_count += 1
 
         # Determine overall result
-        if passed_count == 0:
-            overall = VerificationResult.REJECTED
-            confidence = 0.9
-            strength = CausalStrength.NOT_CAUSAL
-            interpretation = "因果關係被拒絕"
-        elif passed_count == total_count:
+        if total_count > 0 and passed_count == total_count:
             overall = VerificationResult.VERIFIED
             confidence = 0.85
-            strength = (
-                CausalStrength.ROOT_CAUSE
-                if tests.sufficiency and tests.sufficiency.passed
-                else CausalStrength.CONTRIBUTING_FACTOR
-            )
-            interpretation = "因果關係已驗證"
+            # Passing submitted obligations does not establish clinical causal
+            # strength.  Root/contributing-factor attribution remains a human
+            # review decision outside this conservative audit service.
+            strength = None
+            interpretation = "提交的稽核義務已通過；這不是臨床因果關係的證明"
         else:
-            overall = VerificationResult.VERIFIED_WITH_CAVEATS
-            confidence = 0.7
-            strength = CausalStrength.CONTRIBUTING_FACTOR
-            interpretation = "因果關係部分驗證，存在注意事項"
+            overall = VerificationResult.INSUFFICIENT_DATA
+            confidence = 0.4
+            strength = None
+            interpretation = "資料不足；僅可保留為提議關係，不能宣稱臨床因果"
 
         # Build caveats
         caveats: list[str] = []
+        if tests.temporality and not tests.temporality.passed:
+            caveats.append("時序性尚未驗證")
         if tests.necessity and not tests.necessity.passed:
             caveats.append("必要性測試未通過")
         if tests.mechanism and not tests.mechanism.passed:
@@ -353,6 +352,6 @@ class CausationValidator:
             steps.append("分析識別出的其他因素是否也是必要條件")
 
         if not steps:
-            steps.append("因果關係已充分驗證，可進行下一步分析")
+            steps.append("提交的因果稽核義務已通過；仍需合格人員審查臨床因果主張")
 
         return steps

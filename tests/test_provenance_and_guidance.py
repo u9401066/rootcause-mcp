@@ -80,6 +80,121 @@ def test_provenance_verifier_snippet_mismatch(tmp_path: Path) -> None:
     assert match.match_type == "SNIPPET_NOT_FOUND"
 
 
+def test_normalized_match_ignores_blank_lines(tmp_path: Path) -> None:
+    sample_file = tmp_path / "notes.md"
+    sample_file.write_text(
+        "Document heading\n\nActual clinical content\n",
+        encoding="utf-8",
+    )
+    verifier = ProvenanceVerifier(search_roots=[tmp_path])
+
+    match = verifier.verify_provenance(
+        document_id="notes.md",
+        raw_snippet="THIS STRING DOES NOT EXIST",
+    )
+
+    assert match.is_verified is False
+    assert match.match_type == "SNIPPET_NOT_FOUND"
+
+
+def test_file_or_location_existence_does_not_verify_finding(tmp_path: Path) -> None:
+    sample_file = tmp_path / "chart.txt"
+    sample_file.write_text("Line 1: actual chart content\n", encoding="utf-8")
+    verifier = ProvenanceVerifier(search_roots=[tmp_path])
+
+    file_only = verifier.verify_provenance(document_id="chart.txt")
+    location_only = verifier.verify_provenance(
+        document_id="chart.txt",
+        location="Line 1",
+    )
+
+    assert file_only.is_verified is False
+    assert file_only.match_type == "FILE_EXISTS_UNVERIFIED"
+    assert location_only.is_verified is False
+    assert location_only.match_type == "LOCATION_EXISTS_UNVERIFIED"
+
+
+def test_provenance_verifier_rejects_path_outside_approved_roots(
+    tmp_path: Path,
+) -> None:
+    allowed = tmp_path / "allowed"
+    allowed.mkdir()
+    outside = tmp_path / "outside.txt"
+    outside.write_text("secret outside approved roots", encoding="utf-8")
+    verifier = ProvenanceVerifier(search_roots=[allowed])
+
+    match = verifier.verify_provenance(
+        document_id=str(outside),
+        raw_snippet="secret outside approved roots",
+    )
+
+    assert match.is_verified is False
+    assert match.match_type == "FILE_NOT_FOUND"
+
+
+def test_failed_match_is_not_silently_marked_verified(tmp_path: Path) -> None:
+    sample_file = tmp_path / "lab.txt"
+    sample_file.write_text("Potassium: 4.1 mmol/L\n", encoding="utf-8")
+    orchestrator = ClinicalReasoningOrchestrator("failed-verification")
+    orchestrator._provenance_verifier = ProvenanceVerifier(search_roots=[tmp_path])
+    evidence = orchestrator.add_evidence(
+        content="Potassium: 9.1 mmol/L",
+        source_document="lab.txt",
+        raw_snippet="Potassium: 9.1 mmol/L",
+        auto_verify=False,
+    )
+
+    checked, match = orchestrator.verify_evidence(
+        evidence.id.value,
+        verified_by="agent",
+    )
+
+    assert match is not None and match.match_type == "SNIPPET_NOT_FOUND"
+    assert checked.verified is False
+    assert checked.verification_method is None
+
+
+def test_manual_verification_requires_authorized_reviewer(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    sample_file = tmp_path / "scan.txt"
+    sample_file.write_text("Unreadable transcription placeholder\n", encoding="utf-8")
+    orchestrator = ClinicalReasoningOrchestrator("manual-verification")
+    orchestrator._provenance_verifier = ProvenanceVerifier(search_roots=[tmp_path])
+    evidence = orchestrator.add_evidence(
+        content="Finding reviewed on original scan",
+        source_document="scan.txt",
+        raw_snippet="not machine-readable",
+        auto_verify=False,
+    )
+
+    generic, _ = orchestrator.verify_evidence(
+        evidence.id.value,
+        verified_by="agent",
+        manual_confirmation=True,
+    )
+    untrusted, _ = orchestrator.verify_evidence(
+        evidence.id.value,
+        verified_by="Dr Fake",
+        manual_confirmation=True,
+    )
+    monkeypatch.setenv(
+        "ROOTCAUSE_AUTHORIZED_REVIEWERS",
+        "clinician-reviewer-17,quality-officer-2",
+    )
+    reviewed, _ = orchestrator.verify_evidence(
+        evidence.id.value,
+        verified_by="clinician-reviewer-17",
+        manual_confirmation=True,
+    )
+
+    assert generic.verified is False
+    assert untrusted.verified is False
+    assert reviewed.verified is True
+    assert reviewed.verification_method == "MANUAL_REVIEWER_CONFIRMATION"
+
+
 @pytest.mark.asyncio
 async def test_multi_loop_clinical_guidance_progression() -> None:
     """Guidance engine should guide low-tier agents through multi-step completion."""
@@ -105,12 +220,29 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         raw_snippet="ECG showing ST elevation",
         auto_verify=False,
     )
+    orchestrator.evidence_store[ev1.id.value] = ev1.mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
+    orchestrator.evidence_store[ev2.id.value] = ev2.mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
 
     # Propose 1 hypothesis -> Stage 2 DIFFERENTIAL_EXPANSION
     hyp1 = orchestrator.propose_hypothesis(
         diagnosis="Acute myocardial infarction",
         prior_probability=0.3,
         rationale="Hypotension and ST elevation support acute MI.",
+        planned_tests=[
+            {
+                "name": "Serial ECG and troponin",
+                "purpose": "RULE_OUT",
+                "expected_supporting_result": "Dynamic ischemic change",
+                "expected_refuting_result": "Adequate serial studies remain negative",
+                "status": "PLANNED",
+            }
+        ],
     )
 
     g2 = orchestrator.get_guidance()
@@ -123,6 +255,16 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         diagnosis="Pulmonary embolism",
         prior_probability=0.2,
         rationale="Recent surgery increases DVT/PE risk.",
+        must_not_miss=True,
+        planned_tests=[
+            {
+                "name": "CT pulmonary angiography",
+                "purpose": "RULE_OUT",
+                "expected_supporting_result": "Pulmonary arterial filling defect",
+                "expected_refuting_result": "Adequate study without filling defect",
+                "status": "PLANNED",
+            }
+        ],
     )
     assert hyp2.diagnosis.display == "Pulmonary embolism"
     hyp3 = orchestrator.propose_hypothesis(
@@ -145,6 +287,13 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         likelihood_ratio=10.0,
         supports=True,
         rationale="ST elevation highly specific for STEMI.",
+    )
+    orchestrator.link_evidence_to_hypothesis(
+        evidence_id=ev1.id.value,
+        hypothesis_id=hyp2.id.value,
+        likelihood_ratio=1.5,
+        supports=True,
+        rationale="Acute postoperative hypotension keeps PE in the differential.",
     )
     # Disconfirming check on hyp3 (Sepsis ruled out)
     orchestrator.exclude_hypothesis(
@@ -174,6 +323,33 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
     assert any(
         "rc_generate_contract_report" in act for act in g_final.next_recommended_actions
     )
+    assert g_final.missing_prerequisites == []
+
+
+def test_guidance_never_marks_incomplete_case_ready() -> None:
+    orchestrator = ClinicalReasoningOrchestrator("not-ready")
+    for index in range(2):
+        evidence = orchestrator.add_evidence(
+            content=f"Unverified finding {index}",
+            source_document=f"missing-{index}.txt",
+            auto_verify=False,
+        )
+        hypothesis = orchestrator.propose_hypothesis(
+            diagnosis=f"Hypothesis {index}",
+            rationale="A sufficiently detailed clinical rationale.",
+        )
+        orchestrator.link_evidence_to_hypothesis(
+            evidence.id.value,
+            hypothesis.id.value,
+            likelihood_ratio=2.0,
+        )
+
+    guidance = orchestrator.get_guidance()
+
+    assert guidance.is_ready_for_report is False
+    assert guidance.current_stage is not ReasoningStage.READY_FOR_SYNTHESIS
+    assert guidance.missing_prerequisites
+    assert guidance.checklist["disconfirming_evidence_tested"] is False
 
 
 @pytest.mark.asyncio
@@ -239,6 +415,113 @@ async def test_handlers_include_guidance_and_audit_tool() -> None:
     assert "stage" in res_audit
     assert "next_recommended_actions" in res_audit
     assert "checklist" in res_audit
+
+
+@pytest.mark.asyncio
+async def test_refuting_direction_reduces_posterior_probability() -> None:
+    state = ServerState()
+    evidence_handler = EvidenceHandlers(state)
+    dd_handler = DDHandlers(state)
+    session_id = "refuting-direction"
+    evidence = await evidence_handler.handle_add_evidence(
+        {
+            "session_id": session_id,
+            "content": "Normal right ventricle without strain",
+            "auto_verify": False,
+        }
+    )
+    hypothesis = await dd_handler.handle_propose_hypothesis(
+        {
+            "session_id": session_id,
+            "diagnosis": "Massive pulmonary embolism",
+            "prior_probability": 0.3,
+            "clinical_reasoning": "Acute shock requires explicit PE exclusion.",
+        }
+    )
+
+    result = await dd_handler.handle_link_evidence(
+        {
+            "session_id": session_id,
+            "evidence_id": evidence["evidence_id"],
+            "hypothesis_id": hypothesis["hypothesis_id"],
+            "direction": "REFUTES",
+            "weight": 0.9,
+            "rationale": "Normal RV anatomy argues against massive PE.",
+        }
+    )
+
+    assert result["status"] == "success"
+    assert result["supports"] is False
+    assert result["applied_likelihood_ratio"] < 1.0
+    assert result["posterior_probability"] < 0.3
+
+
+@pytest.mark.asyncio
+async def test_omitted_likelihood_ratio_is_neutral() -> None:
+    state = ServerState()
+    evidence_handler = EvidenceHandlers(state)
+    dd_handler = DDHandlers(state)
+    session_id = "neutral-default-lr"
+    evidence = await evidence_handler.handle_add_evidence(
+        {
+            "session_id": session_id,
+            "content": "Nonspecific observation",
+            "auto_verify": False,
+        }
+    )
+    hypothesis = await dd_handler.handle_propose_hypothesis(
+        {
+            "session_id": session_id,
+            "diagnosis": "Undifferentiated shock",
+            "prior_probability": 0.3,
+        }
+    )
+
+    result = await dd_handler.handle_link_evidence(
+        {
+            "session_id": session_id,
+            "evidence_id": evidence["evidence_id"],
+            "hypothesis_id": hypothesis["hypothesis_id"],
+        }
+    )
+
+    assert result["status"] == "success"
+    assert result["applied_likelihood_ratio"] == 1.0
+    assert result["posterior_probability"] == pytest.approx(0.3)
+
+
+@pytest.mark.asyncio
+async def test_add_evidence_accepts_canonical_event_timestamp() -> None:
+    state = ServerState()
+    handler = EvidenceHandlers(state)
+
+    result = await handler.handle_add_evidence(
+        {
+            "session_id": "canonical-event-time",
+            "content": "Hypotension began after induction",
+            "event_timestamp": "2026-08-17T08:15:00+08:00",
+            "auto_verify": False,
+        }
+    )
+
+    assert result["status"] == "success"
+    assert result["event_timestamp"] == "2026-08-17T08:15:00+08:00"
+
+
+def test_short_source_line_cannot_verify_longer_invented_snippet(
+    tmp_path: Path,
+) -> None:
+    source = tmp_path / "short-line.txt"
+    source.write_text("BP\n", encoding="utf-8")
+    verifier = ProvenanceVerifier(search_roots=[tmp_path])
+
+    result = verifier.verify_provenance(
+        document_id=str(source),
+        raw_snippet="BP 35/15 after induction with no response to vasopressor",
+    )
+
+    assert result.is_verified is False
+    assert result.match_type == "SNIPPET_NOT_FOUND"
 
 
 @pytest.mark.asyncio

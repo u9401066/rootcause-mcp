@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-08-14)
+# Progress (Updated: 2026-08-17)
 
 ## Done
 
@@ -35,7 +35,9 @@
 - 實作 `ClinicalGuidanceService` 狀態機（階段推進、完備度清單、下一步 Prompt 指令、蘇格拉底式詰問）
 - 新增 `rc_audit_reasoning_state` MCP 工具（總計 37 tools）
 - 實作跨平台一鍵自動安裝與註冊腳本 (`scripts/setup.ps1`, `scripts/setup.sh`, `scripts/install.py`)
-- 實作 6 個真實案例端到端臨床試跑器 `scripts/run_case_trial.py` (包含 SAM、PRIS、MTP 高血鉀、術後肺栓塞、LVAD 幫浦吸附、延遲診斷等 6 大案例，31 個原始檔案 100% 驗證，0.039s 完成)
+- 實作 6 組案例 fixture 的 preliminary regression/demo `scripts/run_case_trial.py`
+  （SAM、PRIS、MTP 高血鉀、術後肺栓塞、LVAD 幫浦吸附、延遲診斷）；
+  它檢查片段比對與 preview plumbing，不代表 release acceptance 或臨床正確性
 - 實作 Mermaid 語法稽核與自動修復工具 `rc_validate_diagram` 與時序圖渲染工具 `rc_render_timeline`
 - 實作 5 大臨床時序演變模式 (`perioperative_sequence`, `acute_crisis`, `delayed_diagnosis`, `barrier_failure`, `device_incident`)
 - 實作非死亡醫療不良事件與 Near Miss RCA 規範 (`non_death_adverse_event_protocol.yaml`) 與專用報告範本 (`near_miss_adverse_event_rca_template.md`)
@@ -47,15 +49,35 @@
 - 實作 **MCP Pre-Configured Clinical Prompts** (`anesthesia_mm_investigation`, 等 4 大臨床 Prompt)
 - 實作 **Server-Level Instructions & Meta-Prompt** 握手自動注入
 - 通過 102 個檔案的嚴格 mypy 型別檢查與 82 項單元/整合測試 (80.73% 覆蓋率)
+- 完成 multi-source manifest、whole-file SHA-256、exact provenance、strict canonical
+  timestamp、direct-LR DDx、RCA lineage 與 gated unified report 的 native MCP 驗收
+- 完成 patched runtime dependency lock、frozen `pip-audit`、Python 3.12／3.13、
+  package／installed-wheel release gate 定義；實際結果以當次 CI/release run 為準
+- 完成 Codex／Claude／Cline RootCause harness 鏡像與 Copilot／AGENTS 整合，並明示
+  raw binary extraction、PHI、人工核准與 preliminary-first 邊界
+- 完成 typed nested final report、machine-readable `conformance_checks[]`、root/audit
+  lineage/disposition、unique DDx、typed planned tests、authorized reviewer/time/hash
+  與 recursive final immutability 的 deterministic P0 gates
+- 建立去診斷／檔名提示的六案例 public engineering corpus 與 fail-closed eval
+  runner scaffold；public reference rubrics 不作 blinded gold claim
 
 ## Doing
 
-- 準備 v2.0.0-alpha 的發佈前審查
-- 更新 memory bank 與 Git 階段性 commit
+- 完成當次 CI/release gates 後交付 maintainer 審閱；不得沿用本檔舊 test count
+- 正式跨-Agent 36-run、private case bundle、分離的 private holdout、trusted trace、
+  兩名臨床 reviewer 與裁決仍為 `AGENT_EVAL_NOT_ESTABLISHED`
 
 ## Next
 
+- 將 protocol/domain/timeline YAML 收斂為 versioned runtime PolicyCatalog，session
+  pin policy version/digest，並用行為測試證明設定變更真正生效
+- 以至少三個真實 runtime 完成 3 × 6 × 2 formal matrix，使用 repo 外 private case
+  bundle、分離的 private holdout、trusted server/proxy trace、兩名 qualified clinical
+  reviewers 與分歧裁決
 - 建立正式資料庫 migration 機制 (Alembic)
-- 補 authentication、encryption-at-rest、tenant isolation 與 PHI governance
+- 補 authentication、trusted reviewer RBAC、encryption-at-rest、tenant isolation、
+  retention enforcement 與 PHI governance
+- 將 corrective action、owner、due date 與 effectiveness measure 建成 first-class
+  domain/report contract
 - 將共用 output envelope 細化為每個 tool 的 domain-specific output schema
 - 發布 v2.0.0-alpha（不得宣稱為醫療器材或自主診斷系統）

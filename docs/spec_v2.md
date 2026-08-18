@@ -1,10 +1,18 @@
 # rootcause-mcp 技術規格書 v2
 
+> [!CAUTION]
+> **歷史設計草案（non-normative）。** 本文件保留早期研究、Phase 3 構想與
+> 尚未實作的 causal-engine 選項，不代表目前 runtime 能力或安全宣稱。它所使用的
+> 「因果驗證」等舊詞不得解讀為臨床因果證明。現行行為以 MCP live contracts、
+> [API reference](api.md) 與
+> [MVP conformance and Agent evaluation](mvp_conformance_and_evaluation.md) 為準；
+> causation validator 只做保守 proof-obligation audit。
+
 **專案名稱：** rootcause-mcp  
-**版本：** 2.5.0  
-**最後更新：** 2026-01-15  
+**版本：** 2.0.0-alpha.1
+**最後更新：** 2026-08-17
 **類型：** Model Context Protocol (MCP) Server  
-**GitHub：** https://github.com/[owner]/rootcause-mcp
+**GitHub：** https://github.com/u9401066/rootcause-mcp
 
 ---
 
@@ -18,7 +26,7 @@
 | Schema | **Pydantic v2** | 標準 |
 | Persistence | **SQLite + SQLModel** | 決策 |
 | Graph | **networkx** | 決策 |
-| Ontology Reasoning | **owlready2** (Phase 2) | KG-RCA |
+| Ontology Reasoning | **YAML rules + Agent classification** | 可審核、可配置；不使用 owlready2 |
 | Causal Inference | **DoWhy-GCM** (Phase 3) | PMID:35950198 |
 | Causal Discovery | **causal-learn** (Phase 3) | py-why |
 | Linter | **ruff** | 最佳實踐 |
@@ -37,6 +45,7 @@
 1. [專案概述](#1-專案概述) ✅
    - 1.4 創新定位與價值主張 🆕
    - 1.5 風險與不確定性 🆕
+   - 1.6 多來源案件與標準產物驗收契約 🆕
 2. [理論基礎](#2-理論基礎) ✅
 3. [系統架構](#3-系統架構) ✅
 4. [RCA 流程引擎](#4-rca-流程引擎) ✅
@@ -63,7 +72,7 @@
 **rootcause-mcp 是什麼：**
 - 一個專注於 **結構化因果推論** 的 MCP Server
 - 提供 AI Agent **RCA 流程管控**、**因果驗證**、**魚骨圖生成** 能力
-- 確保推論過程有跡可循，杜絕幻覺式的因果宣稱
+- 讓推論過程有跡可循，偵測並阻擋未通過 release gate 的無來源因果宣稱
 
 **rootcause-mcp 不做什麼：**
 - ❌ 不負責資料原子化（由 Agent/LLM 處理）
@@ -191,6 +200,59 @@
    └─ 先能跑，再優化
    └─ 先單機，需要再分散式
 ```
+
+### 1.6 多來源案件與標準產物驗收契約
+
+本節定義 controlled evaluation 的最低可驗收行為。結構完整度只代表流程
+完成，不代表診斷正確、因果成立或可直接用於治療決策。
+
+#### 輸入與來源覆蓋
+
+- 一個 case session 可對應多個 raw source；Agent 先建立 source inventory，
+  記錄穩定的 `source_id`／路徑、檔案雜湊、媒體類型與處理狀態。
+- 每筆臨床 Evidence 必須指向一個 inventory source，並保留 exact raw snippet、
+  location、event timestamp（可得時）及 extraction method。
+- 來源 inventory 必須使用目前 manifest schema 的 `registered`、`extracted`、
+  `reviewed`、`failed`，且最終產物需揭露完全沒有取證或未完成 review 的來源。
+- RootCause MCP 不執行 OCR 或語意抽取；host Agent 或 Asset-Aware MCP 負責讀取／
+  解析，RootCause MCP 負責 inventory、provenance、推理狀態與 deterministic artifact。
+
+#### 證據驗證安全不變量
+
+- `verified=true` 僅能來自 exact／normalized snippet match，或具名人工審閱者
+  明確確認；檔案存在、行號存在或雜湊生成本身都不等於 finding 已驗證。
+- 自動比對失敗不得被降級成「人工已驗證」。失敗結果須維持 unverified 並回傳
+  diagnostics。
+- 預設只允許讀取 workspace、`ROOTCAUSE_DATA_DIR` 或顯式配置的 source roots；
+  不接受越界絕對路徑或 `..` traversal。
+
+#### 鑑別診斷與 Bayesian 不變量
+
+- 至少建立三個競爭 hypothesis（若臨床情境不適用，必須記錄理由）。
+- Applied LR 的語意固定：支持證據通常 `LR > 1`、反證通常 `0 < LR < 1`；
+  `supports` 只表示 relationship，不得再次對 LR 取倒數。
+- 同一 Evidence–Hypothesis pair 不得無意重複套用同一筆更新；若要重評，需有
+  明確 replace／supersede 語意與 audit record。
+- 最終產物必須揭露 prior、每次 applied LR、posterior、LR rationale、支持與
+  反證 Evidence IDs，以及未解決不確定性。
+
+#### RCA 與單一標準產物
+
+- DDx 說明「發生了什麼臨床機轉」；RCA 說明「為何防護系統未阻止事件」，兩者
+  必須分開呈現，不得把診斷名稱直接當作系統 root cause。
+- 完整標準產物 schema 必須包含：source inventory、timeline、evidence matrix、
+  ranked DDx、reasoning／cognitive audit、Fishbone、5-Why root causes、HFACS mapping、
+  causal verification、gaps／conflicts、quality metrics、human-review status、內容雜湊。
+- 若某一 RCA 區塊尚未建立，JSON 與 Markdown 都必須明示 `not_started`／
+  `incomplete`，不得靜默省略後仍標記 final-ready。
+
+#### 跨 Agent harness 一致性
+
+- Codex、Claude、Cline 與 Copilot 使用同一個 canonical workflow：source inventory
+  → evidence grounding → timeline → broad DDx → Bayesian discriminator testing →
+  cognitive audit → Fishbone／5-Why／HFACS → conflicts／causation audit → report。
+- Harness 必須禁止輸出隱私資料到外部服務、禁止把工具分數當作診療建議，並要求
+  qualified clinician 對 raw sources、LR、coding、root causes 與 action items 簽核。
 
 ---
 
@@ -3668,7 +3730,7 @@ graph LR
 
 ---
 
-**文件狀態：** ✅ 全部章節已完成
+**文件狀態：** 歷史設計封存；非現行 runtime 規範
 
 **版本歷史：**
 
@@ -3684,5 +3746,4 @@ graph LR
 
 ---
 
-rootcause-mcp Specification v2.5.0 - 最後更新：2026-01-15
-
+rootcause-mcp historical design specification — non-normative archive

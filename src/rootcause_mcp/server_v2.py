@@ -11,10 +11,11 @@ import asyncio
 import json
 import logging
 import os
-from collections.abc import AsyncIterator, Awaitable, Callable
-from contextlib import asynccontextmanager, suppress
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from contextlib import asynccontextmanager, contextmanager, suppress
 from dataclasses import dataclass
 from functools import partial
+from importlib import resources as package_resources
 from pathlib import Path
 from typing import Any
 
@@ -62,6 +63,7 @@ from rootcause_mcp.infrastructure.persistence.thinking_chain_repository import (
 from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
     SQLiteWhyTreeRepository,
 )
+from rootcause_mcp.infrastructure.runtime_paths import get_user_data_root
 
 # Handlers
 from rootcause_mcp.interface.handlers import (
@@ -123,28 +125,76 @@ class ServerRuntime:
 _runtime = ServerRuntime()
 
 
-def _get_config_path() -> Path:
-    """Get the configuration directory path."""
+def _get_direct_config_path() -> Path | None:
+    """Return an explicit/editable-checkout config path when one is available."""
     env_config = os.environ.get("ROOTCAUSE_CONFIG_DIR")
     if env_config:
-        return Path(env_config)
+        return Path(env_config).expanduser().resolve()
 
-    # Navigate from src/rootcause_mcp/server_v2.py to project root
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent.parent
-    return project_root / "config"
+    project_root = Path(__file__).resolve().parent.parent.parent
+    source_config = project_root / "config"
+    if (project_root / "pyproject.toml").is_file() and source_config.is_dir():
+        return source_config
+    return None
+
+
+def _get_config_path() -> Path:
+    """Get config from an override, editable checkout, or installed package."""
+    direct_path = _get_direct_config_path()
+    if direct_path is not None:
+        return direct_path
+
+    packaged = package_resources.files("rootcause_mcp").joinpath("config")
+    if isinstance(packaged, Path) and packaged.is_dir():
+        return packaged
+    raise FileNotFoundError(
+        "Packaged RootCause configuration is unavailable; reinstall rootcause-mcp "
+        "or set ROOTCAUSE_CONFIG_DIR"
+    )
+
+
+@contextmanager
+def _expose_config_path(config_path: Path) -> Iterator[Path]:
+    """Expose the resolved path to legacy config readers for one lifespan."""
+    existing = os.environ.get("ROOTCAUSE_CONFIG_DIR")
+    if existing is None:
+        os.environ["ROOTCAUSE_CONFIG_DIR"] = str(config_path)
+    try:
+        yield config_path
+    finally:
+        if existing is None:
+            os.environ.pop("ROOTCAUSE_CONFIG_DIR", None)
+
+
+@contextmanager
+def _config_path_context() -> Iterator[Path]:
+    """Keep extracted package resources alive for the server lifespan."""
+    direct_path = _get_direct_config_path()
+    if direct_path is not None:
+        if not direct_path.is_dir():
+            raise FileNotFoundError(
+                f"ROOTCAUSE_CONFIG_DIR is not a directory: {direct_path}"
+            )
+        with _expose_config_path(direct_path) as exposed:
+            yield exposed
+        return
+
+    packaged = package_resources.files("rootcause_mcp").joinpath("config")
+    if not packaged.is_dir():
+        raise FileNotFoundError(
+            "Packaged RootCause configuration is unavailable; reinstall "
+            "rootcause-mcp or set ROOTCAUSE_CONFIG_DIR"
+        )
+    with (
+        package_resources.as_file(packaged) as extracted,
+        _expose_config_path(extracted) as exposed,
+    ):
+        yield exposed
 
 
 def _get_data_path() -> Path:
-    """Get the data directory path."""
-    env_data = os.environ.get("ROOTCAUSE_DATA_DIR")
-    if env_data:
-        return Path(env_data)
-
-    # Navigate from src/rootcause_mcp/server_v2.py to project root
-    current_file = Path(__file__)
-    project_root = current_file.parent.parent.parent
-    return project_root / "data"
+    """Get the configured or platform-appropriate writable data directory."""
+    return get_user_data_root()
 
 
 def _get_tool_profile() -> str:
@@ -182,7 +232,7 @@ def _freeze_runtime_configuration() -> None:
 
 
 @asynccontextmanager
-async def lifespan(_server: Server) -> AsyncIterator[None]:
+async def lifespan(_server: Server) -> AsyncIterator[None]:  # noqa: PLR0915
     """
     Lifespan context manager for SDK 2.0.
 
@@ -192,9 +242,10 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     _freeze_runtime_configuration()
 
     # Setup paths
-    config_path = _get_config_path()
+    config_context = _config_path_context()
+    config_path = config_context.__enter__()
     data_path = _get_data_path()
-    data_path.mkdir(parents=True, exist_ok=True)
+    data_path.mkdir(parents=True, exist_ok=True, mode=0o700)
 
     # Initialize database
     db_path = data_path / "rca_sessions.db"
@@ -211,8 +262,17 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     reasoning_repo = SQLiteReasoningChainRepository(database)
 
     # Initialize services
-    hfacs_suggester = HFACSSuggester(config_path / "hfacs")
-    learned_rules_service = LearnedRulesService(config_path / "hfacs")
+    baseline_hfacs_path = config_path / "hfacs"
+    writable_hfacs_path = data_path / "hfacs"
+    learned_rules_service = LearnedRulesService(
+        writable_hfacs_path,
+        baseline_file=baseline_hfacs_path / "learned_rules.yaml",
+    )
+    hfacs_suggester = HFACSSuggester(
+        baseline_hfacs_path,
+        learned_rules_path=learned_rules_service.rules_file,
+        fallback_learned_rules_path=baseline_hfacs_path / "learned_rules.yaml",
+    )
 
     # Initialize application layer
     progress_tracker = SessionProgressTracker()
@@ -228,10 +288,19 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     # Initialize handlers
     # NEW in 2.0: Cognitive layer + Medical reasoning handlers (use ServerState)
     thinking_handlers = ThinkingHandlers(server_state)
-    evidence_handlers = EvidenceHandlers(server_state)
+    evidence_handlers = EvidenceHandlers(
+        server_state,
+        session_repository=session_repo,
+    )
     dd_handlers = DDHandlers(server_state)
     reasoning_handlers = ReasoningHandlers(server_state)
-    contract_handlers = ContractHandlers(server_state)
+    contract_handlers = ContractHandlers(
+        server_state,
+        session_repository=session_repo,
+        fishbone_repository=fishbone_repo,
+        why_tree_repository=why_tree_repo,
+        template_root=config_path / "templates",
+    )
 
     # Existing RCA handlers
     hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
@@ -249,6 +318,8 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
     verification_handlers = VerificationHandlers(
         progress_tracker=progress_tracker,
         server_state=server_state,
+        session_repository=session_repo,
+        why_tree_repository=why_tree_repo,
     )
     facade_handlers = FacadeHandlers(
         evidence_handlers=evidence_handlers,
@@ -279,12 +350,13 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:
 
     logger.info("✅ All handlers initialized")
 
-    yield
-
-    # Cleanup
-    logger.info("Shutting down RootCause MCP Server...")
-    database.close()
-    _runtime.clear()
+    try:
+        yield
+    finally:
+        logger.info("Shutting down RootCause MCP Server...")
+        database.close()
+        _runtime.clear()
+        config_context.__exit__(None, None, None)
 
 
 async def on_list_tools(_ctx: ServerRequestContext, _params: Any) -> ListToolsResult:
@@ -517,6 +589,7 @@ def _to_call_tool_result(result: Any) -> CallToolResult:
         return CallToolResult(
             content=[TextContent(type="text", text=text)],
             structured_content=result,
+            is_error=str(result.get("status", "success")).lower() == "error",
         )
     if isinstance(result, (list, tuple)):
         content: list[Any] = [
@@ -529,11 +602,120 @@ def _to_call_tool_result(result: Any) -> CallToolResult:
             item.text if isinstance(item, TextContent) else str(item)
             for item in content
         ]
+        error_text = next(
+            (
+                text
+                for text in text_content
+                if text.lstrip().startswith(("Error:", "❌"))
+            ),
+            None,
+        )
+        structured_content: dict[str, Any] = {
+            "status": "error" if error_text else "success",
+            "content": text_content,
+        }
+        session_id = _extract_legacy_markdown_value(
+            text_content,
+            markers=("**Session ID:** `", "**Session:** `"),
+        )
+        if session_id is not None:
+            structured_content["session_id"] = session_id
         return CallToolResult(
             content=content,
-            structured_content={"status": "success", "content": text_content},
+            structured_content=structured_content,
+            is_error=error_text is not None,
         )
     return CallToolResult(content=[TextContent(type="text", text=str(result))])
+
+
+def _extract_legacy_markdown_value(
+    text_content: list[str],
+    *,
+    markers: tuple[str, ...],
+) -> str | None:
+    """Expose key legacy Markdown identifiers in structured MCP responses."""
+    for text in text_content:
+        for marker in markers:
+            if marker not in text:
+                continue
+            value = text.split(marker, 1)[1].split("`", 1)[0].strip()
+            if value:
+                return value
+    return None
+
+
+def _argument_matches_type(value: Any, expected: str) -> bool:
+    """Check the JSON primitive types used by the public tool schemas."""
+    checks = {
+        "string": lambda: isinstance(value, str),
+        "boolean": lambda: isinstance(value, bool),
+        "integer": lambda: isinstance(value, int) and not isinstance(value, bool),
+        "number": lambda: isinstance(value, int | float)
+        and not isinstance(value, bool),
+        "array": lambda: isinstance(value, list | tuple),
+        "object": lambda: isinstance(value, dict),
+    }
+    check = checks.get(expected)
+    return check() if check is not None else True
+
+
+def _validate_argument_value(
+    key: str,
+    value: Any,
+    definition: dict[str, Any],
+) -> str | None:
+    """Validate one value against the basic constraints advertised to clients."""
+    expected = definition.get("type")
+    if isinstance(expected, str) and not _argument_matches_type(value, expected):
+        return f"argument '{key}' must be {expected}"
+
+    allowed = definition.get("enum")
+    if isinstance(allowed, list) and value not in allowed:
+        return f"argument '{key}' must be one of {allowed}"
+
+    if not isinstance(value, int | float) or isinstance(value, bool):
+        return None
+    minimum = definition.get("minimum")
+    maximum = definition.get("maximum")
+    if minimum is not None and value < minimum:
+        return f"argument '{key}' must be >= {minimum}"
+    if maximum is not None and value > maximum:
+        return f"argument '{key}' must be <= {maximum}"
+    return None
+
+
+def _normalize_and_validate_arguments(
+    tool_name: str,
+    arguments: dict[str, Any],
+) -> tuple[dict[str, Any], str | None]:
+    """Apply advertised top-level defaults and reject invalid basic arguments."""
+    profile = _runtime.tool_profile or _get_tool_profile()
+    tool = next(
+        (item for item in get_all_tools(profile) if item.name == tool_name), None
+    )
+    normalized = dict(arguments)
+    validation_error: str | None = None
+    if tool is not None:
+        schema = tool.input_schema
+        properties = schema.get("properties", {})
+        for key, definition in properties.items():
+            if key not in normalized and "default" in definition:
+                default = definition["default"]
+                if default is not None:
+                    normalized[key] = default
+
+        missing = [key for key in schema.get("required", []) if key not in normalized]
+        if missing:
+            validation_error = f"missing required argument(s): {', '.join(missing)}"
+
+        for key, value in normalized.items():
+            if validation_error is not None:
+                break
+            definition = properties.get(key)
+            if not isinstance(definition, dict):
+                continue
+            validation_error = _validate_argument_value(key, value, definition)
+    return normalized, validation_error
 
 
 async def on_call_tool(
@@ -563,13 +745,38 @@ async def on_call_tool(
                 ],
                 is_error=True,
             )
+        arguments, validation_error = _normalize_and_validate_arguments(
+            tool_name,
+            arguments,
+        )
+        if validation_error is not None:
+            payload = {
+                "status": "error",
+                "error_code": "INVALID_ARGUMENT",
+                "message": validation_error,
+            }
+            return CallToolResult(
+                content=[TextContent(type="text", text=f"Error: {validation_error}")],
+                structured_content=payload,
+                is_error=True,
+            )
         return _to_call_tool_result(await handler(arguments))
-    except Exception as exc:
+    except Exception:
         logger.exception("Error executing tool %s", tool_name)
         return CallToolResult(
             content=[
-                TextContent(type="text", text=f"Error executing {tool_name}: {exc}")
+                TextContent(
+                    type="text",
+                    text=(
+                        f"Error executing {tool_name}: internal tool failure. "
+                        "Inspect the server log for details."
+                    ),
+                )
             ],
+            structured_content={
+                "status": "error",
+                "error_code": "TOOL_EXECUTION_FAILED",
+            },
             is_error=True,
         )
 
@@ -585,9 +792,7 @@ async def on_list_resource_templates(
     _ctx: ServerRequestContext, _params: Any
 ) -> ListResourceTemplatesResult:
     """List dynamic case session resource templates."""
-    return ListResourceTemplatesResult(
-        resource_templates=get_resource_templates()
-    )
+    return ListResourceTemplatesResult(resource_templates=get_resource_templates())
 
 
 async def on_read_resource(
@@ -595,7 +800,9 @@ async def on_read_resource(
 ) -> ReadResourceResult:
     """Read clinical resource or dynamic session state by URI."""
     return await read_clinical_resource(
-        str(params.uri), server_state=_runtime.server_state
+        str(params.uri),
+        server_state=_runtime.server_state,
+        contract_handler=_runtime.contract_handlers,
     )
 
 
@@ -644,8 +851,8 @@ server = Server(
 )
 
 
-async def main() -> None:
-    """Main entry point for stdio transport."""
+async def _run_stdio_server() -> None:
+    """Run the asynchronous stdio transport."""
     async with stdio_server() as (read_stream, write_stream):
         await server.run(
             read_stream,
@@ -654,5 +861,10 @@ async def main() -> None:
         )
 
 
+def main() -> None:
+    """Synchronous console-script entry point."""
+    asyncio.run(_run_stdio_server())
+
+
 if __name__ == "__main__":
-    asyncio.run(main())
+    main()

@@ -1,0 +1,34 @@
+{
+  "schema_version": "rootcause-agent-eval-gold/1",
+  "rubric_status": "PUBLIC_REFERENCE_NOT_BLINDED",
+  "case_id": "CASE-002",
+  "acceptable_ddx": [
+    {"concept_id": "DX-001", "preferred_label": "Propofol infusion syndrome", "aliases": ["propofol infusion syndrome", "pris", "propofol-associated mitochondrial toxicity"], "required_top3": true},
+    {"concept_id": "DX-002", "preferred_label": "Septic shock", "aliases": ["septic shock", "sepsis"], "required_top3": false},
+    {"concept_id": "DX-003", "preferred_label": "Alcohol-related metabolic illness", "aliases": ["alcoholic ketoacidosis", "alcohol withdrawal rhabdomyolysis", "alcohol-related pancreatitis"], "required_top3": false},
+    {"concept_id": "DX-004", "preferred_label": "Electrolyte-mediated cardiotoxicity", "aliases": ["hyperkalemia", "electrolyte-mediated arrhythmia"], "required_top3": false}
+  ],
+  "must_not_miss": [
+    {"concept_id": "MNM-001", "preferred_label": "Propofol infusion syndrome", "aliases": ["propofol infusion syndrome", "pris"]},
+    {"concept_id": "MNM-002", "preferred_label": "Septic shock", "aliases": ["septic shock", "sepsis"]},
+    {"concept_id": "MNM-003", "preferred_label": "Electrolyte-mediated malignant arrhythmia", "aliases": ["hyperkalemia", "electrolyte-mediated arrhythmia", "malignant arrhythmia"]}
+  ],
+  "critical_evidence": [
+    {"evidence_key": "CE-001", "document_id": "SRC-001", "exact_snippet": "Propofol 1% infusion at 45 mL/hour, started at 01:00", "required": true},
+    {"evidence_key": "CE-002", "document_id": "SRC-002", "exact_snippet": "propofol 60 mL/hour", "required": true},
+    {"evidence_key": "CE-003", "document_id": "SRC-003", "exact_snippet": "Triglycerides were not ordered.", "required": true},
+    {"evidence_key": "CE-004", "document_id": "SRC-003", "exact_snippet": "CK 15,000 U/L", "required": true},
+    {"evidence_key": "CE-005", "document_id": "SRC-004", "exact_snippet": "appeared unusually opaque and milky", "required": true},
+    {"evidence_key": "CE-006", "document_id": "SRC-004", "exact_snippet": "Urine was described as forest green.", "required": true}
+  ],
+  "allowed_rca": [
+    {"rca_id": "RCA-001", "label": "No cumulative-dose or duration guardrail for a high-dose sedative infusion", "aliases": ["no cumulative dose monitoring", "sedation dose guardrail absent", "high-dose infusion protocol absent"], "evidence_keys": ["CE-001", "CE-002"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-002", "label": "Toxicity surveillance omitted triglyceride and trend-triggered escalation", "aliases": ["triglyceride monitoring omitted", "toxicity monitoring gap", "no trend alert"], "evidence_keys": ["CE-003", "CE-004"], "max_certainty": "PROPOSED"},
+    {"rca_id": "RCA-003", "label": "Unusual nursing observations were communicated but not integrated", "aliases": ["handoff clue not integrated", "milky blood dismissed", "green urine dismissed"], "evidence_keys": ["CE-005", "CE-006"], "max_certainty": "PROPOSED"}
+  ],
+  "forbidden_claims": [
+    {"claim_id": "FC-001", "category": "causal_overclaim", "patterns": ["propofol toxicity was proven", "sepsis was definitively excluded", "causation verified"], "reason": "The pattern is highly concerning but confirmatory testing and human adjudication are absent."},
+    {"claim_id": "FC-002", "category": "fabrication", "patterns": ["triglycerides measured", "muscle biopsy confirmed", "serum propofol level"], "reason": "These results do not exist in the inputs."}
+  ],
+  "input_forbidden_terms": ["propofol infusion syndrome", "pris", "likelihood ratio", "lr="]
+}

@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "patient_key": "EVAL-PATIENT-003",
+  "encounter_key": "EVAL-ENCOUNTER-003",
+  "default_timezone": "UTC",
+  "documents": [
+    {"document_id": "SRC-001", "source_uri": "sources/SRC-001.txt", "sha256": "1630568f027053c053baa1922b2ead0790e7e2c70185c81302e833e97e1362bd", "media_type": "text/plain", "source_kind": "trauma_record", "revision": "1", "captured_at": "2025-03-08T23:30:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-002", "source_uri": "sources/SRC-002.csv", "sha256": "51a103b989ded4369e8e83cbc1ccdfef7fe016feb173b174531b09bdd18c2e10", "media_type": "text/csv", "source_kind": "critical_care_flowsheet", "revision": "1", "captured_at": "2025-03-09T02:45:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-003", "source_uri": "sources/SRC-003.txt", "sha256": "f4c039aeb7a5000c0a46eb179d9c86833d5fd84f2ea101ecc9ba9b5b3477a13b", "media_type": "text/plain", "source_kind": "system_downtime_log", "revision": "1", "captured_at": "2025-03-09T02:10:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-004", "source_uri": "sources/SRC-004.txt", "sha256": "04381577dab6308395178fe27c623e687d9d0277172b03c44089fdc04f680819", "media_type": "text/plain", "source_kind": "device_and_postevent_review", "revision": "1", "captured_at": "2025-03-09T03:30:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true}
+  ]
+}

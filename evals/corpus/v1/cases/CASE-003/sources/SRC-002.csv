@@ -1,0 +1,7 @@
+timestamp,bp_mmHg,heart_rate,rhythm,cvp_mmHg,action_or_note
+2025-03-09T01:30:00Z,92/52,112,sinus tachycardia,12,Arrival in ICU
+2025-03-09T01:45:00Z,90/50,110,sinus tachycardia,14,Unit 7 packed red cells started; label showed expiry in two days
+2025-03-09T02:00:00Z,88/48,105,sinus tachycardia,15,Urine output 20 mL/hour and red-brown
+2025-03-09T02:15:00Z,85/45,100,uncertain,16,Repeated noisy-lead alarms
+2025-03-09T02:30:00Z,82/40,95,wide-complex appearance,18,Norepinephrine increased; two more plasma units ordered for presumed bleeding
+2025-03-09T02:45:00Z,70/40,50,bradycardia,20,Cardiac arrest response activated

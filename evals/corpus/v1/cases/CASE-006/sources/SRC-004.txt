@@ -1,0 +1,8 @@
+TIMESTAMP: 2025-07-18T19:42:00Z
+SETTING: Emergency return visit
+
+The patient presented with 30-50 mL bright-red hemoptysis, chest tightness, weakness, and shortness of breath. HR 110/min, SpO2 94% on room air, and right upper-field breath sounds were reduced.
+
+The patient asked why no one had called about the prior CT. Record review found the 2025-06-04 report, but no follow-up note, acknowledgement, tissue-sampling order, or specialty referral after that date.
+
+Oxygen, urgent repeat imaging, specialty consultation, and admission were arranged.

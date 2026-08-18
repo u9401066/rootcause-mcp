@@ -54,15 +54,25 @@ class DDHandlers:
         )
 
         # Delegate to orchestrator
-        hypothesis = orch.propose_hypothesis(
-            diagnosis=args["diagnosis"],
-            icd10_code=args.get("icd10_code"),
-            snomed_code=args.get("snomed_code"),
-            prior_probability=args.get("prior_probability", 0.1),
-            rationale=rationale,
-            inclusion_criteria=args.get("inclusion_criteria"),
-            exclusion_criteria=args.get("exclusion_criteria"),
-        )
+        try:
+            hypothesis = orch.propose_hypothesis(
+                diagnosis=args["diagnosis"],
+                icd10_code=args.get("icd10_code"),
+                snomed_code=args.get("snomed_code"),
+                prior_probability=args.get("prior_probability", 0.1),
+                rationale=rationale,
+                inclusion_criteria=args.get("inclusion_criteria"),
+                exclusion_criteria=args.get("exclusion_criteria"),
+                must_not_miss=args.get("must_not_miss", False),
+                alternatives_considered=args.get(
+                    "differential_diagnoses_considered", []
+                ),
+                uncertainty_factors=args.get("uncertainty_factors", []),
+                confidence_rationale=args.get("confidence_rationale", ""),
+                planned_tests=args.get("planned_tests", []),
+            )
+        except (TypeError, ValueError) as exc:
+            return {"status": "error", "message": str(exc), "session_id": session_id}
         await self._state.persist_orchestrator(session_id)
         guidance = orch.get_guidance()
 
@@ -72,10 +82,13 @@ class DDHandlers:
             "session_id": session_id,
             "diagnosis": hypothesis.diagnosis.display,
             "prior_probability": hypothesis.prior_probability,
-            "differential_diagnoses_considered": args.get(
-                "differential_diagnoses_considered", []
-            ),
-            "uncertainty_factors": args.get("uncertainty_factors", []),
+            "must_not_miss": hypothesis.must_not_miss,
+            "differential_diagnoses_considered": hypothesis.alternatives_considered,
+            "uncertainty_factors": hypothesis.uncertainty_factors,
+            "confidence_rationale": hypothesis.confidence_rationale,
+            "planned_tests": [
+                item.model_dump(mode="json") for item in hypothesis.planned_tests
+            ],
             "guidance": guidance.model_dump(mode="json"),
         }
 
@@ -88,13 +101,30 @@ class DDHandlers:
         likelihood_ratio = args.get("likelihood_ratio")
         if likelihood_ratio is None:
             direction = str(args.get("direction", "SUPPORTS")).upper()
-            weight = float(args.get("weight", 1.0))
-            if direction in {"REFUTES", "CONTRADICTS", "RULE_OUT", "EXCLUDE"}:
-                likelihood_ratio = max(0.01, 1.0 - weight * 0.95)
-                supports = False
+            supports = direction not in {
+                "REFUTES",
+                "CONTRADICTS",
+                "RULE_OUT",
+                "EXCLUDE",
+            }
+            raw_weight = args.get("weight")
+            if raw_weight is None:
+                # The public tool contract declares an omitted LR as neutral.
+                # Only translate the legacy 0..1 weight when it was explicitly
+                # supplied; silently treating an omitted weight as 1.0 used to
+                # apply an undocumented LR of 10.
+                likelihood_ratio = 1.0
             else:
-                likelihood_ratio = max(1.0, 1.0 + weight * 9.0)
-                supports = True
+                weight = float(raw_weight)
+                if not 0.0 <= weight <= 1.0:
+                    return {
+                        "status": "error",
+                        "message": "weight must be between 0.0 and 1.0",
+                    }
+                if supports:
+                    likelihood_ratio = max(1.0, 1.0 + weight * 9.0)
+                else:
+                    likelihood_ratio = max(0.01, 1.0 - weight * 0.95)
         else:
             supports = args.get("supports", likelihood_ratio >= 1.0)
 
@@ -122,6 +152,11 @@ class DDHandlers:
                 "status": "not_found",
                 "message": str(e),
             }
+        except ValueError as e:
+            return {
+                "status": "error",
+                "message": str(e),
+            }
 
         guidance = orch.get_guidance()
 
@@ -131,6 +166,7 @@ class DDHandlers:
             "diagnosis": updated_hypothesis.diagnosis.display,
             "posterior_probability": updated_hypothesis.current_probability,
             "likelihood_ratio": likelihood_ratio,
+            "applied_likelihood_ratio": likelihood_ratio,
             "supports": supports,
             "guidance": guidance.model_dump(mode="json"),
         }

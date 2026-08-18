@@ -9,6 +9,11 @@ from __future__ import annotations
 
 from mcp.types import Tool
 
+from rootcause_mcp.interface.tools.schema_fragments import (
+    case_input_manifest_schema,
+    planned_diagnostic_test_input_schema,
+)
+
 
 def get_condensed_tools() -> list[Tool]:
     """Return the 8 unified facade tool definitions."""
@@ -43,11 +48,23 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "source_document": {
                         "type": "string",
-                        "description": "Source file name or path (e.g. 'flowsheet.csv', 'RAD_REPORT.hl7')",
+                        "description": (
+                            "Stable manifest document_id (for example 'SRC-001'); "
+                            "legacy sessions may use a local path"
+                        ),
                     },
                     "source_location": {
                         "type": "string",
                         "description": "Location within document (e.g., 'Line 42', 'CV line 14')",
+                    },
+                    "event_timestamp": {
+                        "type": "string",
+                        "format": "date-time",
+                        "description": (
+                            "Canonical ISO 8601/RFC3339 event datetime containing 'T' "
+                            "and required Z or numeric timezone offset; omit for "
+                            "date-only or unknown/local time (for action='add')"
+                        ),
                     },
                     "raw_snippet": {
                         "type": "string",
@@ -74,6 +91,23 @@ def get_condensed_tools() -> list[Tool]:
                         "type": "boolean",
                         "description": "Automatically verify snippet against disk file (default: true)",
                         "default": True,
+                    },
+                    "verified_by": {
+                        "type": "string",
+                        "description": "Named reviewer (for action='verify')",
+                        "default": "agent",
+                    },
+                    "manual_confirmation": {
+                        "type": "boolean",
+                        "default": False,
+                        "description": "Explicit human confirmation; verified_by must be in ROOTCAUSE_AUTHORIZED_REVIEWERS",
+                    },
+                    "document_id": {
+                        "type": "string",
+                        "description": (
+                            "Optional stable document_id; manifest-bound evidence cannot "
+                            "be rebound to another source (for action='verify')"
+                        ),
                     },
                 },
                 "required": ["session_id"],
@@ -112,6 +146,33 @@ def get_condensed_tools() -> list[Tool]:
                         "description": "Prior probability P(H) between 0.0 and 1.0 (default: 0.1)",
                         "default": 0.1,
                     },
+                    "must_not_miss": {
+                        "type": "boolean",
+                        "description": "Explicit high-harm rule-out marker (for action='propose')",
+                        "default": False,
+                    },
+                    "differential_diagnoses_considered": {
+                        "type": "array",
+                        "items": {"type": "object"},
+                        "description": "Competing diagnoses and disposition rationale",
+                    },
+                    "uncertainty_factors": {
+                        "type": "array",
+                        "items": {"type": "string"},
+                        "description": "Known diagnostic uncertainty factors",
+                    },
+                    "confidence_rationale": {
+                        "type": "string",
+                        "description": "Why the prior probability was selected",
+                    },
+                    "planned_tests": {
+                        "type": "array",
+                        "items": planned_diagnostic_test_input_schema(),
+                        "description": (
+                            "Typed pending diagnostic tests for action='propose'; "
+                            "the server binds each target to the new hypothesis"
+                        ),
+                    },
                     "clinical_reasoning": {
                         "type": "string",
                         "description": "Clinical reasoning rationale for proposing/linking this hypothesis",
@@ -132,11 +193,15 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "weight": {
                         "type": "number",
+                        "minimum": 0.0,
+                        "maximum": 1.0,
                         "description": "Strength weight (0.0 to 1.0) or exact likelihood ratio (for action='link')",
                     },
                     "likelihood_ratio": {
                         "type": "number",
-                        "description": "Exact Bayesian likelihood ratio (LR+ or LR-)",
+                        "minimum": 0.01,
+                        "maximum": 100.0,
+                        "description": "Applied Bayesian LR: normally >1 for SUPPORTS and <1 for REFUTES/CONTRADICTS; never inverted by the server",
                     },
                     "reason": {
                         "type": "string",
@@ -232,17 +297,22 @@ def get_condensed_tools() -> list[Tool]:
             name="rc_audit",
             description=(
                 "Unified Clinical Audit & Verification: Audit reasoning readiness, detect contradictions/guideline gaps, "
-                "or perform counterfactual causation verification. "
+                "or perform a conservative counterfactual causation audit that does "
+                "not establish clinical causality. "
                 "Actions: 'stage_guidance' (audit stage progression & next prompt directives), "
                 "'detect_conflicts' (auto-detect contradictions & guideline omissions), "
-                "'verify_causation' (4-factor counterfactual causation check)."
+                "'verify_causation' (compatibility action name; conservative 4-factor audit)."
             ),
             input_schema={
                 "type": "object",
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["stage_guidance", "detect_conflicts", "verify_causation"],
+                        "enum": [
+                            "stage_guidance",
+                            "detect_conflicts",
+                            "verify_causation",
+                        ],
                         "description": "Audit operation to perform",
                         "default": "stage_guidance",
                     },
@@ -252,11 +322,46 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "cause": {
                         "type": "object",
-                        "description": "Cause event {description, timestamp} (for action='verify_causation')",
+                        "description": (
+                            "Cause event {id, description, evidence, timestamp}; id, "
+                            "description, and evidence must exactly match a persisted Why "
+                            "root for durable audits. If timestamp is supplied "
+                            "it must contain 'T' and end in Z or a numeric timezone offset "
+                            "(for action='verify_causation')"
+                        ),
+                        "properties": {
+                            "id": {"type": "string"},
+                            "description": {"type": "string"},
+                            "evidence": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "uniqueItems": True,
+                            },
+                            "timestamp": {"type": "string", "format": "date-time"},
+                        },
+                        "required": ["id", "description", "evidence"],
                     },
                     "effect": {
                         "type": "object",
-                        "description": "Effect event {description, timestamp} (for action='verify_causation')",
+                        "description": (
+                            "Effect event {description, evidence, timestamp}; evidence "
+                            "must resolve in the clinical ledger. If timestamp is supplied "
+                            "it must contain 'T' and end in Z or a numeric timezone offset "
+                            "(for action='verify_causation')"
+                        ),
+                        "properties": {
+                            "id": {"type": "string"},
+                            "description": {"type": "string"},
+                            "evidence": {
+                                "type": "array",
+                                "items": {"type": "string"},
+                                "minItems": 1,
+                                "uniqueItems": True,
+                            },
+                            "timestamp": {"type": "string", "format": "date-time"},
+                        },
+                        "required": ["description", "evidence"],
                     },
                     "verification_level": {
                         "type": "string",
@@ -304,8 +409,12 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "finalize": {
                         "type": "boolean",
-                        "description": "Finalize report and compute SHA-256 cryptographic content digest",
+                        "description": "Finalize only after readiness, conflict, manifest, and reviewer gates pass",
                         "default": False,
+                    },
+                    "approved_by": {
+                        "type": "string",
+                        "description": "Explicit reviewer identity from ROOTCAUSE_AUTHORIZED_REVIEWERS; required when finalize=true",
                     },
                 },
                 "required": ["session_id"],
@@ -324,7 +433,12 @@ def get_condensed_tools() -> list[Tool]:
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["timeline", "validate", "reasoning_chain", "evidence_graph"],
+                        "enum": [
+                            "timeline",
+                            "validate",
+                            "reasoning_chain",
+                            "evidence_graph",
+                        ],
                         "description": "Diagram operation to perform",
                         "default": "timeline",
                     },
@@ -369,7 +483,7 @@ def get_condensed_tools() -> list[Tool]:
         Tool(
             name="rc_checkpoint",
             description=(
-                "Unified Case Snapshotting & Branching: Create immutable, timestamped snapshots of active case state, "
+                "Unified Case Snapshotting & Branching: Create integrity-checked, timestamped snapshots of active case state, "
                 "list available checkpoints, or restore cases without context loss. "
                 "Actions: 'create' (save snapshot with SHA-256 digest), 'list' (view all checkpoints), 'restore' (load state)."
             ),
@@ -437,16 +551,57 @@ def get_condensed_tools() -> list[Tool]:
                         "default": "session_start",
                     },
                     "session_id": {"type": "string", "description": "Session ID"},
-                    "case_title": {"type": "string", "description": "Case title (for session_start)"},
-                    "case_type": {"type": "string", "description": "death, sentinel, near_miss (for session_start)"},
-                    "problem_statement": {"type": "string", "description": "Initial problem (for fishbone_init, why_ask)"},
-                    "category": {"type": "string", "description": "Personnel, Equipment, Material, Process, Environment, Monitoring"},
-                    "description": {"type": "string", "description": "Description of cause or finding"},
-                    "answer": {"type": "string", "description": "Answer to why question (for why_ask)"},
-                    "source_node_id": {"type": "string", "description": "Source Why node ID (for why_link)"},
-                    "target_node_id": {"type": "string", "description": "Target Why node ID (for why_link)"},
-                    "relationship": {"type": "string", "description": "contributes_to, escalates, mitigates, feedback"},
-                    "hfacs_code": {"type": "string", "description": "HFACS classification code (e.g. UA-S, PC-C)"},
+                    "case_title": {
+                        "type": "string",
+                        "description": "Case title (for session_start)",
+                    },
+                    "case_type": {
+                        "type": "string",
+                        "enum": [
+                            "death",
+                            "complication",
+                            "near_miss",
+                            "safety",
+                            "staffing",
+                        ],
+                        "description": "Case type (for session_start)",
+                    },
+                    "source_manifest": {
+                        **case_input_manifest_schema(),
+                        "description": "Versioned raw-source manifest (for session_start)",
+                    },
+                    "problem_statement": {
+                        "type": "string",
+                        "description": "Initial problem (for fishbone_init, why_ask)",
+                    },
+                    "category": {
+                        "type": "string",
+                        "description": "Personnel, Equipment, Material, Process, Environment, Monitoring",
+                    },
+                    "description": {
+                        "type": "string",
+                        "description": "Description of cause or finding",
+                    },
+                    "answer": {
+                        "type": "string",
+                        "description": "Answer to why question (for why_ask)",
+                    },
+                    "source_node_id": {
+                        "type": "string",
+                        "description": "Source Why node ID (for why_link)",
+                    },
+                    "target_node_id": {
+                        "type": "string",
+                        "description": "Target Why node ID (for why_link)",
+                    },
+                    "relationship": {
+                        "type": "string",
+                        "description": "contributes_to, escalates, mitigates, feedback",
+                    },
+                    "hfacs_code": {
+                        "type": "string",
+                        "description": "HFACS classification code (e.g. UA-S, PC-C)",
+                    },
                 },
             },
         ),

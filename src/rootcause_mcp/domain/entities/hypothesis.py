@@ -31,6 +31,80 @@ class HypothesisStatus(str, Enum):
     ON_HOLD = "ON_HOLD"  # Temporarily suspended (insufficient evidence)
 
 
+class DiagnosticTestStatus(str, Enum):
+    """Machine-readable lifecycle for a hypothesis-specific diagnostic test."""
+
+    PLANNED = "PLANNED"
+    ORDERED = "ORDERED"
+    COMPLETED = "COMPLETED"
+    CANCELLED = "CANCELLED"
+
+
+class DiagnosticTestPurpose(str, Enum):
+    """Declared relationship between a planned test and its target diagnosis."""
+
+    DISCONFIRM = "DISCONFIRM"
+    RULE_OUT = "RULE_OUT"
+    CONFIRM = "CONFIRM"
+    DISCRIMINATE = "DISCRIMINATE"
+
+
+class PlannedDiagnosticTest(BaseModel):
+    """Explicit test disposition used to challenge one diagnosis.
+
+    The server binds ``target_hypothesis_id`` when the hypothesis is created.
+    Free-text gaps, inclusion criteria, or exclusion criteria are deliberately
+    not substitutes for this typed record.
+    """
+
+    test_id: str = Field(
+        default_factory=lambda: f"TST-{uuid4().hex[:8]}",
+        min_length=5,
+        max_length=64,
+        pattern=r"^TST-[A-Za-z0-9_-]+$",
+    )
+    name: str = Field(..., min_length=1, max_length=200)
+    purpose: DiagnosticTestPurpose
+    target_hypothesis_id: str = Field(
+        ...,
+        min_length=5,
+        max_length=64,
+        pattern=r"^HYP-[A-Za-z0-9_-]+$",
+    )
+    expected_supporting_result: str = Field(..., min_length=1, max_length=500)
+    expected_refuting_result: str = Field(..., min_length=1, max_length=500)
+    status: DiagnosticTestStatus = Field(default=DiagnosticTestStatus.PLANNED)
+    result_evidence_id: str | None = Field(default=None, max_length=64)
+    result_summary: str | None = Field(default=None, max_length=1000)
+
+    @field_validator(
+        "name",
+        "expected_supporting_result",
+        "expected_refuting_result",
+    )
+    @classmethod
+    def strip_required_text(cls, value: str) -> str:
+        """Reject visually empty required fields after whitespace normalization."""
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Diagnostic test fields cannot be blank")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_result_metadata(self) -> Self:
+        """Keep completed/cancelled dispositions explicit and auditable."""
+        if (
+            self.status is DiagnosticTestStatus.COMPLETED
+            and not self.result_evidence_id
+        ):
+            raise ValueError("COMPLETED diagnostic tests require result_evidence_id")
+        if self.status is DiagnosticTestStatus.CANCELLED and not self.result_summary:
+            raise ValueError("CANCELLED diagnostic tests require result_summary")
+        return self
+
+    model_config = {"frozen": True, "extra": "forbid"}
+
+
 class HypothesisStatusChange(BaseModel):
     """Auditable transition between hypothesis lifecycle states."""
 
@@ -52,8 +126,19 @@ class LikelihoodRatio(BaseModel):
     """
 
     evidence_id: str = Field(..., description="Evidence ID")
-    lr_positive: float = Field(..., gt=0, description="LR+ (evidence present)")
+    lr_positive: float | None = Field(
+        None, gt=0, description="LR+ for a validated diagnostic test, when supplied"
+    )
     lr_negative: float | None = Field(None, gt=0, description="LR- (evidence absent)")
+    applied_likelihood_ratio: float | None = Field(
+        None,
+        gt=0,
+        description="The LR actually applied to the Bayesian update",
+    )
+    supports: bool | None = Field(
+        None,
+        description="Whether the observed evidence supports or contradicts the hypothesis",
+    )
     rationale: str = Field(..., description="Why this LR value?")
 
     @field_validator("lr_positive", "lr_negative")
@@ -129,6 +214,29 @@ class Hypothesis(BaseModel):
     exclusion_criteria: list[str] = Field(
         default_factory=list, description="Criteria that rule out this diagnosis"
     )
+    must_not_miss: bool = Field(
+        default=False,
+        description="Whether this is an explicitly reviewed high-harm rule-out",
+    )
+    alternatives_considered: list[dict[str, Any]] = Field(
+        default_factory=list,
+        description="Agent-authored competing diagnoses and disposition rationale",
+    )
+    uncertainty_factors: list[str] = Field(
+        default_factory=list,
+        description="Known diagnostic uncertainty retained with the hypothesis",
+    )
+    confidence_rationale: str = Field(
+        default="",
+        description="Why the prior probability was selected",
+    )
+    planned_tests: list[PlannedDiagnosticTest] = Field(
+        default_factory=list,
+        description=(
+            "Typed diagnostic tests planned or ordered to support or refute this "
+            "specific hypothesis"
+        ),
+    )
 
     # Evidence linking
     likelihood_ratios: list[LikelihoodRatio] = Field(
@@ -168,6 +276,15 @@ class Hypothesis(BaseModel):
                 f"prior_probability ({self.prior_probability}) when no Bayesian "
                 "history exists"
             )
+        if any(
+            test.target_hypothesis_id != self.id.value for test in self.planned_tests
+        ):
+            raise ValueError(
+                "Every planned diagnostic test must target its containing hypothesis"
+            )
+        test_ids = [test.test_id for test in self.planned_tests]
+        if len(test_ids) != len(set(test_ids)):
+            raise ValueError("Diagnostic test IDs must be unique within a hypothesis")
         return self
 
     def bayesian_update(
@@ -182,9 +299,10 @@ class Hypothesis(BaseModel):
 
         Args:
             evidence_id: ID of evidence
-            likelihood_ratio: LR+ or LR- depending on evidence presence
+            likelihood_ratio: The likelihood ratio to apply directly. Supporting
+                evidence normally uses LR > 1 and contradicting evidence LR < 1.
             updated_by: Who performed this update
-            supports: If True, use LR+; if False, use 1/LR (or LR-)
+            supports: Relationship label used for the evidence audit trail
 
         Returns:
             New Hypothesis instance with updated probability
@@ -193,7 +311,19 @@ class Hypothesis(BaseModel):
             Posterior Odds = Prior Odds × LR
             Posterior P = Posterior Odds / (1 + Posterior Odds)
         """
-        lr = likelihood_ratio if supports else (1.0 / likelihood_ratio)
+        if supports and likelihood_ratio < 1.0:
+            raise ValueError(
+                "Supporting evidence requires an applied likelihood ratio >= 1.0"
+            )
+        if not supports and likelihood_ratio > 1.0:
+            raise ValueError(
+                "Contradicting evidence requires an applied likelihood ratio <= 1.0"
+            )
+
+        # ``likelihood_ratio`` is already the applied LR.  Older code inverted a
+        # contradicting LR here even though the MCP contract supplies LR- (< 1),
+        # causing refuting evidence to increase the posterior probability.
+        lr = likelihood_ratio
         if self.current_probability <= 0.0:
             posterior_prob = 0.0
         elif self.current_probability >= 1.0:
@@ -233,9 +363,11 @@ class Hypothesis(BaseModel):
     def add_likelihood_ratio(
         self,
         evidence_id: str,
-        lr_positive: float,
+        lr_positive: float | None,
         lr_negative: float | None,
         rationale: str,
+        applied_likelihood_ratio: float | None = None,
+        supports: bool | None = None,
     ) -> Self:
         """
         Add likelihood ratio for a piece of evidence.
@@ -245,6 +377,8 @@ class Hypothesis(BaseModel):
             lr_positive: LR when evidence is present
             lr_negative: LR when evidence is absent (optional)
             rationale: Clinical justification for this LR
+            applied_likelihood_ratio: LR actually used for this observation
+            supports: Direction of the observed evidence relationship
 
         Returns:
             New Hypothesis instance with added LR
@@ -254,6 +388,8 @@ class Hypothesis(BaseModel):
             lr_positive=lr_positive,
             lr_negative=lr_negative,
             rationale=rationale,
+            applied_likelihood_ratio=applied_likelihood_ratio,
+            supports=supports,
         )
 
         return self.model_copy(

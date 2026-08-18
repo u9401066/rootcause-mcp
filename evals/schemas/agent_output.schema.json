@@ -1,0 +1,115 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://rootcause-mcp.local/schemas/agent-eval-output-v1.json",
+  "title": "RootCause agent evaluation output",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "status", "evidence_ledger", "differential", "cognitive_audit", "root_cause_analysis", "readiness", "human_review", "tool_trace", "report_markdown"],
+  "properties": {
+    "schema_version": {"const": "rootcause-agent-eval-output/1"},
+    "case_id": {"type": "string", "pattern": "^CASE-[0-9]{3}$"},
+    "status": {"enum": ["PRELIMINARY", "FINAL"]},
+    "evidence_ledger": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["evidence_id", "document_id", "raw_snippet", "source_location", "event_timestamp", "certainty_label"],
+        "properties": {
+          "evidence_id": {"type": "string", "minLength": 1},
+          "document_id": {"type": "string", "pattern": "^SRC-[0-9]{3}$"},
+          "raw_snippet": {"type": "string", "minLength": 1},
+          "source_location": {"type": "string", "minLength": 1},
+          "event_timestamp": {"type": ["string", "null"], "format": "date-time"},
+          "certainty_label": {"enum": ["VERIFIED_OBSERVATION", "UNVERIFIED_OBSERVATION"]}
+        }
+      }
+    },
+    "differential": {
+      "type": "array",
+      "minItems": 3,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["rank", "diagnosis", "must_not_miss", "certainty_label", "evidence_ids", "disconfirming_evidence_ids"],
+        "properties": {
+          "rank": {"type": "integer", "minimum": 1},
+          "diagnosis": {"type": "string", "minLength": 1},
+          "must_not_miss": {"type": "boolean"},
+          "certainty_label": {"enum": ["HIGH", "MODERATE", "LOW", "INSUFFICIENT_DATA"]},
+          "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}},
+          "disconfirming_evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+        }
+      }
+    },
+    "cognitive_audit": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uncertainties", "missing_data", "bias_risks", "alternative_explanations"],
+      "properties": {
+        "uncertainties": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "missing_data": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "bias_risks": {"type": "array", "items": {"type": "string", "minLength": 1}},
+        "alternative_explanations": {"type": "array", "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "root_cause_analysis": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fishbone_status", "why_status", "hfacs_status", "causation_status", "proposed_roots", "limitations"],
+      "properties": {
+        "fishbone_status": {"enum": ["COMPLETE", "NOT_COMPLETED"]},
+        "why_status": {"enum": ["COMPLETE", "NOT_COMPLETED"]},
+        "hfacs_status": {"enum": ["COMPLETE", "NOT_COMPLETED"]},
+        "causation_status": {"enum": ["INSUFFICIENT_DATA", "REJECTED", "NOT_ASSESSED"]},
+        "proposed_roots": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["root_id", "statement", "certainty_label", "evidence_ids"],
+            "properties": {
+              "root_id": {"type": "string", "minLength": 1},
+              "statement": {"type": "string", "minLength": 1},
+              "certainty_label": {"enum": ["PROPOSED", "INSUFFICIENT_DATA", "CORRELATION"]},
+              "evidence_ids": {"type": "array", "items": {"type": "string", "minLength": 1}}
+            }
+          }
+        },
+        "limitations": {"type": "array", "minItems": 1, "items": {"type": "string", "minLength": 1}}
+      }
+    },
+    "readiness": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["conflicts_checked", "readiness_checked", "blockers"],
+      "properties": {
+        "conflicts_checked": {"type": "boolean"},
+        "readiness_checked": {"type": "boolean"},
+        "blockers": {"type": "array", "items": {"type": "string"}}
+      }
+    },
+    "human_review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["status", "reviewer_id"],
+      "properties": {
+        "status": {"enum": ["NOT_REVIEWED", "REVIEWED"]},
+        "reviewer_id": {"type": ["string", "null"]}
+      }
+    },
+    "tool_trace": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": true,
+        "required": ["sequence", "tool_name"],
+        "properties": {
+          "sequence": {"type": "integer", "minimum": 1},
+          "tool_name": {"type": "string", "minLength": 1}
+        }
+      }
+    },
+    "report_markdown": {"type": "string", "minLength": 1}
+  }
+}

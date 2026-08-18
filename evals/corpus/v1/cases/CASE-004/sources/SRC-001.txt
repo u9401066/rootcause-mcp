@@ -1,0 +1,11 @@
+TIMESTAMP: 2025-04-10T14:00:00Z
+SETTING: Postoperative orders after hip arthroplasty
+AGE BAND: 60-69 years
+
+Estimated blood loss was 450 mL. Implant fixation was stable. Drain output exceeded 100 mL in recovery.
+
+Orders:
+- Bed rest for the remainder of the day; mobilize with therapy the next day.
+- Hold enoxaparin 40 mg for 24 hours because of drain oozing, then reassess.
+- Cefazolin for 24 hours.
+- Morphine patient-controlled analgesia.

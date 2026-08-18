@@ -59,6 +59,36 @@ def test_structured_results_use_compact_text_fallback(
     assert len(verbose.encode()) > len(compact.encode()) * 50
 
 
+def test_legacy_error_content_is_not_wrapped_as_success() -> None:
+    result = server_v2._to_call_tool_result(
+        [TextContent(type="text", text="Error: invalid case input")]
+    )
+
+    assert result.is_error is True
+    assert _structured(result)["status"] == "error"
+
+
+@pytest.mark.asyncio
+async def test_tool_schema_rejects_invalid_enum_as_mcp_error(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    _configure_runtime(monkeypatch, tmp_path)
+    async with lifespan(server):
+        context: Any = None
+        result = await on_call_tool(
+            context,
+            CallToolRequestParams(
+                name="rc_start_session",
+                arguments={"case_type": "bogus", "case_title": "Invalid"},
+            ),
+        )
+
+    assert result.is_error is True
+    assert _structured(result)["error_code"] == "INVALID_ARGUMENT"
+    assert "bogus" not in _text(result)
+
+
 def _configure_runtime(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
@@ -250,19 +280,28 @@ async def test_medical_reasoning_mcp_workflow(
             "rc_export_reasoning_chain",
             {"session_id": session_id, "format": "markdown"},
         )
-        unsupported = _structured(
-            await _call(
-                "rc_export_reasoning_chain",
-                {"session_id": session_id, "format": "unsupported"},
-            )
+        context: Any = None
+        unsupported_result = await on_call_tool(
+            context,
+            CallToolRequestParams(
+                name="rc_export_reasoning_chain",
+                arguments={"session_id": session_id, "format": "unsupported"},
+            ),
         )
+        assert unsupported_result.is_error is True
+        unsupported = _structured(unsupported_result)
         assert unsupported["status"] == "error"
         report = _structured(
             await _call(
                 "rc_generate_contract_report",
-                {"session_id": session_id, "format": "json", "finalize": True},
+                {
+                    "session_id": session_id,
+                    "format": "json",
+                    "finalize": False,
+                },
             )
         )
+        assert report["finalized"] is False
         assert report["total_evidence"] == 1
         assert report["total_hypotheses"] == 1
 
@@ -416,16 +455,21 @@ async def test_legacy_rca_mcp_workflow(
                 "learner_level": "medical_student",
             },
         )
-        verification = await _call(
-            "rc_verify_causation",
-            {
-                "session_id": session_id,
-                "cause": {"description": "No independent double check"},
-                "effect": {"description": "Ten-fold medication dose error"},
-                "verification_level": "comprehensive",
-            },
+        context: Any = None
+        verification = await on_call_tool(
+            context,
+            CallToolRequestParams(
+                name="rc_verify_causation",
+                arguments={
+                    "session_id": session_id,
+                    "cause": {"description": "No independent double check"},
+                    "effect": {"description": "Ten-fold medication dose error"},
+                    "verification_level": "comprehensive",
+                },
+            ),
         )
-        assert "VERIFIED_WITH_CAVEATS" in _text(verification)
+        assert verification.is_error is True
+        assert "cause.id is required" in _text(verification)
         await _call("rc_archive_session", {"session_id": session_id})
 
 

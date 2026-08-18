@@ -6,11 +6,9 @@
 
 ## 專案概述
 
-這是一個 **AI 輔助開發專案模板**，整合了：
-- 憲法-子法層級規則系統
-- Claude Skills 模組化技能
-- Memory Bank 專案記憶
-- DDD + DAL 獨立架構（前後端通用）
+這是 **RootCause MCP 2.x 臨床推理與醫療根因分析專案**。它以 MCP SDK 2 提供 43 個 discrete tools 或 8 個 condensed facade tools，讓不同 host agent 將多來源、去識別化病歷整理成具來源血緣的時間線、鑑別診斷、Bayesian evidence links、認知偏誤審查、Fishbone／Why／HFACS 因果分析與標準化交接產物。
+
+RootCause 是回溯性決策支援與稽核 harness，不是自主診斷或治療系統。所有 case workflow 必須遵守 exact provenance、PHI 最小化、保守因果判定及 qualified-human review。
 
 ---
 
@@ -36,13 +34,13 @@ CONSTITUTION.md          ← 最高原則（不可違反）
   │     ├── python-environment.md
   │     └── memory-bank.md
   │
-  └── .claude/skills/    ← 實施細則（操作程序）
+  └── .codex/skills/rootcause-clinical-reasoning-harness/  ← RootCause case workflow canonical skill
 ```
 
 你必須遵守以下法規層級：
 1. **憲法**：`CONSTITUTION.md` - 最高原則，不可違反
 2. **子法**：`.github/bylaws/*.md` - 細則規範
-3. **技能**：`.claude/skills/*/SKILL.md` - 操作程序
+3. **技能**：`.codex/skills/rootcause-clinical-reasoning-harness/SKILL.md` - RootCause 操作程序；相容鏡像位於 `.cline/skills/rootcause-clinical-reasoning-harness/` 與 `.claude/skills/rootcause-clinical-reasoning-harness/`
 
 ---
 
@@ -127,11 +125,12 @@ uv add --dev pytest ruff mypy bandit vulture
 
 ## 可用 Skills
 
-位於 `.claude/skills/` 目錄：
+RootCause canonical skill 位於 `.codex/skills/rootcause-clinical-reasoning-harness/`，並鏡像至 `.cline/skills/` 與 `.claude/skills/` 的同名目錄。其他通用開發 skills 仍位於 `.claude/skills/`：
 
 ### 核心技能
 | Skill | 用途 | 觸發詞 |
 |-------|------|--------|
+| **rootcause-clinical-reasoning-harness** | 多來源病歷的 evidence-grounded DDx + RCA 與跨-agent handoff | RootCause, raw 病歷, DDx, RCA, M&M, Fishbone, HFACS, causation |
 | **git-precommit** | Git 提交前編排器 | GIT, gc, commit, push, 提交, 推送 |
 | **ddd-architect** | DDD 架構輔助（前後端） | DDD, arch, 架構, 新功能, scaffold |
 | **code-refactor** | 主動重構與模組化 | RF, refactor, 重構, 拆分, 模組化 |

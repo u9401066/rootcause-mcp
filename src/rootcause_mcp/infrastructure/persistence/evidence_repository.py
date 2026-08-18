@@ -32,6 +32,11 @@ class SQLiteEvidenceRepository:
 
     async def save(self, session_id: str, evidence: Evidence) -> None:
         """Save evidence to database."""
+        source_data = evidence.source.model_dump(mode="json")
+        # Preserve verification detail in the existing JSON column so alpha
+        # databases retain it without requiring an in-place table alteration.
+        source_data["_verification_method"] = evidence.verification_method
+        source_data["_matched_lines"] = evidence.matched_lines
         model = EvidenceModel(
             id=evidence.id.value,
             session_id=session_id,
@@ -39,7 +44,7 @@ class SQLiteEvidenceRepository:
             evidence_type=evidence.evidence_type.value,
             clinical_context=evidence.clinical_context,
             quality_data=evidence.quality.model_dump(mode="json"),
-            source_data=evidence.source.model_dump(mode="json"),
+            source_data=source_data,
             event_timestamp=evidence.event_timestamp,
             supports_cause_ids=evidence.supports_cause_ids,
             supports_hypothesis_ids=evidence.supports_hypothesis_ids,
@@ -96,19 +101,24 @@ class SQLiteEvidenceRepository:
 
     def _to_entity(self, model: EvidenceModel) -> Evidence:
         """Convert EvidenceModel to Evidence entity."""
+        source_data = dict(model.source_data)
+        verification_method = source_data.pop("_verification_method", None)
+        matched_lines = source_data.pop("_matched_lines", [])
         return Evidence(
             id=EvidenceId(model.id),
             content=model.content,
             evidence_type=EvidenceType(model.evidence_type),
             clinical_context=model.clinical_context,
             quality=EvidenceQuality(**model.quality_data),
-            source=EvidenceSource(**model.source_data),
+            source=EvidenceSource(**source_data),
             event_timestamp=model.event_timestamp,
             supports_cause_ids=model.supports_cause_ids,
             supports_hypothesis_ids=model.supports_hypothesis_ids,
             contradicts_hypothesis_ids=model.contradicts_hypothesis_ids,
             verified=model.verified,
             verifier=model.verifier,
+            verification_method=verification_method,
+            matched_lines=matched_lines,
             verification_timestamp=model.verification_timestamp,
             tags=model.tags,
         )

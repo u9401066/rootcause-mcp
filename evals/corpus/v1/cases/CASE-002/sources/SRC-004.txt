@@ -1,0 +1,13 @@
+TIMESTAMP: 2025-02-05T05:30:00Z
+
+Nursing handoff:
+- Blood drawn for an arterial gas appeared unusually opaque and milky.
+- Urine was described as forest green.
+- A transient heart rate of 40/min was observed.
+- These findings were communicated, but the record shows no triglyceride order or medication-toxicity escalation.
+
+ECG observations:
+- Sinus bradycardia at 48/min.
+- PR 0.22 s, QRS 0.14 s, QTc 0.48 s.
+- Coved ST elevation in V1-V2 with right-bundle morphology.
+- Automated interpretation listed ischemia or electrolyte disturbance for consideration.

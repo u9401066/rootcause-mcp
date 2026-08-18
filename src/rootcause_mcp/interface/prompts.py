@@ -111,7 +111,9 @@ def get_all_prompts() -> list[Prompt]:
     ]
 
 
-def get_prompt_result(name: str, arguments: dict[str, Any] | None = None) -> GetPromptResult:
+def get_prompt_result(
+    name: str, arguments: dict[str, Any] | None = None
+) -> GetPromptResult:
     """
     Generate the structured PromptMessages for a requested clinical prompt.
 
@@ -138,7 +140,7 @@ def get_prompt_result(name: str, arguments: dict[str, Any] | None = None) -> Get
             "   - **Stream B**: Surgical insults (e.g. lateral positioning, occult bleeding, cement BCIS, IVC compression)\n"
             "   - **Stream C**: Anesthesia management (e.g. propofol vasodilation, inotrope selection in SAM, syringe swap)\n"
             "4. **Step 4: Cognitive & System Audit**: Call `rc_reflect` and `rc_challenge_assumption` to document cognitive traps (anchoring on 'light anesthesia', alarm fatigue) and HFACS latent errors.\n"
-            "5. **Step 5: Synthesize Final M&M Report**: Call `rc_generate_contract_report(format='markdown', template_file='config/templates/anesthesia_mm_rca_report_template.md', finalize=True)`.\n\n"
+            "5. **Step 5: Synthesize Final M&M Report**: Preview first, then call `rc_generate_contract_report(format='markdown', template_file='config/templates/anesthesia_mm_rca_report_template.md', finalize=True, approved_by='<authorized reviewer>')` only after readiness and safety gates pass.\n\n"
             "Begin by creating a session and adding the initial physical evidence records."
         )
         return GetPromptResult(
@@ -152,7 +154,9 @@ def get_prompt_result(name: str, arguments: dict[str, Any] | None = None) -> Get
         )
 
     elif name == "perioperative_crisis_differential":
-        pres = args.get("clinical_presentation", "Acute Hypotensive Collapse Post-Induction")
+        pres = args.get(
+            "clinical_presentation", "Acute Hypotensive Collapse Post-Induction"
+        )
         resp = args.get("drug_response", "Unspecified response")
 
         text = (

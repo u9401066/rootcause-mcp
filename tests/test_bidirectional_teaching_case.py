@@ -3,7 +3,9 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
+from collections.abc import Iterator
+
+import pytest
 
 from rootcause_mcp.application.session_progress import SessionProgressTracker
 from rootcause_mcp.domain.entities.session import RCASession
@@ -18,8 +20,9 @@ from rootcause_mcp.infrastructure.persistence.why_tree_repository import (
 from rootcause_mcp.interface.handlers.why_tree_handlers import WhyTreeHandlers
 
 
-def _build_handlers(_export_dir: Path) -> tuple[str, WhyTreeHandlers]:
-    """Create a lightweight handler stack for testing."""
+@pytest.fixture
+def handler_case() -> Iterator[tuple[str, WhyTreeHandlers]]:
+    """Create a handler stack and dispose its SQLite owner after each test."""
     database = Database(":memory:")
     database.create_tables()
 
@@ -40,7 +43,10 @@ def _build_handlers(_export_dir: Path) -> tuple[str, WhyTreeHandlers]:
         session_repository=session_repo,
         progress_tracker=progress_tracker,
     )
-    return str(session.id), handlers
+    try:
+        yield str(session.id), handlers
+    finally:
+        database.close()
 
 
 def _extract_node_id(result_text: str) -> str:
@@ -48,9 +54,11 @@ def _extract_node_id(result_text: str) -> str:
     return result_text.split("**Node ID:** `", maxsplit=1)[1].split("`", maxsplit=1)[0]
 
 
-async def test_add_causal_link_detects_feedback_loop(tmp_path: Path) -> None:
+async def test_add_causal_link_detects_feedback_loop(
+    handler_case: tuple[str, WhyTreeHandlers],
+) -> None:
     """Adding a backward causal link should surface a feedback loop."""
-    session_id, handlers = _build_handlers(tmp_path)
+    session_id, handlers = handler_case
 
     first = await handlers.handle_ask_why(
         {
@@ -91,9 +99,11 @@ async def test_add_causal_link_detects_feedback_loop(tmp_path: Path) -> None:
     assert "缺乏明確 escalation trigger 與交班提醒" in tree[0].text
 
 
-async def test_build_teaching_case_outputs_learning_artifacts(tmp_path: Path) -> None:
+async def test_build_teaching_case_outputs_learning_artifacts(
+    handler_case: tuple[str, WhyTreeHandlers],
+) -> None:
     """RCA chain should be convertible into a teaching-ready lesson plan."""
-    session_id, handlers = _build_handlers(tmp_path)
+    session_id, handlers = handler_case
 
     first = await handlers.handle_ask_why(
         {

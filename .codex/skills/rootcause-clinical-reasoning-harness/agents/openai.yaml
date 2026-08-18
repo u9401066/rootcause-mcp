@@ -1,0 +1,4 @@
+interface:
+  display_name: "RootCause Clinical Reasoning"
+  short_description: "Grounded multi-source DDx and RCA workflow"
+  default_prompt: "Use $rootcause-clinical-reasoning-harness to inventory and safely extract these de-identified records, then build an evidence-grounded DDx/RCA preliminary report."

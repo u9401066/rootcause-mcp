@@ -17,8 +17,8 @@
 | 2026-08-09 | **MCP SDK 1.x → 2.0 升級** | 不考慮 1.x 相容；typed BaseModel input/output；McpError 統一錯誤處理 |
 | 2026-08-09 | **Evidence as First-Class Entity** | `list[str]` 改為結構化 Evidence（來源、品質、雙向連結），法律稽核需求 |
 | 2026-08-09 | **Differential Diagnosis Tree** | 新增 Hypothesis entity + Bayesian LR 更新機制，取代 0/1 確認 |
-| 2026-08-09 | **Chain of Thought Persistence** | ReasoningStep entity 持久化，提供完整推理 audit trail |
-| 2026-08-09 | **CONTRACT-level Report** | 不可變的 ContractReport（finalized 後禁止修改），符合 FHIR-like 標準 |
+| 2026-08-09 | **Externalized Reasoning Audit Persistence** | ReasoningStep 持久化 Agent 主動提供的 rationale／decision record；不擷取或要求模型隱藏 chain-of-thought |
+| 2026-08-09 | **CONTRACT-level Report** | 提供 deterministic、content-hashed 的統一報告 snapshot 與 FHIR-like presenter；finalized 不等於 WORM storage |
 | 2026-08-09 | **Evidence Quality Grading** | Oxford CEBM 啟發的 Strength×Reliability 二維品質矩陣 |
 | 2026-08-09 | **DB: JSON array 儲存 ID 關聯** | 不用外鍵 JOIN，SQLite 效能 + 彈性，Evidence↔Cause many-to-many |
 | 2026-08-09 | **🔴 深度審計發現 P0 缺陷** | server_v2 路由對 5 個舊 handlers 呼叫不存在的 `handle()` → 19/36 tools 運行時 AttributeError；Orchestrator 未整合；3 個新 repos 是死代碼。詳見審計報告 |
@@ -35,15 +35,24 @@
 | 2026-08-14 | **Server-Level Instructions & Meta-Prompt** | 連線握手時自動注入系統級臨床推理 Meta-Prompt，鎖定 4-Tier 倒推因果與證據血緣 |
 | 2026-08-14 | **SQLite WhyTree 持久化** | 實作 `SQLiteWhyTreeRepository` 與 `WhyChainModel`，消除 WhyTree 記憶體遺失缺陷 |
 | 2026-08-14 | **臨床衝突與遺漏檢測 (`ClinicalGapAnalyzer`)** | 確定性偵測診斷矛盾、藥物反常惡化反應與臨床指引監測遺漏 (`rc_detect_conflicts`) |
-| 2026-08-14 | **不可變案例快照 (`CaseCheckpointService`)** | 支援案例狀態快照與分支實驗 (`rc_create_checkpoint`, `rc_restore_checkpoint`) |
+| 2026-08-14 | **完整性保護案例快照 (`CaseCheckpointService`)** | 支援帶 SHA-256、session binding 與受限路徑的案例狀態快照與分支實驗 (`rc_create_checkpoint`, `rc_restore_checkpoint`)；不宣稱為 WORM storage |
 | 2026-08-14 | **確定性時序圖與 Mermaid 語法稽核** | 支援 5 種臨床時間軸模式 (`rc_render_timeline`) 與通用圖表語法修復 (`rc_validate_diagram`) |
-| 2026-08-14 | **硬性證據溯源 (Hard-Coded Provenance)** | 借鑑 ETL/Airbyte lineage 架構，Evidence 必須綁定 raw_snippet 與 SHA-256 密碼學摘要，由 ProvenanceVerifier 直接比對磁碟實體文件，實現零幻覺硬性溯源；明確不重疊 Asset-Aware 的 PDF OCR/表格分割角色 |
+| 2026-08-14 | **確定性證據溯源 (Deterministic Provenance)** | Evidence 可綁定 raw snippet 與 SHA-256，由 ProvenanceVerifier 在 allowlisted roots 比對支援的純文字來源；這只證明片段匹配，不證明臨床解讀正確，也不負責 PDF OCR/表格分割 |
 | 2026-08-14 | **Flash 模型多輪導引狀態機** | 輕量模型易提早收斂與漏項；ClinicalGuidanceService 在每次工具回傳中注入 stage、checklist、missing prerequisites 與 next prompt，引導 Flash 模型在多輪對話中循序完成完整臨床思考鏈 |
-| 2026-08-14 | **臨床可自訂範本與 Playbook 體系** | 解耦確定性資料聚合引擎與純文字臨床規格；支援自訂 Markdown 報告範本 (`config/templates/`)、5 階段推論 SOP (`config/protocols/`) 與次專科臨床手冊 (`config/domains/`)，實現高可重現性與免寫代碼維護 |
+| 2026-08-14 | **臨床範本與 Agent-readable Playbook 體系** | 支援 allowlisted Markdown 報告範本、SOP 與次專科手冊 resources；目前只有部分 HFACS YAML 有 runtime consumer，其他規則變更仍可能需要程式修改 |
 | 2026-08-14 | **麻醉專科 4-Tier 倒推因果框架** | 針對術中死亡/重症案例，禁止停留在終末停跳表面，強制執行 4-Tier 逆推：Tier 0 (終末心律) → Tier 1 (ACLS 5H5T) → Tier 2 (術中三方觸發流：病人體質 vs 外科機械 vs 麻醉藥理) → Tier 3 (HFACS 系統漏洞) |
 | 2026-08-14 | **WhyTree 持久化升級 (SQLiteWhyTreeRepository)** | 解決 WhyTree 僅存於記憶體的已知限制；實作 SQLModel `WhyChainModel` 與 `CausalLinkModel`，達到 100% 重啟還原 |
 | 2026-08-14 | **自動化衝突與指引缺口偵測 (ClinicalGapAnalyzer)** | 實作 `ClinicalGapAnalyzer` 領域服務與 `rc_detect_conflicts` 工具，自動偵測診斷矛盾、反常藥物反應與危急值監測遺漏 |
-| 2026-08-14 | **個案快照與分支恢復 (CaseCheckpointService)** | 實作 `CaseCheckpointService` 與快照工具 (`rc_create_checkpoint`, `rc_restore_checkpoint`)，支援不可變密碼學快照存檔與無損跨輪分支恢復 |
+| 2026-08-14 | **個案快照與分支恢復 (CaseCheckpointService)** | 實作 `CaseCheckpointService` 與快照工具 (`rc_create_checkpoint`, `rc_restore_checkpoint`)，以路徑限制、SHA-256、session binding 與原子寫入保護跨輪恢復 |
+| 2026-08-17 | **多來源先建立 manifest，再登錄 atomic evidence** | 每份來源使用穩定 document ID、whole-file SHA-256、媒體型別與處理狀態；來源覆蓋缺口必須出現在標準報告，不能由 Agent 敘事補齊 |
+| 2026-08-17 | **Bayesian API 接受 direct applied LR** | 支持證據通常 LR >= 1、反證 LR <= 1、中性／無可靠定量值使用 1.0；server 不倒數 LR，也不從單一 observation 偽造 LR+/LR- 配對 |
+| 2026-08-17 | **內容驗證不等於檔案存在** | 只有 exact/安全 normalized snippet match，或 operator allowlist 中具名 reviewer 的明確人工確認，才能標記 evidence verified；location/file existence 僅是未驗證 metadata |
+| 2026-08-17 | **標準報告採 unified read model 與 gated final snapshot** | 同一產物聚合 DDx、provenance、timeline、認知安全、Fishbone、5-Why、HFACS、因果稽核與 readiness；finalization 產生 approval/hash，但真正 write-once retention 由部署 records system 負責 |
+| 2026-08-17 | **MCP 不負責 raw binary ingestion** | PDF/DOCX/image/EHR batch 由 host 或經核准 extractor 產生 citation-ready spans；RootCause 只接收結構化 atomic findings，不能把 inaccessible binary 宣稱為已驗證 |
+| 2026-08-17 | **protocol/domain YAML 目前是 Agent-readable 規格，不是完整 runtime policy engine** | readiness、gap 與 timeline 部分規則仍在 Python；文件不得宣稱修改 YAML 一定改變執行結果。未來需 versioned PolicyCatalog、session pin 與 policy digest |
+| 2026-08-17 | **不得把工程 alpha 宣稱為自主診斷或臨床 production system** | 人工審閱、RBAC、tenant isolation、encryption-at-rest、retention、正式 migration 與受監管驗證仍是 production 前置條件 |
+| 2026-08-17 | **Final report 必須 deterministic recompute，不信任 Agent 自報 PASS** | Typed nested schema、完整 `conformance_checks[]`、root/audit lineage、DDx/test disposition、reviewer/time/hash 與 recursive immutability 共同構成 fail-closed final boundary |
+| 2026-08-17 | **Public eval corpus 不是 blinded case/gold** | 正式 Agent MVP 評估需要 repo 外 private case bundle、分離的 private holdout、至少三個真實 runtime、可信 server/proxy trace、36 個 clean-root jobs，以及每個 job 兩名 clinical reviewers 盲評與分歧裁決；目前為 `AGENT_EVAL_NOT_ESTABLISHED` |
 
 ---
 
@@ -90,10 +99,10 @@ MCP SDK 將從 1.x 升至 2.0，需要同步進行架構升級。
 |-----------|------|------|
 | `Evidence` | Entity | 結構化證據（來源、品質、連結） |
 | `Hypothesis` | Entity | DD 假說（Bayesian 機率、inclusion/exclusion criteria） |
-| `ReasoningStep` | Entity | 推理鏈步驟（chain of thought 持久化） |
+| `ReasoningStep` | Entity | Agent 外顯 rationale／決策稽核步驟（不含隱藏 chain-of-thought） |
 | `EvidenceQuality` | Value Object | Strength × Reliability 品質矩陣 |
 | `ClinicalConcept` | Value Object | SNOMED/ICD-10 概念封裝 |
-| `ContractReport` | Value Object | 不可變 CONTRACT 報告 |
+| `ContractReport` | Value Object | gated、content-hashed CONTRACT 報告 snapshot |
 
 ### SDK 2.0 遷移策略
 
@@ -707,4 +716,6 @@ server = Server(
    - docs/architecture/deep_reasoning_architecture.md
    - docs/agent_integration_guide.md
 
-RootCause MCP v2.0.0-alpha is now PRODUCTION-READY. |
+> 上述 2026-08-09 的「PRODUCTION-READY」結論已由 2026-08-17 審計取代。
+> 目前只可稱為 **engineering alpha**；正式 Agent eval 與臨床 production controls
+> 均尚未建立。

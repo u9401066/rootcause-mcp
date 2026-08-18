@@ -1,0 +1,8 @@
+2025-04-12T08:30:00Z progress note:
+Confusion, temperature 38.5 C, HR 112/min, BP 92/52 mmHg, RR 26/min, SpO2 92% on face mask 6 L/min. Bilateral coarse breath sounds and left basal crackles. Wound clean. Mild bilateral leg edema. WBC 14,500, hemoglobin 9.2 g/dL, creatinine 1.4 mg/dL, lactate 2.5 mmol/L, urine nitrite positive. Infection, dehydration, and anemia were listed; cultures, antibiotics, crystalloid, and oxygen were ordered.
+
+Subsequent observations:
+- 2025-04-12T10:00:00Z: BP 90/50 after 500 mL crystalloid; another bolus ordered.
+- 2025-04-12T11:30:00Z: sudden severe chest tightness and inability to breathe; SpO2 85% on face mask.
+- 2025-04-12T11:45:00Z: sinus tachycardia with incomplete right-bundle morphology; no ST elevation.
+- 2025-04-12T12:10:00Z: pulseless electrical activity; resuscitation started.

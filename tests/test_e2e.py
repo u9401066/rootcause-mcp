@@ -10,6 +10,7 @@ Tests the full pipeline:
 """
 
 import json
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -34,7 +35,7 @@ async def _assert_markdown_report_levels(
             "session_id": session_id,
             "format": "markdown",
             "detail_level": "standard",
-            "finalize": True,
+            "finalize": False,
         },
     )
     markdown_path = Path(markdown_report["output_path"])
@@ -48,6 +49,8 @@ async def _assert_markdown_report_levels(
     assert "## Evidence Matrix" in markdown
     assert "## Uncertainty and Cognitive Safety" in markdown
     assert "## Automated Completeness Checks" in markdown
+    assert "## Deterministic Conformance Checks" in markdown
+    assert "this snapshot cannot be treated as final" not in markdown
     assert "1 evidence record(s) have not been independently verified" in markdown
     assert "## Evidence Graph" in markdown
     assert "Cardiogenic shock" in markdown
@@ -249,13 +252,14 @@ async def test_complete_clinical_reasoning_workflow(
         {
             "session_id": session_id,
             "format": "json",
-            "finalize": True,
+            "finalize": False,
             "include_reasoning_chain": True,
             "include_evidence_graph": True,
             "include_quality_metrics": True,
         },
     )
     assert report["status"] == "success"
+    assert report["finalized"] is False
     assert "output_path" in report
     assert report["evidence_graph_nodes"] == 2
     assert report["evidence_graph_edges"] == 1
@@ -376,15 +380,18 @@ async def test_contract_report_vo() -> None:
     assert report.report_id == "RPT-001"
     assert not report.is_finalized
 
-    # Finalize report
-    report.finalize("test_reviewer")
-    assert report.is_finalized
-    assert report.content_hash is not None
+    # A typed preliminary envelope is renderable, but an incomplete clinical/RCA
+    # aggregate must never be promoted to a final snapshot.
+    with pytest.raises(ValueError, match="deterministic conformance failed"):
+        report.finalize("test_reviewer")
+    assert report.is_finalized is False
+    assert report.content_hash is None
 
     # Test FHIR export
     fhir = render_contract_report_fhir(report)
     assert fhir["resourceType"] == "DiagnosticReport"
-    assert fhir["status"] == "final"
+    assert fhir["status"] == "preliminary"
+    assert "issued" not in fhir
     assert fhir["code"]["coding"][0] == {
         "system": "urn:rootcause-mcp:report-type",
         "code": "clinical-reasoning-report",
@@ -403,6 +410,26 @@ async def test_contract_report_vo() -> None:
     assert "INVALID CODE: SNOMED_CT:not-a-snomed-code" in markdown
 
 
+def test_markdown_omits_timeline_only_for_invalid_persisted_evidence(
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Malformed legacy evidence degrades explicitly without hiding other errors."""
+    from rootcause_mcp.domain.value_objects.contract_report import ContractReport
+
+    report = ContractReport(
+        report_id="RPT-invalid-evidence",
+        session_id="case-invalid-evidence",
+        generated_by="test-agent",
+        evidence=[{"id": "legacy-malformed", "content": "Incomplete persisted row"}],
+    )
+
+    with caplog.at_level("WARNING", logger="rootcause_mcp.interface.contract_markdown"):
+        markdown = render_contract_report_markdown(report)
+
+    assert "## Chronological Timeline" not in markdown
+    assert "persisted evidence failed Evidence schema validation" in caplog.text
+
+
 def test_contract_hash_ignores_derived_mermaid_presentation() -> None:
     from rootcause_mcp.domain.value_objects.contract_report import ContractReport
 
@@ -411,20 +438,23 @@ def test_contract_hash_ignores_derived_mermaid_presentation() -> None:
         "edges": [],
         "warnings": [],
     }
+    generated_at = datetime(2026, 8, 17, 8, 0, tzinfo=UTC)
     first = ContractReport(
         report_id="RPT-1",
         session_id="case-1",
+        generated_at=generated_at,
         generated_by="test-agent",
         evidence_graph={**graph, "mermaid": "style version one"},
     )
     second = ContractReport(
-        report_id="RPT-2",
+        report_id="RPT-1",
         session_id="case-1",
+        generated_at=generated_at,
         generated_by="test-agent",
         evidence_graph={**graph, "mermaid": "style version two"},
     )
 
-    first.finalize("reviewer")
-    second.finalize("reviewer")
+    assert first.compute_content_hash() == second.compute_content_hash()
 
-    assert first.content_hash == second.content_hash
+    changed_identity = second.model_copy(update={"report_id": "RPT-2"})
+    assert first.compute_content_hash() != changed_identity.compute_content_hash()

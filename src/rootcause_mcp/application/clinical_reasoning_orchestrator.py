@@ -2,12 +2,13 @@
 Clinical Reasoning Orchestrator.
 
 Agent-friendly API that hides medical complexity behind simple operations.
-This is the core "harness" that enables any AI agent to perform specialist-level reasoning.
+This is the core harness for recording a consistent, auditable reasoning workflow.
 """
 
 from __future__ import annotations
 
 import hashlib
+import os
 from datetime import datetime
 from typing import Any
 
@@ -16,7 +17,11 @@ from rootcause_mcp.domain.entities.evidence import (
     EvidenceSource,
     EvidenceType,
 )
-from rootcause_mcp.domain.entities.hypothesis import Hypothesis, HypothesisStatus
+from rootcause_mcp.domain.entities.hypothesis import (
+    Hypothesis,
+    HypothesisStatus,
+    PlannedDiagnosticTest,
+)
 from rootcause_mcp.domain.entities.reasoning_step import (
     ReasoningChain,
     ReasoningStep,
@@ -37,6 +42,7 @@ from rootcause_mcp.domain.value_objects.evidence_quality import (
     EvidenceReliability,
     EvidenceStrength,
 )
+from rootcause_mcp.domain.value_objects.identifiers import HypothesisId
 from rootcause_mcp.domain.value_objects.reasoning_guidance import ReasoningGuidance
 
 
@@ -222,6 +228,11 @@ class ClinicalReasoningOrchestrator:
         rationale: str = "",
         inclusion_criteria: list[str] | None = None,
         exclusion_criteria: list[str] | None = None,
+        must_not_miss: bool = False,
+        alternatives_considered: list[dict[str, Any]] | None = None,
+        uncertainty_factors: list[str] | None = None,
+        confidence_rationale: str = "",
+        planned_tests: list[dict[str, Any]] | None = None,
         created_by: str = "agent",
     ) -> Hypothesis:
         """
@@ -240,6 +251,11 @@ class ClinicalReasoningOrchestrator:
             rationale: Why this hypothesis is being considered
             inclusion_criteria: Criteria that support this diagnosis
             exclusion_criteria: Criteria that rule out this diagnosis
+            must_not_miss: Explicitly reviewed high-harm rule-out marker
+            alternatives_considered: Competing diagnoses and disposition rationale
+            uncertainty_factors: Known uncertainty retained with the hypothesis
+            confidence_rationale: Why the prior probability was selected
+            planned_tests: Typed tests planned or ordered to challenge this hypothesis
             created_by: Who proposed this hypothesis
 
         Returns:
@@ -271,13 +287,32 @@ class ClinicalReasoningOrchestrator:
                 version=None,
             )
 
+        hypothesis_id = HypothesisId.generate()
+        bound_planned_tests: list[PlannedDiagnosticTest] = []
+        for planned_test in planned_tests or []:
+            payload = dict(planned_test)
+            supplied_target = payload.pop("target_hypothesis_id", None)
+            if supplied_target not in {None, "SELF", hypothesis_id.value}:
+                raise ValueError(
+                    "planned test target_hypothesis_id must be omitted or SELF when "
+                    "proposing a new hypothesis"
+                )
+            payload["target_hypothesis_id"] = hypothesis_id.value
+            bound_planned_tests.append(PlannedDiagnosticTest.model_validate(payload))
+
         # Create hypothesis
         hypothesis = Hypothesis(
+            id=hypothesis_id,
             diagnosis=concept,
             prior_probability=prior_probability,
             current_probability=prior_probability,
             inclusion_criteria=inclusion_criteria or [],
             exclusion_criteria=exclusion_criteria or [],
+            must_not_miss=must_not_miss,
+            alternatives_considered=alternatives_considered or [],
+            uncertainty_factors=uncertainty_factors or [],
+            confidence_rationale=confidence_rationale,
+            planned_tests=bound_planned_tests,
             created_by=created_by,
             clinical_rationale=rationale
             or f"Considering {diagnosis} based on clinical presentation",
@@ -337,6 +372,14 @@ class ClinicalReasoningOrchestrator:
         if not hypothesis:
             raise KeyError(f"Hypothesis {hypothesis_id} not found")
 
+        if any(
+            update.evidence_id == evidence_id for update in hypothesis.bayesian_history
+        ):
+            raise ValueError(
+                f"Evidence {evidence_id} is already linked to hypothesis "
+                f"{hypothesis_id}; duplicate Bayesian updates are not allowed"
+            )
+
         # Perform Bayesian update
         updated_hypothesis = hypothesis.bayesian_update(
             evidence_id=evidence_id,
@@ -348,9 +391,11 @@ class ClinicalReasoningOrchestrator:
         # Add likelihood ratio metadata
         updated_hypothesis = updated_hypothesis.add_likelihood_ratio(
             evidence_id=evidence_id,
-            lr_positive=likelihood_ratio if supports else 1.0 / likelihood_ratio,
-            lr_negative=1.0 / likelihood_ratio if supports else likelihood_ratio,
+            lr_positive=likelihood_ratio if supports else None,
+            lr_negative=likelihood_ratio if not supports else None,
             rationale=rationale or "No rationale provided",
+            applied_likelihood_ratio=likelihood_ratio,
+            supports=supports,
         )
 
         # Update store
@@ -439,6 +484,10 @@ class ClinicalReasoningOrchestrator:
         verified_by: str = "agent",
         raw_snippet: str | None = None,
         document_id: str | None = None,
+        manual_confirmation: bool = False,
+        expected_source_sha256: str | None = None,
+        fail_closed: bool = False,
+        provenance_verifier: ProvenanceVerifier | None = None,
     ) -> tuple[Evidence, ProvenanceMatch | None]:
         """
         Verify evidence against physical files or mark with reviewer audit.
@@ -448,6 +497,14 @@ class ClinicalReasoningOrchestrator:
             verified_by: Person or system recording verification
             raw_snippet: Optional verbatim quote to verify on disk
             document_id: Optional document ID override
+            manual_confirmation: Explicit assertion that a qualified human
+                independently checked the source when deterministic matching is
+                unavailable
+            expected_source_sha256: Whole-file digest pinned by a source manifest
+            fail_closed: Revoke prior verification when manifest-bound physical
+                verification fails
+            provenance_verifier: Optional shared verifier used by a manifest-aware
+                handler so URI resolution and snippet verification use identical roots
 
         Returns:
             Tuple of (Updated Evidence, Optional ProvenanceMatch)
@@ -461,11 +518,13 @@ class ClinicalReasoningOrchestrator:
 
         match: ProvenanceMatch | None = None
         if target_doc:
-            match = self._provenance_verifier.verify_provenance(
+            verifier = provenance_verifier or self._provenance_verifier
+            match = verifier.verify_provenance(
                 document_id=target_doc,
                 raw_snippet=target_snippet,
                 location=evidence.source.location,
                 content=evidence.content,
+                expected_source_sha256=expected_source_sha256,
             )
             if match.is_verified:
                 verified_evidence = evidence.mark_verified(
@@ -474,19 +533,66 @@ class ClinicalReasoningOrchestrator:
                     matched_lines=list(match.line_numbers),
                     content_hash=match.snippet_hash,
                 )
-            else:
+            elif (
+                match.match_type != "SOURCE_HASH_MISMATCH"
+                and manual_confirmation
+                and self._is_authorized_human_reviewer(verified_by)
+            ):
                 verified_evidence = evidence.mark_verified(
                     verifier=verified_by,
-                    verification_method="MANUAL_REVIEWER_UNVERIFIED_FILE",
+                    verification_method="MANUAL_REVIEWER_CONFIRMATION",
                 )
-        else:
+            elif fail_closed:
+                verified_evidence = self.record_failed_provenance_verification(
+                    evidence_id,
+                    match,
+                )
+            else:
+                verified_evidence = evidence
+        elif manual_confirmation and self._is_authorized_human_reviewer(verified_by):
             verified_evidence = evidence.mark_verified(
                 verifier=verified_by,
-                verification_method="MANUAL_REVIEWER",
+                verification_method="MANUAL_REVIEWER_CONFIRMATION",
             )
+        else:
+            verified_evidence = evidence
 
         self.evidence_store[evidence_id] = verified_evidence
         return verified_evidence, match
+
+    def record_failed_provenance_verification(
+        self,
+        evidence_id: str,
+        match: ProvenanceMatch,
+    ) -> Evidence:
+        """Persist an explicit unverified state for a manifest-bound failure."""
+        evidence = self.evidence_store.get(evidence_id)
+        if evidence is None:
+            raise KeyError(f"Evidence {evidence_id} not found")
+        unverified = evidence.model_copy(
+            update={
+                "verified": False,
+                "verifier": None,
+                "verification_method": match.match_type,
+                "matched_lines": [],
+                "verification_timestamp": None,
+            }
+        )
+        self.evidence_store[evidence_id] = unverified
+        return unverified
+
+    @staticmethod
+    def _is_authorized_human_reviewer(verified_by: str) -> bool:
+        """Require an operator-controlled allowlist for manual verification."""
+        normalized = verified_by.strip().casefold()
+        authorized = {
+            reviewer.strip().casefold()
+            for reviewer in os.environ.get("ROOTCAUSE_AUTHORIZED_REVIEWERS", "").split(
+                ","
+            )
+            if reviewer.strip()
+        }
+        return bool(normalized) and normalized in authorized
 
     def get_guidance(self) -> ReasoningGuidance:
         """

@@ -4,6 +4,8 @@ Test real persistence with SQLite.
 Verifies that data survives across sessions.
 """
 
+import gc
+import warnings
 from pathlib import Path
 
 import pytest
@@ -13,6 +15,12 @@ from rootcause_mcp.domain.entities.evidence import (
     EvidenceSource,
     EvidenceType,
 )
+from rootcause_mcp.domain.entities.session import RCASession
+from rootcause_mcp.domain.value_objects.case_manifest import (
+    CaseInputManifest,
+    SourceDocument,
+)
+from rootcause_mcp.domain.value_objects.enums import CaseType
 from rootcause_mcp.domain.value_objects.evidence_quality import (
     EvidenceQuality,
     EvidenceReliability,
@@ -22,6 +30,65 @@ from rootcause_mcp.infrastructure.persistence.database import Database
 from rootcause_mcp.infrastructure.persistence.evidence_repository import (
     SQLiteEvidenceRepository,
 )
+from rootcause_mcp.infrastructure.persistence.session_repository import (
+    SQLiteSessionRepository,
+)
+
+
+def test_database_close_prevents_sqlite_resource_warning(tmp_path: Path) -> None:
+    """Explicit owner shutdown must close pooled SQLite connections."""
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always", ResourceWarning)
+        database = Database(tmp_path / "resource-owner.db")
+        database.create_tables()
+        database.close()
+        del database
+        gc.collect()
+
+    resource_warnings = [
+        warning for warning in caught if issubclass(warning.category, ResourceWarning)
+    ]
+    assert resource_warnings == []
+
+
+def test_source_manifest_survives_session_restart(tmp_path: Path) -> None:
+    database_path = tmp_path / "manifest.db"
+    database = Database(database_path)
+    database.create_tables()
+    repository = SQLiteSessionRepository(database)
+    session = RCASession.create(
+        case_type=CaseType.COMPLICATION,
+        case_title="Multi-source case",
+    )
+    manifest = CaseInputManifest(
+        documents=(
+            SourceDocument(
+                document_id="chart-1",
+                source_uri="records/chart-1.txt",
+                sha256="c" * 64,
+                media_type="text/plain",
+                source_kind="progress_note",
+            ),
+            SourceDocument(
+                document_id="device-1",
+                source_uri="records/device-1.log",
+                sha256="d" * 64,
+                media_type="text/plain",
+                source_kind="device_log",
+            ),
+        )
+    )
+    session.set_source_manifest(manifest)
+    repository.save(session)
+    session_id = str(session.id)
+    database.close()
+
+    reopened = Database(database_path)
+    restored = SQLiteSessionRepository(reopened).get_by_id(session_id)
+
+    assert restored is not None
+    assert restored.get_source_manifest() == manifest
+    reopened.close()
 
 
 @pytest.mark.asyncio
@@ -118,6 +185,47 @@ async def test_evidence_list_by_session(tmp_path: Path) -> None:
 
 
 @pytest.mark.asyncio
+async def test_evidence_verification_metadata_survives_restart(tmp_path: Path) -> None:
+    db_path = tmp_path / "verification.db"
+    database = Database(db_path)
+    database.create_tables()
+    repository = SQLiteEvidenceRepository(database)
+    evidence = Evidence(
+        content="Verified chart finding",
+        evidence_type=EvidenceType.DOCUMENT,
+        quality=EvidenceQuality(
+            strength=EvidenceStrength.STRONG,
+            reliability=EvidenceReliability.GRADE_A,
+        ),
+        source=EvidenceSource(
+            document_id="chart.txt",
+            location="Line 7",
+            raw_snippet="Verified chart finding",
+            collected_by="test",
+        ),
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        matched_lines=[7],
+        content_hash="sha256:abc",
+    )
+    await repository.save("verification-session", evidence)
+    database.close()
+
+    reopened = Database(db_path)
+    restored = await SQLiteEvidenceRepository(reopened).get_by_id(
+        "verification-session",
+        evidence.id.value,
+    )
+
+    assert restored is not None
+    assert restored.verification_method == "EXACT_SNIPPET_MATCH"
+    assert restored.matched_lines == [7]
+    assert restored.source.content_hash == "sha256:abc"
+    reopened.close()
+
+
+@pytest.mark.asyncio
 async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -> None:
     """Evidence, hypotheses, thinking, and reasoning survive a restart."""
     from rootcause_mcp.application.server_state import ServerState
@@ -154,6 +262,12 @@ async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -
         icd10_code="I21.9",
         prior_probability=0.3,
         rationale="Chest pain with elevated troponin supports acute MI.",
+        must_not_miss=True,
+        alternatives_considered=[
+            {"diagnosis": "Pulmonary embolism", "reason_rejected": "No RV strain"}
+        ],
+        uncertainty_factors=["Serial ECG pending"],
+        confidence_rationale="Clinical prevalence plus objective findings",
     )
     orchestrator.link_evidence_to_hypothesis(
         evidence_id=evidence.id.value,
@@ -186,6 +300,10 @@ async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -
     assert list(restored.evidence_store) == [evidence.id.value]
     assert list(restored.hypothesis_store) == [hypothesis.id.value]
     assert restored.hypothesis_store[hypothesis.id.value].current_probability > 0.3
+    restored_hypothesis = restored.hypothesis_store[hypothesis.id.value]
+    assert restored_hypothesis.must_not_miss is True
+    assert restored_hypothesis.uncertainty_factors == ["Serial ECG pending"]
+    assert restored_hypothesis.confidence_rationale.startswith("Clinical prevalence")
     assert len(restored.reasoning_chain.steps) == 3
     assert len(restored.thinking_chain.steps) == 1
     reopened_database.close()

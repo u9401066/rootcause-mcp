@@ -9,6 +9,7 @@ Unit and Integration Tests for Advanced MCP SDK 2.0 Capabilities:
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -66,12 +67,26 @@ def test_static_resources_enumeration_and_read() -> None:
     assert "clinical://protocols/clinical-reasoning-sop" in uris
     assert "clinical://domains/perioperative-shock" in uris
     assert "clinical://templates/anesthesia-mm-rca-report-template" in uris
+    assert "clinical://contracts/case-input-manifest" in uris
+    assert "clinical://contracts/case-analysis-report" in uris
+
+
+@pytest.mark.asyncio
+async def test_case_input_manifest_schema_is_discoverable() -> None:
+    result = await read_clinical_resource("clinical://contracts/case-input-manifest")
+    content = result.contents[0]
+    assert isinstance(content, TextResourceContents)
+    assert content.mime_type == "application/schema+json"
+    assert '"documents"' in content.text
+    assert '"sha256"' in content.text
 
 
 @pytest.mark.asyncio
 async def test_read_static_protocol_resource() -> None:
     """Reading a protocol resource by URI should return YAML content."""
-    res = await read_clinical_resource("clinical://protocols/anesthesia-mm-rca-protocol")
+    res = await read_clinical_resource(
+        "clinical://protocols/anesthesia-mm-rca-protocol"
+    )
     assert len(res.contents) == 1
     content = res.contents[0]
     assert isinstance(content, TextResourceContents)
@@ -82,12 +97,31 @@ async def test_read_static_protocol_resource() -> None:
 @pytest.mark.asyncio
 async def test_read_static_template_resource() -> None:
     """Reading a template resource by URI should return Markdown content."""
-    res = await read_clinical_resource("clinical://templates/anesthesia-mm-rca-report-template")
+    res = await read_clinical_resource(
+        "clinical://templates/anesthesia-mm-rca-report-template"
+    )
     assert len(res.contents) == 1
     content = res.contents[0]
     assert isinstance(content, TextResourceContents)
     assert content.mime_type == "text/markdown"
     assert "# 🏥 麻醉與圍術期重症事件 4-Tier 根因分析報告" in content.text
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "uri",
+    [
+        "clinical://templates/../../AGENTS",
+        "clinical://protocols/%2e%2e/AGENTS",
+        "clinical://domains/../templates/clinical-reasoning-report-template",
+    ],
+)
+async def test_static_resources_reject_path_traversal(uri: str) -> None:
+    result = await read_clinical_resource(uri)
+    assert len(result.contents) == 1
+    content = result.contents[0]
+    assert isinstance(content, TextResourceContents)
+    assert content.text == f"Resource not found: {uri}"
 
 
 def test_resource_templates_enumeration() -> None:
@@ -100,6 +134,14 @@ def test_resource_templates_enumeration() -> None:
     assert "clinical://sessions/{session_id}/timeline" in patterns
     assert "clinical://sessions/{session_id}/guidance" in patterns
     assert "clinical://sessions/{session_id}/conflicts" in patterns
+    report_template = next(
+        template
+        for template in templates
+        if template.uri_template == "clinical://sessions/{session_id}/report"
+    )
+    assert report_template.description == (
+        "Current preliminary unified DDx and RCA preview from live session state"
+    )
 
 
 def test_clinical_prompts_enumeration_and_generation() -> None:
@@ -131,7 +173,9 @@ def test_clinical_prompts_enumeration_and_generation() -> None:
 
 
 @pytest.mark.asyncio
-async def test_server_advanced_mcp_callbacks(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+async def test_server_advanced_mcp_callbacks(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """Full server instance should handle prompts, resources, and condensed tool dispatch."""
     monkeypatch.setenv("ROOTCAUSE_DATA_DIR", str(tmp_path))
     monkeypatch.setenv("ROOTCAUSE_TOOL_PROFILE", "condensed")
@@ -162,6 +206,7 @@ async def test_server_advanced_mcp_callbacks(tmp_path: Path, monkeypatch: pytest
         # 5. Test Facade Tool Call: rc_evidence(action='add')
         session_id = "test-facade-session-001"
         from mcp.types import CallToolRequestParams
+
         call_ev = await on_call_tool(
             context,
             CallToolRequestParams(
@@ -228,14 +273,14 @@ async def test_server_advanced_mcp_callbacks(tmp_path: Path, monkeypatch: pytest
         # 8. Test Dynamic Session Resource Reading
         read_dyn = await on_read_resource(
             context,
-            ReadResourceRequestParams(
-                uri=f"clinical://sessions/{session_id}/guidance"
-            ),
+            ReadResourceRequestParams(uri=f"clinical://sessions/{session_id}/guidance"),
         )
         assert len(read_dyn.contents) == 1
         dyn_content = read_dyn.contents[0]
         assert isinstance(dyn_content, TextResourceContents)
-        assert "DIFFERENTIAL_EXPANSION" in dyn_content.text
+        # Unverified source references must keep the workflow in evidence
+        # collection instead of advancing solely on evidence count.
+        assert "EVIDENCE_COLLECTION" in dyn_content.text
 
         # 9. Test Facade Tool Call: rc_thinking(action='think', 'reflect', 'gap', 'challenge', 'get_chain')
         call_think = await on_call_tool(
@@ -411,7 +456,6 @@ async def test_server_advanced_mcp_callbacks(tmp_path: Path, monkeypatch: pytest
         assert call_rep.is_error is not True
 
         # 13. Test Facade Tool Call: rc_rca(action='session_start', 'fishbone_init', 'fishbone_add_cause', 'why_ask', 'hfacs_suggest')
-        rca_sess_id = "rc_sess_facade_rca_01"
         call_rca_start = await on_call_tool(
             context,
             CallToolRequestParams(
@@ -424,6 +468,12 @@ async def test_server_advanced_mcp_callbacks(tmp_path: Path, monkeypatch: pytest
             ),
         )
         assert call_rca_start.is_error is not True
+        assert call_rca_start.structured_content is not None
+        assert call_rca_start.structured_content["session_id"].startswith("rc_sess_")
+        start_text = "\n".join(call_rca_start.structured_content["content"])
+        session_match = re.search(r"`(rc_sess_[a-f0-9]+)`", start_text)
+        assert session_match is not None
+        rca_sess_id = session_match.group(1)
 
         call_fb_init = await on_call_tool(
             context,

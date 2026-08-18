@@ -1,0 +1,12 @@
+{
+  "schema_version": "1.0",
+  "patient_key": "EVAL-PATIENT-005",
+  "encounter_key": "EVAL-ENCOUNTER-005",
+  "default_timezone": "UTC",
+  "documents": [
+    {"document_id": "SRC-001", "source_uri": "sources/SRC-001.txt", "sha256": "9103999f879befb65d6582c30abddbb0ceab54d8151146aa09077d98f426d40b", "media_type": "text/plain", "source_kind": "emergency_assessment", "revision": "1", "captured_at": "2025-05-19T03:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-002", "source_uri": "sources/SRC-002.txt", "sha256": "8613d7cea400d2253c7d4f1d84a489fefd722fd7474173c0c897abe9b9214f47", "media_type": "text/plain", "source_kind": "imaging_report", "revision": "1", "captured_at": "2025-05-19T03:45:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-003", "source_uri": "sources/SRC-003.csv", "sha256": "e8ed475049ee5e138ab6c42bfab3a72ac37e32253ac51bc446a014aa860d759b", "media_type": "text/csv", "source_kind": "device_log", "revision": "1", "captured_at": "2025-05-19T04:00:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true},
+    {"document_id": "SRC-004", "source_uri": "sources/SRC-004.txt", "sha256": "3b136b1243a1719ad9df556b5ce226836d9a1ac8c834ac97c1949dd3762e90e0", "media_type": "text/plain", "source_kind": "laboratory_and_update", "revision": "1", "captured_at": "2025-05-19T04:30:00Z", "parser_name": "eval-curation", "parser_version": "1.0", "status": "reviewed", "de_identified": true}
+  ]
+}

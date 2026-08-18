@@ -16,6 +16,10 @@ from rootcause_mcp.domain.entities.thinking_step import (
     ThinkingStep,
     ThinkingType,
 )
+from rootcause_mcp.domain.value_objects.case_manifest import (
+    CaseInputManifest,
+    SourceDocument,
+)
 from rootcause_mcp.domain.value_objects.enums import (
     CaseType,
     FishboneCategoryType,
@@ -147,6 +151,54 @@ def test_session_stage_and_status_lifecycle() -> None:
     archived_session.archive()
     assert archived_session.status is SessionStatus.ARCHIVED
     assert set(session.get_progress()) == {stage.value for stage in Stage}
+
+
+def test_session_pins_versioned_multi_source_manifest() -> None:
+    manifest = CaseInputManifest(
+        patient_key="case-patient-1",
+        encounter_key="encounter-1",
+        default_timezone="Asia/Taipei",
+        documents=(
+            SourceDocument(
+                document_id="anesthesia-record",
+                source_uri="records/anesthesia.csv",
+                sha256="a" * 64,
+                media_type="text/csv",
+                source_kind="anesthesia_record",
+            ),
+            SourceDocument(
+                document_id="tee-report",
+                source_uri="records/tee.txt",
+                sha256="b" * 64,
+                media_type="text/plain",
+                source_kind="imaging_report",
+            ),
+        ),
+    )
+    session = RCASession.create(
+        case_type=CaseType.COMPLICATION,
+        case_title="Post-induction shock",
+    )
+
+    session.set_source_manifest(manifest)
+
+    restored = session.get_source_manifest()
+    assert restored == manifest
+    assert restored is not None
+    assert len(restored.documents) == 2
+    assert manifest.digest.startswith("sha256:")
+
+
+def test_source_manifest_rejects_duplicate_document_ids() -> None:
+    source = {
+        "document_id": "duplicate",
+        "source_uri": "records/a.txt",
+        "sha256": "a" * 64,
+        "media_type": "text/plain",
+        "source_kind": "progress_note",
+    }
+    with pytest.raises(ValueError, match="document_id values must be unique"):
+        CaseInputManifest.model_validate({"documents": [source, source]})
 
 
 def test_stage_record_failure_and_completion() -> None:

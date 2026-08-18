@@ -1,0 +1,628 @@
+<!doctype html>
+<html lang="zh-Hant">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      name="description"
+      content="RootCause MCP 把多份臨床紀錄轉成可追溯、可檢查、可交接的鑑別診斷、系統 RCA 與標準化審查包。"
+    >
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#ffffff">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="zh_TW">
+    <meta property="og:locale:alternate" content="en_US">
+    <meta property="og:title" content="RootCause MCP｜可檢查的臨床推理基礎設施">
+    <meta
+      property="og:description"
+      content="多來源證據、鑑別診斷、系統 RCA、保守因果稽核與標準化人類審查產物。"
+    >
+    <meta property="og:url" content="https://u9401066.github.io/rootcause-mcp/">
+    <link rel="canonical" href="https://u9401066.github.io/rootcause-mcp/">
+    <link rel="alternate" hreflang="zh-Hant" href="https://u9401066.github.io/rootcause-mcp/">
+    <link rel="alternate" hreflang="en" href="https://u9401066.github.io/rootcause-mcp/en/">
+    <link rel="alternate" hreflang="x-default" href="https://u9401066.github.io/rootcause-mcp/">
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="assets/styles.css">
+    <script src="assets/site.js" defer></script>
+    <title>RootCause MCP｜讓臨床推理可以被檢查</title>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareSourceCode",
+        "name": "RootCause MCP",
+        "description": "Evidence-grounded infrastructure for multi-source clinical reasoning and systems root-cause analysis.",
+        "codeRepository": "https://github.com/u9401066/rootcause-mcp",
+        "programmingLanguage": "Python",
+        "softwareVersion": "2.0.0a1",
+        "license": "https://github.com/u9401066/rootcause-mcp/blob/master/LICENSE"
+      }
+    </script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main-content">跳到主要內容</a>
+
+    <header class="site-header">
+      <div class="container header-inner">
+        <a class="brand" href="./" aria-label="RootCause MCP 首頁">
+          <span class="brand-mark" aria-hidden="true">RC</span>RootCause MCP
+        </a>
+        <button
+          class="menu-button"
+          type="button"
+          aria-label="開啟導覽選單"
+          aria-controls="site-navigation"
+          aria-expanded="false"
+          data-menu-open-label="開啟導覽選單"
+          data-menu-close-label="關閉導覽選單"
+          data-menu-button
+        ><span></span></button>
+        <nav id="site-navigation" class="site-nav" aria-label="主要導覽" data-navigation>
+          <a href="#overview">概覽</a>
+          <a href="#workflow">如何運作</a>
+          <a href="#output">標準產物</a>
+          <a href="#developers">開發者</a>
+          <a href="#validation">驗證狀態</a>
+          <a href="#safety">安全與限制</a>
+          <a class="language-link" href="en/" lang="en" hreflang="en">EN</a>
+          <a
+            class="external"
+            href="https://github.com/u9401066/rootcause-mcp"
+            target="_blank"
+            rel="noopener noreferrer"
+          >GitHub <span aria-hidden="true">↗</span></a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="main-content">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <p class="boundary-line">多來源臨床推理的可追溯基礎設施</p>
+            <h1 id="hero-title">讓臨床推理<br>可以被檢查。</h1>
+            <p>
+              把多份臨床紀錄整理成有來源依據的鑑別診斷、系統 RCA，
+              以及可由合格人員複核的標準化審查包。
+            </p>
+            <div class="actions">
+              <a class="button primary" href="#workflow">從工作流程開始</a>
+              <a class="button" href="#developers">閱讀架構邏輯</a>
+            </div>
+            <p class="boundary-line">Engineering alpha · 非醫療器材 · 需要合格人員審查</p>
+          </div>
+
+          <div class="hero-system" aria-label="從來源到審查產物的資料流">
+            <div class="flow-column">
+              <div class="flow-node">
+                <strong>急診紀錄</strong><span>document + SHA-256</span>
+              </div>
+              <div class="flow-node">
+                <strong>檢驗與影像</strong><span>snippet + location</span>
+              </div>
+              <div class="flow-node">
+                <strong>住院時間軸</strong><span>timestamp + precision</span>
+              </div>
+            </div>
+            <div class="flow-node flow-hub">
+              <strong>可驗證證據帳本</strong>
+              <span>manifest · provenance · conflicts</span>
+            </div>
+            <div class="branch-column">
+              <div class="flow-node">
+                <strong>鑑別診斷</strong><span>support · refute · direct LR</span>
+              </div>
+              <div class="flow-node">
+                <strong>系統 RCA</strong><span>Fishbone · 5-Why · HFACS</span>
+              </div>
+            </div>
+            <div class="flow-node review-node">
+              <strong>審查產物</strong>
+              <span>PRELIMINARY → human approval</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="overview" class="section" aria-labelledby="overview-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="overview-title">一個案例，一本可追溯帳本。</h2>
+            <p>
+              RootCause MCP 不是診斷模型。它讓不同 Agent 以同一份 session、同一組來源契約和同一套
+              產物格式工作，並保存每個推論輸入、反證、限制與核准狀態。
+            </p>
+          </div>
+
+          <div class="stage-rail" aria-label="核心資料鏈">
+            <article class="stage">
+              <span class="stage-number">01</span>
+              <strong>來源清冊</strong>
+              <p>文件 stable ID、雜湊、時間範圍、去識別狀態。</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">02</span>
+              <strong>原子證據</strong>
+              <p>逐字片段、來源位置、事件時間與驗證方法。</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">03</span>
+              <strong>鑑別推理</strong>
+              <p>至少三個候選假說、支持與反證、直接 LR。</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">04</span>
+              <strong>系統分析</strong>
+              <p>Fishbone、5-Why、HFACS 與保守因果稽核。</p>
+            </article>
+            <article class="stage">
+              <span class="stage-number">05</span>
+              <strong>人類審查</strong>
+              <p>先預覽、再核准；保留 reviewer 與內容雜湊。</p>
+            </article>
+          </div>
+
+          <div class="audience-links">
+            <a class="audience-link" href="#workflow">
+              <span>給使用者與 Reviewer</span>
+              <strong>先看誰負責什麼 →</strong>
+              <p>理解 Agent、MCP 與合格審查者之間不可互相取代的責任。</p>
+            </a>
+            <a class="audience-link" href="#developers">
+              <span>給 Agent 與 MCP 開發者</span>
+              <strong>直接看 contracts 與 gates →</strong>
+              <p>以 live schema、tool profiles 與 preliminary-first 流程整合。</p>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      <section id="workflow" class="section wash" aria-labelledby="workflow-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="workflow-title">思考發生在 Agent；約束與稽核發生在 MCP。</h2>
+            <p>
+              一份合規格的產物來自清楚的責任交接，不是把 raw records 丟給 MCP 後期待它自行判讀。
+            </p>
+          </div>
+
+          <div class="responsibility-grid">
+            <article class="responsibility">
+              <span class="responsibility-index">01 · INPUT</span>
+              <h3>Host／核准的 extractor</h3>
+              <p>讀取 raw PDF、DOCX、影像或 EHR，輸出原子文字、頁碼／行號、雜湊與時間精度。</p>
+            </article>
+            <article class="responsibility">
+              <span class="responsibility-index">02 · REASON</span>
+              <h3>Reasoning Agent</h3>
+              <p>提出 DDx、直接 LR、替代解釋、不確定性、反證與系統原因假說。</p>
+            </article>
+            <article class="responsibility">
+              <span class="responsibility-index">03 · GOVERN</span>
+              <h3>RootCause MCP</h3>
+              <p>檢查 schema、來源血緣、機率更新、狀態轉移、readiness gates 與標準化輸出。</p>
+            </article>
+            <article class="responsibility">
+              <span class="responsibility-index">04 · APPROVE</span>
+              <h3>合格人類審查者</h3>
+              <p>複核來源、醫學合理性、因果用語與改善措施，決定是否核准最終快照。</p>
+            </article>
+          </div>
+
+          <div class="nine-stage" aria-label="九階段推理流程">
+            <div><span>01</span><strong>建立 session</strong></div>
+            <div><span>02</span><strong>登錄 manifest</strong></div>
+            <div><span>03</span><strong>加入證據</strong></div>
+            <div><span>04</span><strong>建立 DDx</strong></div>
+            <div><span>05</span><strong>雙向檢驗</strong></div>
+            <div><span>06</span><strong>偏誤／缺口</strong></div>
+            <div><span>07</span><strong>系統 RCA</strong></div>
+            <div><span>08</span><strong>預覽報告</strong></div>
+            <div><span>09</span><strong>人類核准</strong></div>
+          </div>
+
+          <aside class="notice" aria-label="重要能力邊界">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>
+              <strong>重要：</strong>MCP 不會解析 raw PDF／DOCX／影像、不會自行產生醫學推理，
+              也不會證明臨床因果。Causation validator 是對 Agent 所提交 proof obligations 的保守稽核器。
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="output" class="section" aria-labelledby="output-title">
+        <div class="container output-grid">
+          <div>
+            <div class="section-intro">
+              <h2 id="output-title">標準產物不是一段結論，而是一組可查核關係。</h2>
+              <p>同一份案例可輸出 JSON、Markdown 與 FHIR DiagnosticReport 表示；canonical JSON 是交接基準。</p>
+            </div>
+            <div class="output-list">
+              <article class="output-item">
+                <h3>來源與時間軸</h3>
+                <p>manifest 覆蓋、文件 hash、事件時間、precision 與跨來源衝突。</p>
+              </article>
+              <article class="output-item">
+                <h3>證據與鑑別診斷</h3>
+                <p>逐筆 provenance、支持／反證、直接 LR、機率歷程與 must-not-miss disposition。</p>
+              </article>
+              <article class="output-item">
+                <h3>系統 RCA</h3>
+                <p>Fishbone、5-Why、HFACS 與 causation audit；稽核狀態不等於因果證明。</p>
+              </article>
+              <article class="output-item">
+                <h3>限制、readiness 與審查</h3>
+                <p>未解缺口、認知偏誤、核准者、核准範圍、finalization blocker 與內容雜湊。</p>
+              </article>
+            </div>
+          </div>
+
+          <div class="code-window" aria-label="標準報告 JSON 範例">
+            <div class="code-header">
+              <span>case-analysis-report.json · abridged</span>
+              <button
+                class="copy-button"
+                type="button"
+                data-copy-target="report-example"
+                data-copied-label="已複製"
+                data-error-label="複製失敗"
+              >複製</button>
+            </div>
+            <pre id="report-example"><code>{
+  <span class="code-key">"source_inventory"</span>: [
+    {
+      <span class="code-key">"document"</span>: <span class="code-string">"SRC-001"</span>,
+      <span class="code-key">"sha256"</span>: <span class="code-string">"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"</span>,
+      <span class="code-key">"evidence_count"</span>: 3,
+      <span class="code-key">"verified_count"</span>: 3,
+      <span class="code-key">"coverage_status"</span>: <span class="code-string">"reviewed"</span>
+    }
+  ],
+  <span class="code-key">"hypotheses"</span>: [
+    {
+      <span class="code-key">"id"</span>: <span class="code-string">"HYP-001"</span>,
+      <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate A"</span>},
+      <span class="code-key">"current_probability"</span>: 0.55,
+      <span class="code-key">"must_not_miss"</span>: false,
+      <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-001"</span>],
+      <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-004"</span>],
+      <span class="code-key">"planned_tests"</span>: [],
+      <span class="code-key">"status"</span>: <span class="code-string">"ACTIVE"</span>,
+      <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Auditable rationale for Candidate A"</span>
+    },
+    {
+      <span class="code-key">"id"</span>: <span class="code-string">"HYP-002"</span>,
+      <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate B"</span>},
+      <span class="code-key">"current_probability"</span>: 0.30,
+      <span class="code-key">"must_not_miss"</span>: false,
+      <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-002"</span>],
+      <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-005"</span>],
+      <span class="code-key">"planned_tests"</span>: [],
+      <span class="code-key">"status"</span>: <span class="code-string">"ACTIVE"</span>,
+      <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Auditable rationale for Candidate B"</span>
+    },
+    {
+      <span class="code-key">"id"</span>: <span class="code-string">"HYP-003"</span>,
+      <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Must-not-miss C"</span>},
+      <span class="code-key">"current_probability"</span>: 0.15,
+      <span class="code-key">"must_not_miss"</span>: true,
+      <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-003"</span>],
+      <span class="code-key">"contradicting_evidence_ids"</span>: [],
+      <span class="code-key">"planned_tests"</span>: [{
+        <span class="code-key">"test_id"</span>: <span class="code-string">"TST-001"</span>,
+        <span class="code-key">"name"</span>: <span class="code-string">"Definitive local diagnostic study"</span>,
+        <span class="code-key">"purpose"</span>: <span class="code-string">"RULE_OUT"</span>,
+        <span class="code-key">"target_hypothesis_id"</span>: <span class="code-string">"HYP-003"</span>,
+        <span class="code-key">"expected_supporting_result"</span>: <span class="code-string">"Predefined positive pattern"</span>,
+        <span class="code-key">"expected_refuting_result"</span>: <span class="code-string">"Predefined adequate negative pattern"</span>,
+        <span class="code-key">"status"</span>: <span class="code-string">"PLANNED"</span>
+      }],
+      <span class="code-key">"status"</span>: <span class="code-string">"ACTIVE"</span>,
+      <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Must-not-miss until ruled out"</span>
+    }
+  ],
+  <span class="code-key">"root_causes"</span>: [{
+    <span class="code-key">"id"</span>: <span class="code-string">"WHY-003"</span>,
+    <span class="code-key">"answer"</span>: <span class="code-string">"Escalation trigger absent"</span>,
+    <span class="code-key">"evidence"</span>: [<span class="code-string">"EVD-006"</span>],
+    <span class="code-key">"causation_verification_id"</span>: <span class="code-string">"AUDIT-001"</span>,
+    <span class="code-key">"causation_result"</span>: <span class="code-string">"INSUFFICIENT_DATA"</span>,
+    <span class="code-key">"disposition"</span>: <span class="code-string">"PROPOSED"</span>
+  }],
+  <span class="code-key">"causation_verifications"</span>: [{
+    <span class="code-key">"verification_id"</span>: <span class="code-string">"AUDIT-001"</span>,
+    <span class="code-key">"cause_event"</span>: {<span class="code-key">"id"</span>: <span class="code-string">"WHY-003"</span>, <span class="code-key">"description"</span>: <span class="code-string">"Escalation trigger absent"</span>, <span class="code-key">"evidence"</span>: [<span class="code-string">"EVD-006"</span>]},
+    <span class="code-key">"effect_event"</span>: {<span class="code-key">"description"</span>: <span class="code-string">"Escalation was delayed"</span>, <span class="code-key">"evidence"</span>: [<span class="code-string">"EVD-007"</span>]},
+    <span class="code-key">"overall_result"</span>: <span class="code-string">"INSUFFICIENT_DATA"</span>,
+    <span class="code-key">"audit_scope"</span>: <span class="code-string">"CONSERVATIVE_CAUSATION_AUDIT"</span>,
+    <span class="code-key">"clinical_causality_established"</span>: false
+  }],
+  <span class="code-key">"conformance_checks"</span>: [{
+    <span class="code-key">"code"</span>: <span class="code-string">"ROOT_CAUSATION_AUDIT_LINEAGE"</span>,
+    <span class="code-key">"status"</span>: <span class="code-string">"PASS"</span>,
+    <span class="code-key">"severity"</span>: <span class="code-string">"HARD"</span>,
+    <span class="code-key">"message"</span>: <span class="code-string">"Root audit lineage is exact"</span>,
+    <span class="code-key">"refs"</span>: [<span class="code-string">"WHY-003"</span>],
+    <span class="code-key">"details"</span>: {}
+  }],
+  <span class="code-key">"is_finalized"</span>: false,
+  <span class="code-key">"content_hash"</span>: null
+}</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="developers" class="section wash" aria-labelledby="developers-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="developers-title">把它當作 reasoning ledger，不是診斷模型。</h2>
+            <p>
+              MCP surface 接受結構化動作；application 層編排流程；domain 層保護醫學推理不變量；
+              infrastructure 層保存 session 與匯出產物。
+            </p>
+          </div>
+
+          <div class="architecture" aria-label="系統架構資料流">
+            <div class="architecture-column">
+              <span>Agent surface</span>
+              <div class="architecture-node"><strong>Tools</strong><small>structured actions</small></div>
+              <div class="architecture-node"><strong>Resources</strong><small>live contracts</small></div>
+              <div class="architecture-node"><strong>Prompts</strong><small>workflow guidance</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Application</span>
+              <div class="architecture-node"><strong>ServerState</strong><small>session aggregate</small></div>
+              <div class="architecture-node"><strong>Handlers</strong><small>validation + orchestration</small></div>
+              <div class="architecture-node"><strong>Readiness</strong><small>preview-first gates</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Domain</span>
+              <div class="architecture-node"><strong>Evidence graph</strong><small>provenance + links</small></div>
+              <div class="architecture-node"><strong>Clinical reasoning</strong><small>DDx + Bayesian updates</small></div>
+              <div class="architecture-node"><strong>Systems RCA</strong><small>Fishbone + Why + HFACS</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Persistence</span>
+              <div class="architecture-node"><strong>SQLite</strong><small>local operational store</small></div>
+              <div class="architecture-node"><strong>Checkpoints</strong><small>confined recovery files</small></div>
+              <div class="architecture-node"><strong>Exports</strong><small>JSON + Markdown + FHIR</small></div>
+            </div>
+            <div class="architecture-column">
+              <span>Review boundary</span>
+              <div class="architecture-node"><strong>PRELIMINARY</strong><small>inspect and revise</small></div>
+              <div class="architecture-node"><strong>Approval gate</strong><small>identity + scope + time</small></div>
+              <div class="architecture-node"><strong>Snapshot</strong><small>content-hashed handoff</small></div>
+            </div>
+          </div>
+
+          <p class="dependency-line">Interface → Application → Domain ← Infrastructure</p>
+
+          <div class="technical-grid">
+            <article class="technical-column">
+              <h3>Live contracts 是權威</h3>
+              <p>不要從網站 copy 猜 schema。Agent 啟動後應先讀取 MCP resource：</p>
+              <ul class="technical-list">
+                <li><code>clinical://contracts/case-input-manifest</code></li>
+                <li><code>clinical://contracts/case-analysis-report</code></li>
+                <li><code>tools/list</code> 取得當前 tool schema</li>
+              </ul>
+            </article>
+            <article class="technical-column">
+              <h3>依情境選 tool profile</h3>
+              <div class="profile-row"><strong>condensed</strong><strong>8</strong></div>
+              <div class="profile-row"><strong>clinical</strong><strong>23</strong></div>
+              <div class="profile-row"><strong>rca</strong><strong>23</strong></div>
+              <div class="profile-row"><strong>all</strong><strong>43</strong></div>
+              <p>數字為 2.0.0a1 的發布快照；runtime 的 <code>tools/list</code> 優先。</p>
+            </article>
+            <article class="technical-column">
+              <h3>P0 deterministic conformance</h3>
+              <ul class="technical-list">
+                <li><code>typed nested schema</code> 驗證穩定 section；報告附 <code>conformance_checks[]</code></li>
+                <li>Root audit 的 ID、description、evidence 必須與 Why／evidence ledger 完全一致</li>
+                <li><code>REJECTED</code> 不得留在 root-cause bucket；<code>INSUFFICIENT_DATA</code> 只能標為 <code>PROPOSED</code></li>
+                <li>至少三個不重複 DDx；每個 active DDx 都要有 evidence 或 typed test disposition</li>
+                <li>Leading 與每個 must-not-miss 都要有真正支持，以及反證或 typed planned test</li>
+                <li>final 必須有 authorized reviewer、時間與可重算 hash；完成後是 immutable final snapshot</li>
+                <li>23／23 targeted hard-mutation regressions 均阻擋 unsafe finalization</li>
+              </ul>
+            </article>
+          </div>
+
+          <aside class="notice notice-spaced" aria-label="設定檔限制">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>
+              <strong>目前限制：</strong>protocol 與 pattern YAML 主要供 Agent 閱讀；多數 runtime readiness／finalization
+              gates 仍由 Python 實作。修改 YAML 不代表執行行為已同步改變。
+            </p>
+          </aside>
+        </div>
+      </section>
+
+      <section id="validation" class="section" aria-labelledby="validation-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="validation-title">Engineering alpha 的 deterministic P0 已通過；Agent MVP 尚未建立。</h2>
+            <p>
+              Contract 與 targeted regressions 能證明不合規的報告不能 finalize；公開案例與 runner 只供工程驗證。
+              它們不能證明未知案例中的 DDx 或 root cause 正確，也不能取代正式盲評。
+            </p>
+          </div>
+
+          <div class="validation-table-wrap">
+            <table class="validation-table">
+              <caption>RootCause MCP 2.0.0a1 驗證成熟度</caption>
+              <thead>
+                <tr><th scope="col">驗證層</th><th scope="col">目前狀態</th><th scope="col">能證明什麼</th></tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td>Engineering-alpha deterministic P0</td>
+                  <td class="status-passed">已通過</td>
+                  <td>Typed nested report schema、machine-readable <code>conformance_checks[]</code> 與 23／23 targeted hard-mutation regressions。</td>
+                </tr>
+                <tr>
+                  <td>Native multi-source MCP flow</td>
+                  <td class="status-passed">已通過</td>
+                  <td>多來源 manifest、exact provenance、DDx、RCA、approval gate 與統一報告。</td>
+                </tr>
+                <tr>
+                  <td>Public 6-case corpus／runner</td>
+                  <td class="status-pending">Engineering reference</td>
+                  <td>去除檔名、診斷與 LR 洩漏的公開案例、公開 rubric 與 runner scaffold；公開 gold 不能構成盲評。</td>
+                </tr>
+                <tr>
+                  <td>Formal cross-Agent evaluation</td>
+                  <td class="status-pending">NOT_ESTABLISHED</td>
+                  <td>仍需 3 runtimes × 6 cases × 2 repeats = 36 runs、repo-external private corpus、private holdout gold、乾淨 data root 與 trusted server trace。</td>
+                </tr>
+                <tr>
+                  <td>Two-clinician blinded review</td>
+                  <td class="status-pending">NOT_ESTABLISHED</td>
+                  <td>仍需兩名臨床 reviewer 盲評 DDx、must-not-miss、RCA 與因果措辭，並 adjudicate 分歧。</td>
+                </tr>
+                <tr>
+                  <td>Production security／governance</td>
+                  <td class="status-pending">NOT_ESTABLISHED</td>
+                  <td>真實部署所需的身分、授權、多租戶、加密、稽核與 retention 控制。</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="validation-columns">
+            <p class="validation-statement">
+              Finalized 代表「通過 deterministic gates、由 authorized reviewer 核准、附時間與可重算 hash 的 immutable final snapshot」，
+              不代表診斷已獲臨床證實，也不代表因果關係成立。
+            </p>
+            <div>
+              <h3>Engineering alpha 現在可以宣稱</h3>
+              <ul class="validation-list">
+                <li>typed nested contract 與 fail-closed finalization</li>
+                <li>root／Why／evidence／audit lineage 與安全 disposition</li>
+                <li>至少三個 DDx、active／leading／must-not-miss disposition</li>
+                <li>公開 6-case corpus／rubric／runner 可作工程 reference</li>
+              </ul>
+            </div>
+            <div>
+              <h3>Formal Agent MVP：NOT_ESTABLISHED</h3>
+              <ul class="validation-list">
+                <li>repo-external private corpus 與 private holdout gold</li>
+                <li>可信 runtime／MCP server trace 與 36-run matrix</li>
+                <li>兩名臨床 reviewer 的 blinded scoring 與 adjudication</li>
+                <li>PHI／IAM／audit／retention 控制</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="quickstart" class="section wash" aria-labelledby="quickstart-title">
+        <div class="container quickstart-grid">
+          <div>
+            <div class="section-intro">
+              <h2 id="quickstart-title">五分鐘啟動工程試跑。</h2>
+              <p>先使用 synthetic 或已去識別資料。不要把 GitHub、CI 或公開 Pages 當作臨床資料安全區。</p>
+            </div>
+            <ol class="quickstart-steps">
+              <li><strong>安裝鎖定環境</strong><span>同步 runtime、dev 與測試依賴。</span></li>
+              <li><strong>以 condensed profile 啟動</strong><span>讓 Agent 先看到 8 個 facade tools。</span></li>
+              <li><strong>讀取 live contracts</strong><span>再建立 session 與來源 manifest。</span></li>
+              <li><strong>PRELIMINARY first</strong><span>先預覽 blockers；合格人員複核後再 finalize。</span></li>
+            </ol>
+          </div>
+          <div class="code-window" aria-label="安裝與啟動命令">
+            <div class="code-header">
+              <span>terminal</span>
+              <button
+                class="copy-button"
+                type="button"
+                data-copy-target="quickstart-code"
+                data-copied-label="已複製"
+                data-error-label="複製失敗"
+              >複製</button>
+            </div>
+            <pre id="quickstart-code"><code><span class="code-string"># 1. Install the locked environment</span>
+uv sync --all-extras --all-groups --locked
+
+<span class="code-string"># 2. Start the MCP server over stdio</span>
+ROOTCAUSE_TOOL_PROFILE=condensed uv run rootcause-mcp
+
+<span class="code-string"># 3. The client should read these live resources first</span>
+clinical://contracts/case-input-manifest
+clinical://contracts/case-analysis-report</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="safety" class="section" aria-labelledby="safety-title">
+        <div class="container">
+          <div class="section-intro">
+            <h2 id="safety-title">安全邊界要比功能清單更早被看見。</h2>
+            <p>這是 engineering alpha。公開 repo、CI 與 GitHub Pages 都不是用來接收或保存真實病歷的環境。</p>
+          </div>
+          <div class="safety-grid">
+            <article>
+              <h3>目前內建</h3>
+              <ul class="plain-list">
+                <li>來源 stable ID、SHA-256、snippet 與 location 驗證</li>
+                <li>資料路徑與 checkpoint confinement</li>
+                <li>DDx、反證、衝突、readiness 與核准 gates</li>
+                <li>PRELIMINARY／final 狀態與 content hash</li>
+                <li>JSON、Markdown、FHIR DiagnosticReport 輸出</li>
+              </ul>
+            </article>
+            <article>
+              <h3>尚未內建／不能宣稱</h3>
+              <ul class="plain-list">
+                <li>raw PDF、DOCX、影像或 EHR 的內建抽取器</li>
+                <li>身分驗證、RBAC、多租戶隔離、at-rest encryption、retention enforcement</li>
+                <li>Agent 臨床能力、輸出完全正確或法規合規保證</li>
+                <li>causation audit 對臨床因果的證明</li>
+                <li>未經人類複核即可直接用於照護決策</li>
+              </ul>
+            </article>
+          </div>
+          <aside class="notice notice-spaced" aria-label="PHI 警告">
+            <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true">
+              <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <p>
+              <strong>PHI 警告：</strong>試跑只可使用 synthetic 或已去識別資料。正式導入前，部署方必須自行完成
+              身分、最小權限、加密、稽核、備份、資料保留與事故應變控制。
+            </p>
+          </aside>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container">
+        <div class="footer-grid">
+          <div>
+            <p class="footer-brand">RootCause MCP</p>
+            <p class="footer-note">
+              讓多來源臨床推理保留來源、反證、不確定性與審查責任的開源 MCP 基礎設施。
+            </p>
+          </div>
+          <nav class="footer-links" aria-label="延伸文件">
+            <a href="https://github.com/u9401066/rootcause-mcp/blob/master/README.zh-TW.md">繁中 README</a>
+            <a href="https://github.com/u9401066/rootcause-mcp/blob/master/docs/api.md">API reference</a>
+            <a href="https://github.com/u9401066/rootcause-mcp/blob/master/docs/PHI_DATA_POLICY.md">PHI policy</a>
+            <a href="https://github.com/u9401066/rootcause-mcp/tree/master/.codex/skills/rootcause-clinical-reasoning-harness">Agent harness</a>
+          </nav>
+        </div>
+        <p class="meta-line">
+          v2.0.0a1 · Engineering alpha · 文件驗證日期 2026-08-17 ·
+          網站不接收病歷資料 ·
+          <a href="https://github.com/u9401066/rootcause-mcp/commits/master">檢視版本紀錄</a>
+        </p>
+      </div>
+    </footer>
+  </body>
+</html>

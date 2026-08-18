@@ -1,0 +1,7 @@
+timestamp,event,status
+2025-06-04T11:30:00Z,Printer jam reported to help desk,ticket opened
+2025-06-04T14:05:00Z,Batch of laboratory and imaging faxes received,paper tray low
+2025-06-04T14:10:00Z,Incoming reports placed in pending stack,pending
+2025-06-04T14:30:00Z,Ordering clinician departed for conference,departed
+2025-06-04T14:45:00Z,Loose papers moved to filing tray during clean-desk process,done
+2025-06-04T17:00:00Z,End-of-shift sign-off,complete

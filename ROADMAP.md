@@ -2,6 +2,11 @@
 
 醫療根因分析 MCP Server 發展路線圖。
 
+> **目前狀態：engineering alpha。** Deterministic report conformance 已可用；
+> 正式跨-Agent 臨床表現評估仍是 `AGENT_EVAL_NOT_ESTABLISHED`。下方 Phase 3
+> 以後的項目是研究／規劃，不代表已實作或已完成臨床驗證。詳見
+> [MVP conformance 與 Agent 評估](docs/mvp_conformance_and_evaluation.md)。
+
 ---
 
 ## 🎯 願景：Multi-Model RCA Framework
@@ -69,7 +74,7 @@
   - rc_ask_why, rc_get_why_tree
   - rc_mark_root_cause, rc_export_why_tree
 - [x] Verification Tool (1)
-  - rc_verify_causation (因果驗證 - Bradford Hill Criteria)
+  - `rc_verify_causation`（保守 proof-obligation 稽核；不證明臨床因果）
 - [x] 6M-HFACS 對照工具 (1)
   - rc_get_6m_hfacs_mapping (表圖樹 Cross-Reference)
 - [x] Proximate vs Ultimate Cause 概念實作
@@ -98,7 +103,7 @@
 - [ ] Compact checkpoint/resume artifact
 - [ ] 實際 model tokenizer 與 end-to-end cost benchmark
 
-### Phase 2.8: Hard-Coded Provenance & Multi-Loop Guidance (2026-08-14)
+### Phase 2.8: Deterministic Provenance & Multi-Loop Guidance (2026-08-14)
 
 - [x] `ProvenanceVerifier` 領域服務：原始病歷逐字引文 (raw_snippet)、行號定位、SHA-256 密碼學錨定
 - [x] 確定性實體檔案比對（TXT, CSV, HL7, XML），完全不依賴神經網路或 LLM
@@ -114,7 +119,8 @@
 - [x] 確定性臨床事件時序圖 `build_timeline` 與渲染工具 `rc_render_timeline`（支援 5 種臨床時間軸模式）
 - [x] 通用 Mermaid 語法稽核與修復工具 `rc_validate_diagram`
 - [x] 跨平台自動化安裝套件 (`scripts/setup.ps1`, `scripts/setup.sh`, `scripts/install.py`)，自動註冊 VS Code, Claude Desktop, Cline
-- [x] 6 大真實多檔案臨床案例測試基準 (`scripts/run_case_trial.py`)，0.039 秒完成 100% 物理引文驗證
+- [x] 6 組多檔案案例 fixture 的 preliminary regression/demo
+  (`scripts/run_case_trial.py`)；不作 release acceptance 或臨床正確性宣稱
 
 ### Phase 2.10: MCP SDK 2.0 Advanced Harness & Tool Condensation (2026-08-14)
 
@@ -123,6 +129,33 @@
 - [x] **MCP Dynamic Session Resource Templates** (`clinical://sessions/{session_id}/report|timeline|guidance|conflicts`)
 - [x] **MCP Pre-Configured Prompts** (`anesthesia_mm_investigation`, `perioperative_crisis_differential`, `near_miss_barrier_analysis`, `delayed_diagnosis_investigation`)
 - [x] **MCP Server-Level Instructions**：在握手時自動注入系統級臨床推理 Meta-Prompt
+
+### Phase 2.11: Deterministic Final Conformance (2026-08-17)
+
+- [x] Typed nested CONTRACT-report schema 與 live MCP contract resource
+- [x] 每份報告輸出 machine-readable `conformance_checks[]`
+- [x] Root/Why/causation-audit ID、description、evidence ledger 一致性 gate
+- [x] `REJECTED` 移出 root bucket；`INSUFFICIENT_DATA` 維持 `PROPOSED`
+- [x] 至少三個 unique DDx、active disposition、leading 與 must-not-miss challenge
+- [x] Typed `planned_tests`（purpose、support/refute expectations、lifecycle status）
+- [x] Operator-authorized reviewer、含時區 finalization time、可重算 SHA-256、
+  recursive final snapshot immutability
+- [x] Hard mutations fail-closed，不信任 caller 自行宣告的 `PASS`
+
+### Phase 2.12: Cross-Agent Evaluation
+
+- [x] 六案例中性 `CASE-*` / `SRC-*` 公開 corpus 與 engineering reference rubrics
+- [x] Clean-root artifact runner、schema validation、hash manifest、review/adjudication
+  import scaffold
+- [ ] 至少三個已驗證 MCP wiring/trace adapters 可實際執行
+- [ ] Repo 外 private case bundle、分離的 private holdout gold 與 adapter filesystem
+  isolation 證明；公開 `CASE-*` / rubric 不具 formal eligibility
+- [ ] 3 runtimes × 6 cases × 2 repeats（至少 36 jobs）
+- [ ] 每個 job 兩名 qualified clinicians 盲評，分歧完成裁決
+- [ ] 達成零 fabrication/PHI leak/causal overclaim、100% must-not-miss、top-3
+  ≥90%、workflow ≥95%、lineage/certainty 100%
+
+在全部未完成項目關閉前，只能稱為 engineering alpha，不得宣稱完整 Agent MVP。
 
 ---
 

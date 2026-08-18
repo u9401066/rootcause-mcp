@@ -99,9 +99,11 @@ class SessionProgress:
 
         # Verification criteria
         if self.root_causes_verified > 0:
-            criteria.append(f"✅ 已驗證 {self.root_causes_verified} 個因果關係")
+            criteria.append(
+                f"✅ {self.root_causes_verified} 個因果稽核義務已通過（非臨床因果證明）"
+            )
         elif self.root_causes_identified > 0:
-            criteria.append("⚠️ 建議驗證已識別的根本原因")
+            criteria.append("⚠️ 建議對已識別的根本原因執行保守因果稽核")
 
         return criteria
 
@@ -185,11 +187,15 @@ class SessionProgressTracker:
 
         return progress
 
-    def update_root_cause_verified(self, session_id: str) -> SessionProgress:
-        """Mark that a root cause has been verified."""
+    def update_causation_audit_passed(self, session_id: str) -> SessionProgress:
+        """Record that submitted causation-audit obligations passed."""
         progress = self.get_progress(session_id)
         progress.root_causes_verified += 1
         return progress
+
+    def update_root_cause_verified(self, session_id: str) -> SessionProgress:
+        """Compatibility alias for the non-proof audit-pass counter."""
+        return self.update_causation_audit_passed(session_id)
 
     def update_hfacs_added(self, session_id: str) -> SessionProgress:
         """Mark that HFACS code was added to a cause."""

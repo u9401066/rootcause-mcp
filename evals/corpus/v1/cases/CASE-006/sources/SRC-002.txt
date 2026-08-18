@@ -1,0 +1,14 @@
+ACCESSION: EVAL-IMG-006
+STUDY TIME: 2025-06-04T10:15:00Z
+REPORT FINALIZED: 2025-06-04T14:00:00Z
+STUDY: CT thorax without contrast
+
+Observations:
+- Spiculated 2.5 x 2.2 cm soft-tissue mass in the right upper-lobe apical segment.
+- Pleural tagging is present.
+- No pleural effusion or subcarinal lymph-node enlargement is described.
+
+Impression:
+- The right upper-lobe mass requires urgent clinical correlation and tissue sampling.
+
+Distribution log: automated fax to outpatient station at 14:01; transmission status recorded as successful.

@@ -1,0 +1,11 @@
+2025-02-03T03:00:00Z
+WBC 12.5; creatinine 0.9 mg/dL; lactate 2.1 mmol/L; CK 450 U/L.
+
+2025-02-04T08:00:00Z
+WBC 14.2; creatinine 1.2 mg/dL; lactate 3.5 mmol/L; CK 1,200 U/L.
+Triglycerides were not ordered.
+
+2025-02-04T22:00:00Z
+pH 7.22; base excess -8; lactate 6.8 mmol/L; potassium 5.8 mmol/L.
+Creatinine 2.1 mg/dL; CK 15,000 U/L; troponin-I 0.5 ng/mL; lipase 800 U/L.
+The progress note attributed the abnormalities to infection, demand ischemia, alcohol exposure, and pancreatitis; no unifying medication-related assessment was documented.

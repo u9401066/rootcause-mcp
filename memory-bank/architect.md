@@ -132,7 +132,7 @@ structural checks 移出 LLM，可降低重複 tokens 並提高跨 Agent 的一�
 **限制**：raw 文件閱讀、臨床 hypothesis generation、LR 選擇與最終醫師審查仍不可由
 deterministic harness 取代。Batch ingest 必須先具備 aliases、idempotency 與 rollback。
 
-### ADR-007: 硬性證據溯源與 Flash 模型多輪導引狀態機
+### ADR-007: 確定性證據溯源與 Flash 模型多輪導引狀態機
 
 **日期**：2026-08-14
 
@@ -175,4 +175,3 @@ deterministic harness 取代。Batch ingest 必須先具備 aliases、idempotenc
 
 ---
 *Last updated: 2026-08-09*
-
