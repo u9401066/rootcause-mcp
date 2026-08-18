@@ -438,14 +438,18 @@ src/rootcause_mcp/
 - [RootCause agent harness](.codex/skills/rootcause-clinical-reasoning-harness/SKILL.md)
 - [PHI and clinical-data policy](docs/PHI_DATA_POLICY.md)
 - [Existing solutions research](docs/research/existing_solutions.md)
+- [GitHub landscape: per-repository learning and citation reports](docs/research/github_landscape/README.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 
 ## Research and Attribution
 
-The design references publicly available work including MEDDxAgent, ClinClaw,
-HFACS-MES, Oxford CEBM concepts, FHIR conventions, and the MCP Python SDK. See the
-[research survey](docs/research/existing_solutions.md) for licenses and design notes.
+The design references publicly available clinical-reasoning, RCA, FHIR, provenance,
+causal-inference, and Agent-evaluation work. The dated [research
+survey](docs/research/existing_solutions.md) states the product boundary; the
+[per-repository reports](docs/research/github_landscape/README.md) record what can be
+learned, how a foundation package should be integrated and cited, and which license or
+data-use constraints prohibit direct reuse.
 
 ## License
 

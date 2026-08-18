@@ -419,14 +419,16 @@ src/rootcause_mcp/
 - [RootCause Agent Harness](.codex/skills/rootcause-clinical-reasoning-harness/SKILL.md)
 - [PHI 與臨床資料政策](docs/PHI_DATA_POLICY.md)
 - [公開方案研究](docs/research/existing_solutions.md)
+- [GitHub landscape：逐 repo 學習與引用報告](docs/research/github_landscape/README.md)
 - [Roadmap](ROADMAP.md)
 - [Changelog](CHANGELOG.md)
 
 ## 研究與引用
 
-設計參考 MEDDxAgent、ClinClaw、HFACS-MES、Oxford CEBM、FHIR 慣例與 MCP Python
-SDK 等公開研究及專案。授權與設計取捨請見
-[研究整理](docs/research/existing_solutions.md)。
+設計參考公開的臨床推理、RCA、FHIR、provenance、因果推論與 Agent evaluation
+研究及專案。[研究總覽](docs/research/existing_solutions.md)說明產品邊界；
+[逐 repo 報告](docs/research/github_landscape/README.md)則記錄可學設計、基礎套件的
+整合與引用方式，以及禁止直接重用的授權或資料使用限制。
 
 ## 授權
 
