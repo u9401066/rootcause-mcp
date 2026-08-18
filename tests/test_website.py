@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import ast
 import importlib
 import json
 import sys
@@ -24,7 +25,7 @@ class _Checker(Protocol):
     SITE_BASE_URL: str
 
     @staticmethod
-    def check_website(site_root: str | Path = Path("website")) -> list[_Issue]: ...
+    def check_website(_site_root: str | Path = Path("website")) -> list[_Issue]: ...
 
     @staticmethod
     def main(argv: list[str] | None = None) -> int: ...
@@ -66,6 +67,30 @@ def _report_example(path: Path) -> dict[str, object]:
     parser = _ReportExampleParser()
     parser.feed(path.read_text(encoding="utf-8"))
     return cast("dict[str, object]", json.loads("".join(parser.parts)))
+
+
+def _p0_hard_mutation_case_count() -> int:
+    """Read the authoritative parametrized mutation table without importing it."""
+    path = REPOSITORY_ROOT / "tests" / "test_p0_final_report_conformance.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in tree.body:
+        if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            continue
+        if node.name != "test_every_negative_mutation_produces_a_hard_failure":
+            continue
+        for decorator in node.decorator_list:
+            if not isinstance(decorator, ast.Call):
+                continue
+            if getattr(decorator.func, "attr", None) != "parametrize":
+                continue
+            if len(decorator.args) < 2:
+                continue
+            parameter_names = ast.literal_eval(decorator.args[0])
+            if tuple(parameter_names) != ("mutation", "expected_code"):
+                continue
+            rows = ast.literal_eval(decorator.args[1])
+            return len(rows)
+    raise AssertionError("P0 hard-mutation parametrization table was not found")
 
 
 def _page(*, language: str, canonical: str, english: bool) -> str:
@@ -451,6 +476,17 @@ def test_bilingual_report_examples_use_the_live_typed_contract() -> None:
         assert checks[0]["code"] == "ROOT_CAUSATION_AUDIT_LINEAGE"
         assert payload["is_finalized"] is False
         assert payload["content_hash"] is None
+
+
+def test_website_mutation_count_matches_authoritative_p0_table() -> None:
+    """Keep the bilingual release snapshot synchronized with the P0 mutation table."""
+    count = _p0_hard_mutation_case_count()
+    english = Path("website/en/index.html").read_text(encoding="utf-8")
+    traditional_chinese = Path("website/index.html").read_text(encoding="utf-8")
+
+    assert count == 76
+    assert f"{count}/{count} targeted hard-mutation regressions" in english
+    assert f"{count}／{count} targeted hard-mutation regressions" in traditional_chinese
 
 
 def test_repository_website_conforms() -> None:

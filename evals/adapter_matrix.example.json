@@ -18,15 +18,21 @@
       "mcp_wiring": {
         "server_aliases": ["rootcause-mcp", "rootcause"],
         "harness_source": ".codex/skills/rootcause-clinical-reasoning-harness/SKILL.md",
-        "harness_sha256": "8d921e200681edb02192884cad08fd4c0ad3243c57a6e02c85f2fc5764c5db5b",
+        "harness_sha256": "a42dc2f752bb9dcf4d2f0a4ea6a7d3a8658477dfcc46efb29d2c5348e8cd0878",
         "handoff_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md",
-        "handoff_sha256": "f3cc75f1249666ba2da4eb9ae582c0afecf63a70ee42682c10612fa02147c37c",
+        "handoff_sha256": "2ecf5ce470ead2ffb85317967b1674ed9815c113f58ed714f60bd9a26c4f7d72",
+        "clinician_ddx_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/clinician-ddx-discussion-zh-tw.md",
+        "clinician_ddx_sha256": "58d25562450c3fdf62ae4c669cd35152c4b0cf24873c58e2d7af5fd9b0c0f668",
         "required_tool_groups": [
           ["rc_start_session", "rc_rca"],
+          ["rc_adjudicate_source", "rc_rca"],
           ["rc_add_evidence", "rc_evidence"],
           ["rc_propose_hypothesis", "rc_hypothesis"],
+          ["rc_audit_differential_breadth", "rc_hypothesis"],
+          ["rc_select_leading_hypothesis", "rc_hypothesis"],
           ["rc_audit_reasoning_state", "rc_audit"],
           ["rc_init_fishbone", "rc_ask_why", "rc_rca"],
+          ["rc_confirm_classification", "rc_rca"],
           ["rc_generate_contract_report", "rc_report"]
         ],
         "trace_parser_status": "RUNNER_SCAFFOLD"
@@ -45,15 +51,21 @@
       "mcp_wiring": {
         "server_aliases": ["rootcause-mcp", "rootcause"],
         "harness_source": ".codex/skills/rootcause-clinical-reasoning-harness/SKILL.md",
-        "harness_sha256": "8d921e200681edb02192884cad08fd4c0ad3243c57a6e02c85f2fc5764c5db5b",
+        "harness_sha256": "a42dc2f752bb9dcf4d2f0a4ea6a7d3a8658477dfcc46efb29d2c5348e8cd0878",
         "handoff_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md",
-        "handoff_sha256": "f3cc75f1249666ba2da4eb9ae582c0afecf63a70ee42682c10612fa02147c37c",
+        "handoff_sha256": "2ecf5ce470ead2ffb85317967b1674ed9815c113f58ed714f60bd9a26c4f7d72",
+        "clinician_ddx_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/clinician-ddx-discussion-zh-tw.md",
+        "clinician_ddx_sha256": "58d25562450c3fdf62ae4c669cd35152c4b0cf24873c58e2d7af5fd9b0c0f668",
         "required_tool_groups": [
           ["rc_start_session", "rc_rca"],
+          ["rc_adjudicate_source", "rc_rca"],
           ["rc_add_evidence", "rc_evidence"],
           ["rc_propose_hypothesis", "rc_hypothesis"],
+          ["rc_audit_differential_breadth", "rc_hypothesis"],
+          ["rc_select_leading_hypothesis", "rc_hypothesis"],
           ["rc_audit_reasoning_state", "rc_audit"],
           ["rc_init_fishbone", "rc_ask_why", "rc_rca"],
+          ["rc_confirm_classification", "rc_rca"],
           ["rc_generate_contract_report", "rc_report"]
         ],
         "trace_parser_status": "RUNNER_SCAFFOLD"
@@ -72,15 +84,21 @@
       "mcp_wiring": {
         "server_aliases": ["rootcause-mcp", "rootcause"],
         "harness_source": ".codex/skills/rootcause-clinical-reasoning-harness/SKILL.md",
-        "harness_sha256": "8d921e200681edb02192884cad08fd4c0ad3243c57a6e02c85f2fc5764c5db5b",
+        "harness_sha256": "a42dc2f752bb9dcf4d2f0a4ea6a7d3a8658477dfcc46efb29d2c5348e8cd0878",
         "handoff_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md",
-        "handoff_sha256": "f3cc75f1249666ba2da4eb9ae582c0afecf63a70ee42682c10612fa02147c37c",
+        "handoff_sha256": "2ecf5ce470ead2ffb85317967b1674ed9815c113f58ed714f60bd9a26c4f7d72",
+        "clinician_ddx_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/clinician-ddx-discussion-zh-tw.md",
+        "clinician_ddx_sha256": "58d25562450c3fdf62ae4c669cd35152c4b0cf24873c58e2d7af5fd9b0c0f668",
         "required_tool_groups": [
           ["rc_start_session", "rc_rca"],
+          ["rc_adjudicate_source", "rc_rca"],
           ["rc_add_evidence", "rc_evidence"],
           ["rc_propose_hypothesis", "rc_hypothesis"],
+          ["rc_audit_differential_breadth", "rc_hypothesis"],
+          ["rc_select_leading_hypothesis", "rc_hypothesis"],
           ["rc_audit_reasoning_state", "rc_audit"],
           ["rc_init_fishbone", "rc_ask_why", "rc_rca"],
+          ["rc_confirm_classification", "rc_rca"],
           ["rc_generate_contract_report", "rc_report"]
         ],
         "trace_parser_status": "RUNNER_SCAFFOLD"

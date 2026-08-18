@@ -238,6 +238,7 @@ def load_matrix(path: Path) -> dict[str, Any]:  # noqa: PLR0912
         for path_field, hash_field in (
             ("harness_source", "harness_sha256"),
             ("handoff_source", "handoff_sha256"),
+            ("clinician_ddx_source", "clinician_ddx_sha256"),
         ):
             source = wiring.get(path_field)
             expected_hash = wiring.get(hash_field)
@@ -535,7 +536,8 @@ Read only these files in the current isolated working directory:
 - case/manifest.json
 - case/sources/*
 - harness/SKILL.md
-- harness/case-handoff.md
+- harness/references/case-handoff.md
+- harness/references/clinician-ddx-discussion-zh-tw.md
 - agent_output.schema.json
 
 {task}
@@ -1175,6 +1177,8 @@ def _invoke_adapter(
         shutil.copy2(OUTPUT_SCHEMA, schema_path)
         harness_directory = workspace / "harness"
         harness_directory.mkdir(mode=0o700)
+        references_directory = harness_directory / "references"
+        references_directory.mkdir(mode=0o700)
         wiring = adapter["mcp_wiring"]
         shutil.copy2(
             _resolve_repo_file(str(wiring["harness_source"])),
@@ -1182,7 +1186,11 @@ def _invoke_adapter(
         )
         shutil.copy2(
             _resolve_repo_file(str(wiring["handoff_source"])),
-            harness_directory / "case-handoff.md",
+            references_directory / "case-handoff.md",
+        )
+        shutil.copy2(
+            _resolve_repo_file(str(wiring["clinician_ddx_source"])),
+            references_directory / "clinician-ddx-discussion-zh-tw.md",
         )
         candidate_path = workspace / "candidate.json"
         trace_path = workspace / "runtime-trace.jsonl"
@@ -1859,6 +1867,9 @@ def _run_formal(  # noqa: PLR0915
                     "server_aliases": adapter["mcp_wiring"]["server_aliases"],
                     "harness_sha256": adapter["mcp_wiring"]["harness_sha256"],
                     "handoff_sha256": adapter["mcp_wiring"]["handoff_sha256"],
+                    "clinician_ddx_sha256": adapter["mcp_wiring"][
+                        "clinician_ddx_sha256"
+                    ],
                     "trace_parser_status": adapter["mcp_wiring"]["trace_parser_status"],
                 },
             }

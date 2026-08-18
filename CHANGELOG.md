@@ -7,6 +7,97 @@
 
 ## [Unreleased]
 
+## [2.0.0a2] - 2026-08-18
+
+### Added - Clinician-facing DDx contracts
+
+- Added typed DDx classifications for mechanism category, diagnostic role,
+  reasoning basis, and qualitative certainty, kept independent from numeric
+  prior/posterior values.
+- Added a typed differential-breadth audit with syndrome-appropriate built-in or
+  custom frameworks, exact cell coverage, explicit insufficient-data handling,
+  candidate linkage, typed planned discriminators, and a documented stop rule.
+- Expanded the current catalog to 46 discrete tools in `all`, 25 in
+  `clinical`, and 24 in `rca`; `condensed` remains 8 facade tools.
+- Added built-in Markdown `locale="zh-TW"` and `audience="clinician"` output. The
+  renderer localizes fixed explanatory copy while preserving persisted English
+  medical names, quotations, codes, enums, JSON/FHIR data, and custom-template
+  language.
+- Added the general `clinician_ddx_discussion_zh_tw` MCP prompt and a focused,
+  byte-identical clinician DDx reference for the Codex, Cline, and Claude
+  harness mirrors.
+- Added typed source-faithful time (`instant`, `date`, `range`, `relative`, or
+  `unknown`) across evidence, timeline, persistence, MCP schemas, and final
+  cross-ledger conformance. Only source-aware instants may support chronology.
+- Added append-only source review/adjudication and explicit leading-hypothesis
+  selection tools with persisted transition history.
+- Added the complete typed `source_review_ledger` to final artifacts; final
+  inventory projections, manifest binding, event counts, reviewer/time lineage,
+  and append-only transitions are recomputed from that ledger.
+- Added per-Fishbone-cause authorized HFACS `CONFIRMED` / `NOT_APPLICABLE`
+  review lineage and a deterministic `HFACS_REVIEW_LINEAGE` final gate.
+
+### Changed - Bounded clinical reasoning and release claims
+
+- Changed the harness from a fixed-three DDx instruction to maximum reasonable
+  mechanism-based breadth. Three unique diagnoses, two non-`UNKNOWN`
+  mechanisms, and an applicable must-not-miss entry remain deterministic
+  finalization floors, not the clinical target or cap.
+- A final PRIMARY breadth audit must review every framework cell. A
+  `REVIEWED_INSUFFICIENT_DATA` cell keeps decision-relevant unknowns and typed
+  discriminators; `NOT_ASSESSED` remains incomplete, and coverage does not prove
+  diagnostic correctness.
+- Every active candidate now carries why considered, source-linked
+  support/refutation/neutral evidence, candidate-specific unknowns, a genuine
+  evidence/test disposition, and qualitative certainty. `LR=1.0` is neutral and
+  no uncalibrated compatibility prior/posterior is presented as clinical
+  probability or certainty.
+- Non-neutral LRs now require a distinct verified `LITERATURE` calibration
+  evidence record with exact source lineage; citation-looking free text cannot
+  satisfy quantitative calibration. Neutral LR remains 1.0.
+- Guidance and finalization now require an explicit ledger-valid leading
+  selection. Array order and uncalibrated compatibility numbers cannot select
+  the lead, rank FHIR conclusions, or change hard conformance.
+- Updated the Agent integration guide, API reference, bilingual READMEs, harness
+  instructions, and bilingual website for 2.0.0a2. The release remains an
+  engineering alpha and is not clinically validated.
+- Final multi-source conformance now counts independently acquired source roots
+  rather than derivative files. Source manifests can declare independent/derived
+  lineage, groups, parents, and derivation methods; unknown lineage blocks only
+  finalization, not preliminary work.
+- Bundled domain playbooks are now explicitly non-normative retrospective DDx
+  prompts. Embedded patient-specific rescue steps and doses were removed from
+  the packaged resources and report templates.
+
+### Fixed - Report transport and epistemic labels
+
+- Fixed the production SDK output contract so normal stdio `call_tool` accepts
+  Markdown string content, and made dynamic session report resources render the
+  built-in Traditional Chinese clinician view.
+- Removed placeholder prior/posterior percentages from clinician and custom
+  Markdown reports. Omitted priors use a neutral `0.5` uncalibrated internal
+  baseline, non-neutral LR updates require an explicit rationale, and `LR=1.0`
+  remains context-only.
+- Source/date/time missingness remains typed unknown instead of being converted
+  into a negative finding, a sortable synthetic timestamp, or an active-care
+  instruction. Gap summaries, readiness facts, and conservative causation
+  dispositions are recomputed from their underlying ledgers.
+- Report IDs now retain the full session ID, evidence graphs treat neutral LR
+  links separately, provenance wording stays inside the registered-source
+  boundary, and resuscitation events no longer fall into the baseline timeline
+  phase.
+- The bilingual website reports the current table-driven hard-mutation set and
+  now tests that its displayed count stays synchronized with the authoritative
+  P0 parametrization table.
+- Final snapshots now use immutable Mapping/Sequence wrappers that cannot be
+  mutated through unbound `dict`/`list` base methods. Final JSON reloads require
+  an operator-controlled reviewer allowlist context, and finalization rejects
+  missing authorization or lifecycle time earlier than report generation.
+- Domain playbooks and report templates now state their non-normative,
+  retrospective scope; they do not provide active-care management,
+  treatment/rescue instructions, patient-specific dosing, or automatic approval
+  of proposed corrective actions.
+
 ### Added - Multi-source clinical reasoning acceptance (2026-08-17)
 
 - Added the versioned `CaseInputManifest` contract and live MCP JSON Schema
@@ -55,8 +146,8 @@
 ### Fixed - Clinical correctness and provenance (2026-08-17)
 
 - Fixed refuting evidence increasing posterior probability by inverting an
-  already-applied LR; support now uses LR >= 1, contradiction LR <= 1, and
-  omitted LR is neutral at 1.0.
+  already-applied LR; support now uses LR > 1, contradiction LR < 1, and
+  omitted or quantitatively unknown LR is neutral at 1.0.
 - Prevented duplicate evidence updates and removed synthetic reciprocal LR
   metadata that could falsely satisfy disconfirming-test readiness.
 - Removed file-existence, location-only, blank-line, and reverse-containment
