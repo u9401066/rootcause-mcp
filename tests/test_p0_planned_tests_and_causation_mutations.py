@@ -21,6 +21,11 @@ from rootcause_mcp.domain.services.causation_validator import (
     VerificationLevel,
     VerificationTestResults,
 )
+from rootcause_mcp.domain.value_objects.differential_breadth import (
+    CANONICAL_FRAMEWORK_CELLS,
+    DifferentialBreadthAudit,
+    DifferentialBreadthFramework,
+)
 from rootcause_mcp.domain.value_objects.enums import CaseType, Stage, VerificationResult
 from rootcause_mcp.domain.value_objects.scores import ConfidenceScore
 from rootcause_mcp.infrastructure.persistence.database import Database
@@ -57,11 +62,78 @@ def _hypothesis_args(session_id: str) -> dict[str, Any]:
         "diagnosis": "Acute pulmonary embolism",
         "prior_probability": 0.2,
         "must_not_miss": True,
+        "mechanism_category": "VASCULAR",
+        "diagnostic_role": "ETIOLOGIC",
+        "certainty": "POSSIBLE",
+        "reasoning_basis": "MECHANISM_INFERENCE",
         "clinical_reasoning": "Acute hypotension requires explicit embolic evaluation.",
         "differential_diagnoses_considered": [],
         "uncertainty_factors": ["Definitive imaging pending"],
         "confidence_rationale": "Transparent fixture prior",
         "planned_tests": [_planned_test_input()],
+    }
+
+
+def _verified_calibration_evidence(orchestrator: Any, lr: float = 2.5) -> str:
+    evidence = orchestrator.add_evidence(
+        content=f"Published validation table reports direct LR {lr}.",
+        evidence_type="LITERATURE",
+        source_document="calibration-literature.txt",
+        source_location="Table 2",
+        raw_snippet=f"Index finding likelihood ratio {lr}",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="sha256:" + "a" * 64,
+    )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    return evidence.id.value
+
+
+def _breadth_audit(hypothesis_id: str) -> dict[str, Any]:
+    return {
+        "audit_id": "DBA-transport",
+        "framework": "CUSTOM",
+        "framework_name": "Acute hypotension mechanism matrix",
+        "framework_rationale": (
+            "The acute hypotension syndrome requires explicit mechanism coverage."
+        ),
+        "role": "PRIMARY",
+        "cells": [
+            {
+                "cell_id": "VASCULAR_CANDIDATES",
+                "status": "CANDIDATES_PRESENT",
+                "hypothesis_ids": [hypothesis_id],
+                "mechanism_categories": ["VASCULAR"],
+                "rationale": "The embolic candidate represents vascular mechanisms.",
+                "unknowns": [],
+                "planned_discriminators": [],
+            },
+            {
+                "cell_id": "INFECTIOUS_REVIEW",
+                "status": "REVIEWED_NO_PLAUSIBLE_CANDIDATE",
+                "hypothesis_ids": [],
+                "mechanism_categories": ["INFECTIOUS"],
+                "rationale": "No infectious candidate is supported by supplied findings.",
+                "unknowns": [],
+                "planned_discriminators": [],
+            },
+            {
+                "cell_id": "METABOLIC_REVIEW",
+                "status": "REVIEWED_NO_PLAUSIBLE_CANDIDATE",
+                "hypothesis_ids": [],
+                "mechanism_categories": ["METABOLIC_ENDOCRINE"],
+                "rationale": "No metabolic candidate is supported by supplied findings.",
+                "unknowns": [],
+                "planned_discriminators": [],
+            },
+        ],
+        "stop_rationale": (
+            "Both custom framework cells were reviewed before stopping expansion."
+        ),
+        "recorded_by": "test-agent",
     }
 
 
@@ -77,6 +149,18 @@ async def test_discrete_and_condensed_propose_bind_typed_planned_test() -> None:
         == (discrete["hypothesis_id"])
     )
     assert discrete["planned_tests"][0]["purpose"] == "RULE_OUT"
+    assert discrete["mechanism_category"] == "VASCULAR"
+    assert discrete["diagnostic_role"] == "ETIOLOGIC"
+    assert discrete["certainty"] == "POSSIBLE"
+    assert discrete["reasoning_basis"] == "MECHANISM_INFERENCE"
+    discrete_audit = await DDHandlers(discrete_state).handle_audit_differential_breadth(
+        {
+            "session_id": "discrete-session",
+            "audit": _breadth_audit(discrete["hypothesis_id"]),
+        }
+    )
+    assert discrete_audit["status"] == "success"
+    assert discrete_audit["differential_breadth_audit"]["framework"] == "CUSTOM"
 
     condensed_state = ServerState()
     dd_handler = DDHandlers(condensed_state)
@@ -100,6 +184,22 @@ async def test_discrete_and_condensed_propose_bind_typed_planned_test() -> None:
     assert (
         condensed["planned_tests"][0]["target_hypothesis_id"]
         == (condensed["hypothesis_id"])
+    )
+    assert condensed["mechanism_category"] == discrete["mechanism_category"]
+    assert condensed["diagnostic_role"] == discrete["diagnostic_role"]
+    assert condensed["certainty"] == discrete["certainty"]
+    assert condensed["reasoning_basis"] == discrete["reasoning_basis"]
+    condensed_audit = await facade.handle_hypothesis(
+        {
+            "action": "audit_breadth",
+            "session_id": "condensed-session",
+            "breadth_audit": _breadth_audit(condensed["hypothesis_id"]),
+        }
+    )
+    assert condensed_audit["status"] == "success"
+    assert (
+        condensed_audit["differential_breadth_audit"]["audit_id"]
+        == discrete_audit["differential_breadth_audit"]["audit_id"]
     )
 
 
@@ -131,6 +231,194 @@ def test_discrete_and_condensed_schemas_advertise_typed_test_plan() -> None:
             "expected_refuting_result",
             "status",
         } <= set(test_schema["required"])
+        properties = tool.input_schema["properties"]
+        assert "UNKNOWN" in properties["mechanism_category"]["enum"]
+        assert properties["diagnostic_role"]["enum"] == [
+            "ETIOLOGIC",
+            "SYNDROMIC",
+            "COMPLICATION",
+            "MIMIC",
+            "UNKNOWN",
+        ]
+        assert properties["certainty"]["enum"] == [
+            "UNKNOWN",
+            "POSSIBLE",
+            "PROBABLE",
+            "HIGH_CONFIDENCE",
+            "CONFIRMED",
+            "EXCLUDED",
+        ]
+        assert properties["reasoning_basis"]["enum"] == [
+            "OBSERVED_DIAGNOSIS",
+            "MECHANISM_INFERENCE",
+            "UNKNOWN",
+        ]
+        alternatives_description = properties["differential_diagnoses_considered"][
+            "description"
+        ]
+        assert "DEPRECATED context-only" in alternatives_description
+        assert "every plausible" in alternatives_description
+
+    assert "differential_diagnoses_considered" not in set(
+        discrete.input_schema["required"]
+    )
+    assert "weight" not in condensed.input_schema["properties"]
+    assert (
+        "direct applied likelihood ratio"
+        in condensed.input_schema["properties"]["likelihood_ratio"][
+            "description"
+        ].lower()
+    )
+
+
+def test_discrete_and_condensed_schemas_advertise_breadth_audit() -> None:
+    discrete = next(
+        tool for tool in get_dd_tools() if tool.name == "rc_audit_differential_breadth"
+    )
+    condensed = next(
+        tool for tool in get_condensed_tools() if tool.name == "rc_hypothesis"
+    )
+
+    discrete_schema = discrete.input_schema["properties"]["audit"]
+    condensed_schema = condensed.input_schema["properties"]["breadth_audit"]
+    for schema in (discrete_schema, condensed_schema):
+        assert schema["properties"]["cells"]["minItems"] == 3
+        framework_ref = schema["properties"]["framework"]["$ref"].rsplit("/", 1)[-1]
+        assert schema["$defs"][framework_ref]["enum"] == [
+            "VINDICATE",
+            "FIVE_H_FIVE_T",
+            "ANATOMIC_SYSTEM",
+            "MEDICATION_DEVICE_EXPOSURE",
+            "CUSTOM",
+        ]
+        cell_schema = schema["$defs"]["DifferentialBreadthCell"]
+        status_ref = cell_schema["properties"]["status"]["$ref"].rsplit("/", 1)[-1]
+        assert schema["$defs"][status_ref]["enum"] == [
+            "CANDIDATES_PRESENT",
+            "REVIEWED_NO_PLAUSIBLE_CANDIDATE",
+            "REVIEWED_INSUFFICIENT_DATA",
+            "NOT_ASSESSED",
+        ]
+
+
+def test_discrete_and_condensed_link_schemas_require_lr_calibration() -> None:
+    discrete = next(
+        tool for tool in get_dd_tools() if tool.name == "rc_link_evidence_to_hypothesis"
+    )
+    condensed = next(
+        tool for tool in get_condensed_tools() if tool.name == "rc_hypothesis"
+    )
+
+    assert "calibration_status" in discrete.input_schema["required"]
+    assert discrete.input_schema["properties"]["calibration_status"]["enum"] == [
+        "SOURCE_CALIBRATED",
+        "QUANTITATIVELY_UNKNOWN",
+    ]
+    assert "weight" not in condensed.input_schema["properties"]
+    assert condensed.input_schema["properties"]["calibration_status"]["enum"] == [
+        "SOURCE_CALIBRATED",
+        "QUANTITATIVELY_UNKNOWN",
+    ]
+    link_requirement = next(
+        branch["then"]["required"]
+        for branch in condensed.input_schema["allOf"]
+        if branch["if"]["properties"].get("action") == {"const": "link"}
+    )
+    assert "calibration_status" in link_requirement
+
+
+def test_builtin_breadth_framework_requires_every_canonical_cell() -> None:
+    payload = _breadth_audit("HYP-placeholder")
+    payload.update(
+        {
+            "framework": "FIVE_H_FIVE_T",
+            "framework_name": None,
+            "cells": payload["cells"],
+        }
+    )
+
+    with pytest.raises(ValueError, match="requires exact canonical cells"):
+        DifferentialBreadthAudit.model_validate(payload)
+
+    assert (
+        len(CANONICAL_FRAMEWORK_CELLS[DifferentialBreadthFramework.FIVE_H_FIVE_T]) == 10
+    )
+
+
+def test_reviewed_insufficient_data_requires_unknowns_and_planned_discriminator() -> (
+    None
+):
+    payload = _breadth_audit("HYP-placeholder")
+    insufficient = payload["cells"][1]
+    insufficient["status"] = "REVIEWED_INSUFFICIENT_DATA"
+
+    with pytest.raises(ValueError, match="unknowns and planned_discriminators"):
+        DifferentialBreadthAudit.model_validate(payload)
+
+    insufficient["unknowns"] = ["Original telemetry waveform is unavailable"]
+    insufficient["planned_discriminators"] = [
+        {
+            "name": "Retrieve original telemetry waveform",
+            "kind": "DATA_RETRIEVAL",
+            "expected_supporting_result": "Rhythm morphology supports the mechanism",
+            "expected_refuting_result": "Adequate tracing refutes the mechanism",
+            "status": "PLANNED",
+        }
+    ]
+
+    audit = DifferentialBreadthAudit.model_validate(payload)
+
+    assert audit.is_complete is True
+
+
+def test_reviewed_no_candidate_cannot_hide_unknowns_or_pending_work() -> None:
+    payload = _breadth_audit("HYP-placeholder")
+    reviewed_empty = payload["cells"][1]
+    reviewed_empty["unknowns"] = ["Medication history remains unavailable"]
+    reviewed_empty["planned_discriminators"] = [
+        {
+            "name": "Retrieve medication administration record",
+            "kind": "DATA_RETRIEVAL",
+            "expected_supporting_result": "A relevant exposure is documented",
+            "expected_refuting_result": "No relevant exposure is documented",
+            "status": "PLANNED",
+        }
+    ]
+
+    with pytest.raises(
+        ValueError,
+        match="unknowns and planned_discriminators require REVIEWED_INSUFFICIENT_DATA",
+    ):
+        DifferentialBreadthAudit.model_validate(payload)
+
+
+@pytest.mark.parametrize("framework", ["VINDICATE", "FIVE_H_FIVE_T"])
+def test_builtin_framework_rejects_unrelated_mechanism_reused_for_every_cell(
+    framework: str,
+) -> None:
+    framework_enum = DifferentialBreadthFramework(framework)
+    payload = _breadth_audit("HYP-placeholder")
+    payload.update(
+        {
+            "framework": framework,
+            "framework_name": None,
+            "cells": [
+                {
+                    "cell_id": cell_id,
+                    "status": "CANDIDATES_PRESENT",
+                    "hypothesis_ids": ["HYP-placeholder"],
+                    "mechanism_categories": ["INFECTIOUS"],
+                    "rationale": "The same mechanism is adversarially reused here.",
+                    "unknowns": [],
+                    "planned_discriminators": [],
+                }
+                for cell_id in sorted(CANONICAL_FRAMEWORK_CELLS[framework_enum])
+            ],
+        }
+    )
+
+    with pytest.raises(ValueError, match=r"canonical cell.*mechanism"):
+        DifferentialBreadthAudit.model_validate(payload)
 
 
 @pytest.mark.asyncio
@@ -154,6 +442,10 @@ async def test_planned_test_survives_hypothesis_repository_round_trip(
     assert restored.planned_tests[0].target_hypothesis_id == restored.id.value
     assert restored.planned_tests[0].purpose.value == "RULE_OUT"
     assert restored.planned_tests[0].status.value == "PLANNED"
+    assert restored.mechanism_category.value == "VASCULAR"
+    assert restored.diagnostic_role.value == "ETIOLOGIC"
+    assert restored.certainty.value == "POSSIBLE"
+    assert restored.reasoning_basis.value == "MECHANISM_INFERENCE"
     database.close()
 
 
@@ -166,6 +458,244 @@ async def test_invalid_free_text_test_purpose_is_rejected() -> None:
 
     assert result["status"] == "error"
     assert "purpose" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_invalid_hypothesis_classification_is_rejected() -> None:
+    args = _hypothesis_args("invalid-classification-session")
+    args["mechanism_category"] = "CARDIAC_BUT_UNTYPED"
+
+    result = await DDHandlers(ServerState()).handle_propose_hypothesis(args)
+
+    assert result["status"] == "error"
+    assert "mechanism_category" in result["message"]
+
+
+@pytest.mark.asyncio
+async def test_omitted_prior_is_neutral_uncalibrated_baseline() -> None:
+    args = _hypothesis_args("neutral-prior-session")
+    args.pop("prior_probability")
+
+    result = await DDHandlers(ServerState()).handle_propose_hypothesis(args)
+
+    assert result["status"] == "success"
+    assert result["prior_probability"] == 0.5
+
+
+@pytest.mark.asyncio
+async def test_non_neutral_lr_requires_explicit_rationale() -> None:
+    state = ServerState()
+    handler = DDHandlers(state)
+    proposed = await handler.handle_propose_hypothesis(
+        _hypothesis_args("lr-rationale-session")
+    )
+    orchestrator = await state.get_orchestrator("lr-rationale-session")
+    assert orchestrator is not None
+    evidence = orchestrator.add_evidence(
+        content="Acute hypotension was observed",
+        source_document="SRC-1",
+        auto_verify=False,
+    )
+
+    rejected = await handler.handle_link_evidence(
+        {
+            "session_id": "lr-rationale-session",
+            "hypothesis_id": proposed["hypothesis_id"],
+            "evidence_id": evidence.id.value,
+            "likelihood_ratio": 2.0,
+            "supports": True,
+            "calibration_status": "SOURCE_CALIBRATED",
+            "calibration_source_ref": "PMID:12345678",
+        }
+    )
+
+    assert rejected["status"] == "error"
+    assert "non-neutral likelihood_ratio" in rejected["message"]
+
+
+@pytest.mark.asyncio
+async def test_agent_estimate_cannot_be_admitted_as_a_non_neutral_lr() -> None:
+    state = ServerState()
+    handler = DDHandlers(state)
+    proposed = await handler.handle_propose_hypothesis(
+        _hypothesis_args("lr-agent-estimate-session")
+    )
+    orchestrator = await state.get_orchestrator("lr-agent-estimate-session")
+    assert orchestrator is not None
+    evidence = orchestrator.add_evidence(
+        content="A nonspecific observation was recorded",
+        source_document="SRC-1",
+        auto_verify=False,
+    )
+
+    rejected = await handler.handle_link_evidence(
+        {
+            "session_id": "lr-agent-estimate-session",
+            "hypothesis_id": proposed["hypothesis_id"],
+            "evidence_id": evidence.id.value,
+            "likelihood_ratio": 99.0,
+            "supports": True,
+            "rationale": "Agent-estimated strength without a quantitative source.",
+            "calibration_status": "QUANTITATIVELY_UNKNOWN",
+        }
+    )
+
+    assert rejected["status"] == "error"
+    assert "QUANTITATIVELY_UNKNOWN requires likelihood_ratio=1.0" in rejected["message"]
+    unchanged = orchestrator.hypothesis_store[proposed["hypothesis_id"]]
+    assert unchanged.bayesian_history == []
+
+
+@pytest.mark.asyncio
+async def test_source_calibrated_direct_lr_requires_local_verified_literature() -> None:
+    state = ServerState()
+    handler = DDHandlers(state)
+    proposed = await handler.handle_propose_hypothesis(
+        _hypothesis_args("lr-source-calibrated-session")
+    )
+    orchestrator = await state.get_orchestrator("lr-source-calibrated-session")
+    assert orchestrator is not None
+    evidence = orchestrator.add_evidence(
+        content="A validated diagnostic finding was recorded",
+        source_document="SRC-1",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    calibration_evidence_id = _verified_calibration_evidence(orchestrator)
+
+    accepted = await handler.handle_link_evidence(
+        {
+            "session_id": "lr-source-calibrated-session",
+            "hypothesis_id": proposed["hypothesis_id"],
+            "evidence_id": evidence.id.value,
+            "likelihood_ratio": 2.5,
+            "supports": True,
+            "rationale": "Published diagnostic performance supports this direct LR.",
+            "calibration_status": "SOURCE_CALIBRATED",
+            "calibration_source_ref": calibration_evidence_id,
+        }
+    )
+
+    assert accepted["status"] == "success"
+    assert accepted["applied_likelihood_ratio"] == 2.5
+    linked = orchestrator.hypothesis_store[proposed["hypothesis_id"]]
+    assert linked.likelihood_ratios[0].calibration_status.value == "SOURCE_CALIBRATED"
+    assert linked.likelihood_ratios[0].calibration_source_ref == calibration_evidence_id
+
+
+@pytest.mark.asyncio
+async def test_citation_looking_string_cannot_replace_calibration_evidence() -> None:
+    state = ServerState()
+    handler = DDHandlers(state)
+    proposed = await handler.handle_propose_hypothesis(
+        _hypothesis_args("lr-fake-citation-session")
+    )
+    orchestrator = await state.get_orchestrator("lr-fake-citation-session")
+    assert orchestrator is not None
+    evidence = orchestrator.add_evidence(
+        content="A finding was observed",
+        source_document="SRC-1",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+
+    rejected = await handler.handle_link_evidence(
+        {
+            "session_id": "lr-fake-citation-session",
+            "hypothesis_id": proposed["hypothesis_id"],
+            "evidence_id": evidence.id.value,
+            "likelihood_ratio": 99.0,
+            "supports": True,
+            "rationale": "Caller supplied a citation-looking token.",
+            "calibration_status": "SOURCE_CALIBRATED",
+            "calibration_source_ref": "PMID:NOT-A-REAL-ID",
+        }
+    )
+
+    assert rejected["status"] == "error"
+    assert "EVD-*" in rejected["message"] or "evidence record" in rejected["message"]
+    assert (
+        orchestrator.hypothesis_store[proposed["hypothesis_id"]].bayesian_history == []
+    )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("likelihood_ratio", "supports"),
+    [(-5.0, False), (float("inf"), True), (2.0, False), (0.5, True), (1.0, True)],
+)
+async def test_invalid_or_directionally_incoherent_lr_is_rejected_without_mutation(
+    likelihood_ratio: float,
+    supports: bool,
+) -> None:
+    state = ServerState()
+    handler = DDHandlers(state)
+    session_id = f"lr-invalid-{likelihood_ratio!s}-{supports}"
+    proposed = await handler.handle_propose_hypothesis(_hypothesis_args(session_id))
+    orchestrator = await state.get_orchestrator(session_id)
+    assert orchestrator is not None
+    evidence = orchestrator.add_evidence(
+        content="A finding was observed",
+        source_document="SRC-1",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    calibration_evidence_id = _verified_calibration_evidence(orchestrator, 2.0)
+
+    rejected = await handler.handle_link_evidence(
+        {
+            "session_id": session_id,
+            "hypothesis_id": proposed["hypothesis_id"],
+            "evidence_id": evidence.id.value,
+            "likelihood_ratio": likelihood_ratio,
+            "supports": supports,
+            "rationale": "Direction and finite range must be checked before mutation.",
+            "calibration_status": "SOURCE_CALIBRATED",
+            "calibration_source_ref": calibration_evidence_id,
+        }
+    )
+
+    assert rejected["status"] == "error"
+    assert (
+        orchestrator.hypothesis_store[proposed["hypothesis_id"]].bayesian_history == []
+    )
+
+
+@pytest.mark.asyncio
+async def test_missing_lr_calibration_status_returns_migration_error() -> None:
+    state = ServerState()
+    handler = DDHandlers(state)
+    proposed = await handler.handle_propose_hypothesis(
+        _hypothesis_args("lr-missing-calibration-session")
+    )
+    orchestrator = await state.get_orchestrator("lr-missing-calibration-session")
+    assert orchestrator is not None
+    evidence = orchestrator.add_evidence(
+        content="A finding requiring qualitative linkage",
+        source_document="SRC-1",
+        auto_verify=False,
+    )
+
+    rejected = await handler.handle_link_evidence(
+        {
+            "session_id": "lr-missing-calibration-session",
+            "hypothesis_id": proposed["hypothesis_id"],
+            "evidence_id": evidence.id.value,
+            "likelihood_ratio": 1.0,
+        }
+    )
+
+    assert rejected["status"] == "error"
+    assert "calibration_status is required" in rejected["message"]
 
 
 @pytest.fixture
@@ -198,11 +728,13 @@ async def causation_runtime(
     first = orchestrator.add_evidence(
         content="The escalation trigger was absent.",
         source_document="SRC-1",
+        temporal={"kind": "instant", "raw_value": "2026-08-17T09:00:00Z"},
         auto_verify=False,
     )
     second = orchestrator.add_evidence(
         content="Escalation was delayed.",
         source_document="SRC-2",
+        temporal={"kind": "instant", "raw_value": "2026-08-17T09:05:00Z"},
         auto_verify=False,
     )
     node = WhyNode.create_first_why(

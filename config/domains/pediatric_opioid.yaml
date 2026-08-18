@@ -1,32 +1,36 @@
 # Clinical Domain Playbook: Pediatric Opioid Safety & Respiratory Depression
 # Clinicians can customize monitoring criteria and pharmacogenomic rules here.
 
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings are prompts for source review, never pathognomonic conclusions."
+  - "Do not emit patient-specific treatment, dose, contraindication, or rescue instructions."
+  - "Use current local protocols and qualified-clinician judgment for active care."
+
 domain: "Pediatric Anesthesiology & Pharmacogenomics"
-scenario: "Postoperative Respiratory Arrest following Tonsillectomy / Adenoidectomy"
+scenario: "Retrospective review of pediatric postoperative respiratory deterioration"
 
-pathophysiology:
-  primary_mechanism: "Ultra-rapid CYP2D6 bioactivation of Codeine/Tramadol into active Morphine metabolites"
-  aggravating_factors: "Obstructive Sleep Apnea (OSA) baseline desensitization, post-op airway edema"
+mechanisms_to_review:
+  candidates:
+    - "Opioid exposure, pharmacokinetic/pharmacogenomic variability, and drug interaction"
+    - "Upper-airway obstruction, sleep-disordered breathing, edema, bleeding, pulmonary, neurologic, or monitoring factors"
 
-pathognomonic_findings:
+candidate_findings_requiring_confirmation:
   - marker: "Severe Bradypnea / Apnea during unmonitored sleep"
     modality: "Capnography / Pulse Oximetry"
-    significance: "Opioid-induced depression of medullary respiratory drive"
+    significance: "Compatible with opioid effect but non-specific; reconcile airway, pulmonary, neurologic, dose/timing, and monitoring evidence"
   - marker: "CYP2D6 *1xN / *2xN Gene Duplication"
     modality: "Pharmacogenomic Testing"
-    significance: "Ultra-rapid conversion yielding toxic serum morphine concentrations"
+    significance: "May affect exposure interpretation; genotype alone does not establish the event mechanism"
 
-diagnostic_rules_to_rule_out:
+differential_questions:
   - diagnosis: "Post-tonsillectomy Secondary Hemorrhage"
-    discriminator: "Absence of hematemesis, clear oral cavity, stable hematocrit"
+    discriminator: "Review bleeding examination, trend, airway findings, and record completeness; undocumented signs are unknown"
   - diagnosis: "Laryngospasm / Airway Obstruction"
-    discriminator: "Absence of stridor or chest wall paradoxical retractions prior to arrest"
+    discriminator: "Review observed airway signs, capnography/oximetry, sleep state, device position, and documentation limitations"
 
-treatment_protocol:
-  strictly_contraindicated:
-    - "Administering Codeine, Tramadol, or Hydrocodone in pediatric post-tonsillectomy patients"
-    - "Unmonitored discharge without pulse oximetry in high-risk OSA patients"
-  recommended_rescue:
-    - "Immediate bag-valve-mask ventilation and 100% oxygen"
-    - "Titrated Naloxone IV (0.01 - 0.1 mg/kg)"
-    - "Maintain continuous monitoring for secondary rebound apnea"
+management_boundary:
+  omitted: true
+  reason: >-
+    Patient-specific medication restrictions, monitoring, and reversal doses are
+    intentionally excluded. Consult current pediatric and local protocols.

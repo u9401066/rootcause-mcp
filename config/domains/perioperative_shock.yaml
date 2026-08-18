@@ -1,21 +1,27 @@
 # Clinical Domain Playbook: Perioperative Shock & Dynamic LVOT Obstruction (SAM)
-# Clinicians can customize discriminators and treatment protocols here.
+# Clinicians can customize retrospective evidence questions here.
+
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings are prompts for source review, never pathognomonic conclusions."
+  - "Do not emit patient-specific treatment, dose, contraindication, or rescue instructions."
+  - "Use current local protocols and qualified-clinician judgment for active care."
 
 domain: "Anesthesiology & Critical Care"
 scenario: "Intraoperative Refractory Hypotensive Shock Post-Induction"
 
-pathophysiology:
-  primary_mechanism: "Dynamic Left Ventricular Outflow Tract (LVOT) Obstruction secondary to Systolic Anterior Motion (SAM)"
-  underlying_substrate: "Unrecognized asymmetric septal hypertrophy, small hyperdynamic LV, altered mitral valve geometry"
-  triggers:
+mechanisms_to_review:
+  candidate: "Dynamic Left Ventricular Outflow Tract (LVOT) Obstruction with Systolic Anterior Motion (SAM)"
+  possible_substrates_requiring_confirmation: "Septal hypertrophy, small hyperdynamic LV, or altered mitral-valve geometry"
+  possible_contextual_factors:
     - "Reduced preload (propofol, blood loss, spinal/epidural block, lateral positioning)"
     - "Reduced afterload (propofol, volatile anesthetics)"
     - "Increased contractility / tachycardia (ephedrine, epinephrine, pain)"
 
-pathognomonic_findings:
+candidate_findings_requiring_confirmation:
   - marker: "Dagger-shaped (late-peaking) CW Doppler across LVOT"
     modality: "TEE"
-    significance: "Confirms dynamic obstruction gradient >50-80 mmHg"
+    significance: "May support dynamic obstruction when acquisition, alignment, loading conditions, and interpretation are adequate"
   - marker: "Bisferiens Pulse (Spike and Dome pattern)"
     modality: "Arterial Line Waveform"
     significance: "Rapid initial ejection followed by mid-systolic obstruction dip"
@@ -24,26 +30,20 @@ pathognomonic_findings:
     significance: "SAM pulls anterior leaflet away from coaptation plane"
   - marker: "Paradoxical hemodynamic collapse after Inotropes (Epinephrine/Ephedrine)"
     modality: "Hemodynamic Monitor"
-    significance: "Inotropy increases LV emptying and Venturi effect, worsening gradient"
+    significance: "A temporal association may be mechanism-consistent but is non-specific and cannot establish causality"
 
-diagnostic_rules_to_rule_out:
+differential_questions:
   - diagnosis: "Massive Pulmonary Embolism (PE)"
-    discriminator: "TEE shows normal RV size, normal TAPSE, and absence of D-sign or McConnell's sign"
+    discriminator: "Review RV size/function, image quality, timing, and alternate embolic evidence; missing or non-diagnostic imaging does not exclude PE"
   - diagnosis: "Severe Anaphylaxis"
-    discriminator: "Absence of bronchospasm/urticaria; blood pressure collapses further with Epinephrine instead of recovering"
+    discriminator: "Review exposure timing, airway/skin findings, tryptase context, and echocardiography; absence of a recorded feature or drug response is not exclusion"
   - diagnosis: "Isolated Hypovolemia"
-    discriminator: "Fluid responsive initially, but inotropes cause paradoxical drop rather than pressure stabilization"
+    discriminator: "Compare source-linked volume assessment, bleeding, dynamic indices, echocardiography, and temporal responses; response alone is non-specific"
   - diagnosis: "Fixed Aortic Stenosis"
-    discriminator: "Symmetric early-to-mid peaking Doppler; valve leaflets open normally"
+    discriminator: "Compare valve morphology and Doppler contour/quality with loading conditions documented at acquisition"
 
-treatment_protocol:
-  strictly_contraindicated:
-    - "Epinephrine / Dobutamine / Ephedrine / Isoproterenol (Positive inotropes ↑ SAM)"
-    - "Vasodilators / Nitrates (↓ Afterload worsens obstruction)"
-    - "Diuretics / Fluid restriction (↓ Preload worsens gradient)"
-  recommended_rescue:
-    - "STOP ALL INOTROPES IMMEDIATELY"
-    - "Aggressive IV volume expansion (fill the hyperdynamic LV)"
-    - "Pure Alpha-1 Vasoconstrictor: Phenylephrine boluses (100-200 mcg) or Noradrenaline"
-    - "Beta-blockade: Esmolol (0.5 mg/kg IV bolus) to slow heart rate and prolong diastolic filling"
-    - "Trendelenburg / Supine positioning"
+management_boundary:
+  omitted: true
+  reason: >-
+    Patient-specific hemodynamic management and medication doses are intentionally
+    excluded. Consult current echocardiography, anesthesia, and local crisis protocols.

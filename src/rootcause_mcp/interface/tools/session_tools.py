@@ -1,11 +1,12 @@
 """
 Session Tool Definitions.
 
-Defines 4 Session management MCP tools:
+Defines 5 Session management MCP tools:
 - rc_start_session
 - rc_get_session
 - rc_list_sessions
 - rc_archive_session
+- rc_adjudicate_source
 """
 
 from mcp.types import Tool
@@ -55,6 +56,67 @@ def get_session_tools() -> list[Tool]:
                     },
                 },
                 "required": ["case_type", "case_title"],
+            },
+        ),
+        Tool(
+            name="rc_adjudicate_source",
+            description=(
+                "Append an authorized source-processing and independence review "
+                "event without mutating the pinned source manifest or its digest. "
+                "Use after extraction/review; reviewer must be allowlisted."
+            ),
+            input_schema={
+                "type": "object",
+                "properties": {
+                    "session_id": {"type": "string"},
+                    "document_id": {
+                        "type": "string",
+                        "description": "Stable document_id in the pinned manifest",
+                    },
+                    "source_status": {
+                        "type": "string",
+                        "enum": ["extracted", "reviewed", "failed"],
+                    },
+                    "de_identified": {
+                        "type": "boolean",
+                        "description": (
+                            "Human attestation; must be true for reviewed sources"
+                        ),
+                    },
+                    "independence_status": {
+                        "type": "string",
+                        "enum": ["unknown", "independent", "derived"],
+                    },
+                    "source_group_id": {
+                        "type": "string",
+                        "description": "Host-adjudicated source root/group",
+                    },
+                    "parent_document_id": {
+                        "type": "string",
+                        "description": "Manifest parent for a derived source",
+                    },
+                    "derivation_method": {
+                        "type": "string",
+                        "description": "Transformation/extraction method for a derivative",
+                    },
+                    "reviewed_by": {
+                        "type": "string",
+                        "description": (
+                            "Named member of ROOTCAUSE_AUTHORIZED_REVIEWERS"
+                        ),
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Source-linked rationale for this transition",
+                    },
+                },
+                "required": [
+                    "session_id",
+                    "document_id",
+                    "source_status",
+                    "reviewed_by",
+                    "reason",
+                ],
             },
         ),
         Tool(

@@ -1,8 +1,9 @@
 """
 Session Handler implementations.
 
-Handles 4 Session management tools:
+Handles 5 Session management tools:
 - rc_start_session
+- rc_adjudicate_source
 - rc_get_session
 - rc_list_sessions
 - rc_archive_session
@@ -11,15 +12,23 @@ Handles 4 Session management tools:
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any
+from uuid import uuid4
 
 from mcp.types import TextContent
 from pydantic import ValidationError
 
 from rootcause_mcp.application.guided_response import format_guided_response
 from rootcause_mcp.domain.entities.session import RCASession
-from rootcause_mcp.domain.value_objects.case_manifest import CaseInputManifest
+from rootcause_mcp.domain.value_objects.case_manifest import (
+    CaseInputManifest,
+    SourceIndependenceStatus,
+    SourceReviewAdjudication,
+    SourceReviewStatus,
+)
 from rootcause_mcp.domain.value_objects.enums import CaseType, SessionStatus
 
 if TYPE_CHECKING:
@@ -119,6 +128,71 @@ class SessionHandlers:
 
         return [TextContent(type="text", text=result)]
 
+    async def handle_adjudicate_source(
+        self, arguments: dict[str, Any]
+    ) -> dict[str, Any]:
+        """Append an authorized review transition without changing manifest identity."""
+        if self._repo is None:
+            return {
+                "status": "error",
+                "message": "SessionRepository not initialized",
+            }
+        session_id = str(arguments.get("session_id") or "")
+        session = self._repo.get_by_id(session_id)
+        if session is None:
+            return {
+                "status": "not_found",
+                "message": f"No session with ID: {session_id}",
+            }
+        reviewer = str(arguments.get("reviewed_by") or "").strip()
+        authorized_reviewers = {
+            item.strip()
+            for item in os.environ.get("ROOTCAUSE_AUTHORIZED_REVIEWERS", "").split(",")
+            if item.strip()
+        }
+        if not reviewer or reviewer not in authorized_reviewers:
+            return {
+                "status": "error",
+                "message": (
+                    "reviewed_by must be a named member of "
+                    "ROOTCAUSE_AUTHORIZED_REVIEWERS"
+                ),
+            }
+        manifest = session.get_source_manifest()
+        if manifest is None:
+            return {
+                "status": "error",
+                "message": "Source adjudication requires a pinned source manifest",
+            }
+        try:
+            adjudication = SourceReviewAdjudication(
+                adjudication_id=f"SRV-{uuid4().hex}",
+                manifest_digest=manifest.digest,
+                document_id=arguments["document_id"],
+                status=SourceReviewStatus(arguments["source_status"]),
+                de_identified=arguments.get("de_identified"),
+                independence_status=SourceIndependenceStatus(
+                    arguments.get("independence_status", "unknown")
+                ),
+                source_group_id=arguments.get("source_group_id"),
+                parent_document_id=arguments.get("parent_document_id"),
+                derivation_method=arguments.get("derivation_method"),
+                reviewed_by=reviewer,
+                reason=arguments["reason"],
+                reviewed_at=datetime.now(UTC),
+            )
+            session.record_source_review(adjudication)
+        except (KeyError, ValueError, ValidationError) as exc:
+            return {"status": "error", "message": str(exc)}
+        self._repo.save(session)
+        return {
+            "status": "success",
+            "session_id": session_id,
+            "manifest_digest": manifest.digest,
+            "source_review": adjudication.model_dump(mode="json"),
+            "append_only": True,
+        }
+
     async def handle_get_session(
         self, arguments: dict[str, Any]
     ) -> Sequence[TextContent]:
@@ -162,11 +236,17 @@ class SessionHandlers:
 
         source_manifest = session.get_source_manifest()
         if source_manifest is not None:
+            latest_reviews = session.get_latest_source_reviews()
+            effective_statuses = [
+                latest_reviews.get(document.document_id, document).status.value
+                for document in source_manifest.documents
+            ]
             result += (
                 "\n\n**Source Manifest:**\n"
                 f"- Documents: {len(source_manifest.documents)}\n"
                 f"- Digest: `{source_manifest.digest}`\n"
-                f"- Statuses: {', '.join(document.status.value for document in source_manifest.documents)}"
+                f"- Effective statuses: {', '.join(effective_statuses)}\n"
+                f"- Append-only review events: {len(session.get_source_review_ledger())}"
             )
 
         return [TextContent(type="text", text=result)]

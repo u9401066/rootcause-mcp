@@ -1727,12 +1727,13 @@ wheels = [
 
 [[package]]
 name = "rootcause-mcp"
-version = "2.0.0a1"
+version = "2.0.0a2"
 source = { editable = "." }
 dependencies = [
     { name = "aiosqlite" },
     { name = "click" },
     { name = "cryptography" },
+    { name = "jsonschema" },
     { name = "mcp", extra = ["cli"] },
     { name = "networkx" },
     { name = "pydantic" },
@@ -1783,7 +1784,8 @@ requires-dist = [
     { name = "causal-learn", marker = "extra == 'causal'", specifier = ">=0.1.3" },
     { name = "click", specifier = ">=8.3.3" },
     { name = "cryptography", specifier = ">=50.0.0" },
-    { name = "dowhy", extras = ["gcm"], marker = "extra == 'causal'", specifier = ">=0.11" },
+    { name = "dowhy", marker = "extra == 'causal'", specifier = ">=0.14" },
+    { name = "jsonschema", specifier = ">=4.26.0" },
     { name = "mcp", extras = ["cli"], specifier = ">=2.0.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.10" },
     { name = "networkx", specifier = ">=3.0" },

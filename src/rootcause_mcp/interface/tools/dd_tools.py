@@ -9,6 +9,9 @@ from __future__ import annotations
 from mcp.types import Tool
 
 from rootcause_mcp.interface.tools.schema_fragments import (
+    differential_breadth_audit_input_schema,
+    hypothesis_classification_input_properties,
+    likelihood_ratio_calibration_input_properties,
     planned_diagnostic_test_input_schema,
 )
 
@@ -18,7 +21,12 @@ def get_dd_tools() -> list[Tool]:
     return [
         Tool(
             name="rc_propose_hypothesis",
-            description="Propose a differential diagnosis hypothesis with Bayesian prior. REQUIRES detailed clinical reasoning to ensure transparency.",
+            description=(
+                "Propose one differential diagnosis with explicit reasoning and "
+                "uncertainty. Omission of prior_probability uses a neutral 0.5 "
+                "UNCALIBRATED implementation baseline; it is not a patient-specific "
+                "clinical probability or certainty label."
+            ),
             input_schema={
                 "type": "object",
                 "properties": {
@@ -42,14 +50,19 @@ def get_dd_tools() -> list[Tool]:
                         "type": "number",
                         "minimum": 0,
                         "maximum": 1,
-                        "description": "Prior probability P(H) before evidence (0-1)",
-                        "default": 0.1,
+                        "description": (
+                            "Numeric Bayesian starting value. Omission uses a neutral "
+                            "0.5 UNCALIBRATED implementation baseline, not a clinical "
+                            "probability or certainty label."
+                        ),
+                        "default": 0.5,
                     },
                     "must_not_miss": {
                         "type": "boolean",
                         "description": "Mark an explicitly reviewed high-harm diagnosis that must be ruled out",
                         "default": False,
                     },
+                    **hypothesis_classification_input_properties(),
                     "clinical_reasoning": {
                         "type": "string",
                         "description": "REQUIRED: Detailed clinical reasoning for why this diagnosis is being considered (e.g., 'Patient has chest pain + elevated troponin + ECG changes')",
@@ -60,15 +73,27 @@ def get_dd_tools() -> list[Tool]:
                             "type": "object",
                             "properties": {
                                 "diagnosis": {"type": "string"},
-                                "reason_rejected": {"type": "string"},
+                                "disposition": {
+                                    "type": "string",
+                                    "enum": ["CONTEXT_ONLY", "REJECTED", "UNKNOWN"],
+                                },
+                                "rationale": {"type": "string"},
+                                "reason_rejected": {
+                                    "type": "string",
+                                    "description": "Deprecated legacy field",
+                                },
                                 "likelihood_if_not_rejected": {
                                     "type": "string",
                                     "enum": ["high", "moderate", "low"],
+                                    "description": "Deprecated uncalibrated legacy field",
                                 },
                             },
-                            "required": ["diagnosis", "reason_rejected"],
                         },
-                        "description": "REQUIRED: Other diagnoses considered but rejected, with reasons",
+                        "description": (
+                            "DEPRECATED context-only notes. Propose every plausible "
+                            "candidate as its own hypothesis. This array cannot replace "
+                            "rc_audit_differential_breadth or justify exclusion."
+                        ),
                     },
                     "evidence_supporting": {
                         "type": "array",
@@ -95,7 +120,10 @@ def get_dd_tools() -> list[Tool]:
                     },
                     "confidence_rationale": {
                         "type": "string",
-                        "description": "REQUIRED: Explanation of why you assigned this prior probability",
+                        "description": (
+                            "REQUIRED: Why the candidate is considered and the "
+                            "calibration/source limitations of any numeric prior"
+                        ),
                     },
                     "inclusion_criteria": {
                         "type": "array",
@@ -120,17 +148,39 @@ def get_dd_tools() -> list[Tool]:
                     "session_id",
                     "diagnosis",
                     "clinical_reasoning",
-                    "differential_diagnoses_considered",
                     "uncertainty_factors",
                     "confidence_rationale",
                 ],
             },
         ),
         Tool(
+            name="rc_audit_differential_breadth",
+            description=(
+                "Persist a systematic differential-breadth audit. Select a "
+                "syndrome-appropriate framework, review every canonical cell, "
+                "retain insufficient data with planned discriminators, and record "
+                "why expansion stopped. This proves coverage, not diagnostic truth."
+            ),
+            input_schema={
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "RCA session ID",
+                    },
+                    "audit": differential_breadth_audit_input_schema(),
+                },
+                "required": ["session_id", "audit"],
+            },
+        ),
+        Tool(
             name="rc_link_evidence_to_hypothesis",
             description=(
                 "Link one evidence item to one hypothesis with Bayesian updating. "
-                "The supplied LR is applied directly: normally >1 for supports and <1 for contradicts."
+                "The supplied LR is applied directly: >1 supports, <1 refutes, "
+                "and 1.0 is neutral. A non-neutral LR additionally needs a verified "
+                "local literature calibration evidence record."
             ),
             input_schema={
                 "type": "object",
@@ -158,21 +208,47 @@ def get_dd_tools() -> list[Tool]:
                         "default": 1.0,
                     },
                     "supports": {
-                        "type": "boolean",
-                        "description": "True if evidence supports hypothesis, False if contradicts",
-                        "default": True,
+                        "type": ["boolean", "null"],
+                        "description": (
+                            "True only with LR>1, false only with LR<1, and null "
+                            "with neutral LR=1. Omit to derive this direction from LR."
+                        ),
+                        "default": None,
                     },
                     "rationale": {
                         "type": "string",
-                        "description": "Clinical justification for this LR",
+                        "description": (
+                            "Clinical justification plus source/calibration limitation; "
+                            "required by the handler whenever LR is not neutral 1.0"
+                        ),
                     },
+                    **likelihood_ratio_calibration_input_properties(),
                 },
-                "required": ["session_id", "evidence_id", "hypothesis_id"],
+                "required": [
+                    "session_id",
+                    "evidence_id",
+                    "hypothesis_id",
+                    "calibration_status",
+                ],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {
+                                "calibration_status": {"const": "SOURCE_CALIBRATED"}
+                            },
+                            "required": ["calibration_status"],
+                        },
+                        "then": {"required": ["calibration_source_ref"]},
+                    }
+                ],
             },
         ),
         Tool(
             name="rc_get_differential_diagnosis",
-            description="Get probability-ranked differential diagnosis tree",
+            description=(
+                "Get the differential diagnosis in stable working-ledger order; "
+                "uncalibrated compatibility values are never used for rank or filtering"
+            ),
             input_schema={
                 "type": "object",
                 "properties": {
@@ -190,11 +266,51 @@ def get_dd_tools() -> list[Tool]:
                         "type": "number",
                         "minimum": 0,
                         "maximum": 1,
-                        "description": "Minimum probability threshold",
+                        "description": (
+                            "Deprecated compatibility argument; accepted but ignored "
+                            "because no calibrated clinical probability is established"
+                        ),
                         "default": 0.01,
                     },
                 },
                 "required": ["session_id"],
+            },
+        ),
+        Tool(
+            name="rc_select_leading_hypothesis",
+            description=(
+                "Explicitly select one ACTIVE or CONFIRMED hypothesis as the "
+                "current leading diagnosis. This appends a typed audit record; "
+                "numeric compatibility values and array order never select a lead."
+            ),
+            input_schema={
+                "type": "object",
+                "additionalProperties": False,
+                "properties": {
+                    "session_id": {"type": "string"},
+                    "hypothesis_id": {
+                        "type": "string",
+                        "pattern": "^HYP-[A-Za-z0-9_-]+$",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "minLength": 10,
+                        "maxLength": 1000,
+                        "description": "Why this candidate is selected as leading now",
+                    },
+                    "changed_by": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "description": "Auditable agent/reviewer identity",
+                    },
+                },
+                "required": [
+                    "session_id",
+                    "hypothesis_id",
+                    "reason",
+                    "changed_by",
+                ],
             },
         ),
         Tool(

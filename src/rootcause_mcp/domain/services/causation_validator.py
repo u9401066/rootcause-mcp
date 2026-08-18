@@ -49,8 +49,8 @@ class NecessityResult:
     passed: bool
     counterfactual_question: str
     counterfactual_answer: str  # "likely", "unlikely", "uncertain"
-    confidence: ConfidenceScore
     reasoning: str
+    confidence: ConfidenceScore | None = None
 
 
 @dataclass
@@ -93,7 +93,7 @@ class CausationVerificationResult:
     effect: str
     tests: VerificationTestResults
     overall_result: VerificationResult
-    confidence: ConfidenceScore
+    confidence: ConfidenceScore | None = None
     causal_strength: CausalStrength | None = None
     interpretation: str = ""
     next_steps: list[str] | None = None
@@ -146,7 +146,6 @@ class CausationValidator:
                 effect=effect.description,
                 tests=tests,
                 overall_result=VerificationResult.REJECTED,
-                confidence=ConfidenceScore(0.95),
                 interpretation=(
                     "提交的時序義務未通過；此結果不建立或否定完整臨床因果關係"
                 ),
@@ -209,15 +208,10 @@ class CausationValidator:
             f"若「{cause.description}」未發生，「{effect.description}」是否仍會發生？"
         )
 
-        # Evidence attached to both events increases confidence, but cannot by itself
-        # establish the counterfactual claim.
-        has_evidence = bool(cause.evidence and effect.evidence)
-
         return NecessityResult(
             passed=False,
             counterfactual_question=counterfactual_question,
             counterfactual_answer="uncertain",
-            confidence=ConfidenceScore(0.6 if has_evidence else 0.4),
             reasoning="缺少明確反事實評估，不能將必要性視為已通過",
         )
 
@@ -298,7 +292,6 @@ class CausationValidator:
         # Determine overall result
         if total_count > 0 and passed_count == total_count:
             overall = VerificationResult.VERIFIED
-            confidence = 0.85
             # Passing submitted obligations does not establish clinical causal
             # strength.  Root/contributing-factor attribution remains a human
             # review decision outside this conservative audit service.
@@ -306,7 +299,6 @@ class CausationValidator:
             interpretation = "提交的稽核義務已通過；這不是臨床因果關係的證明"
         else:
             overall = VerificationResult.INSUFFICIENT_DATA
-            confidence = 0.4
             strength = None
             interpretation = "資料不足；僅可保留為提議關係，不能宣稱臨床因果"
 
@@ -328,7 +320,6 @@ class CausationValidator:
             effect=effect.description,
             tests=tests,
             overall_result=overall,
-            confidence=ConfidenceScore(confidence),
             causal_strength=strength,
             interpretation=interpretation,
             next_steps=self._get_next_steps(tests),
@@ -342,7 +333,7 @@ class CausationValidator:
         if tests.temporality and not tests.temporality.passed:
             steps.append("重新確認事件發生的時間順序")
 
-        if tests.necessity and tests.necessity.confidence.value < 0.7:
+        if tests.necessity and not tests.necessity.passed:
             steps.append("收集更多證據以支持因果必要性")
 
         if tests.mechanism and not tests.mechanism.domain_knowledge_support:

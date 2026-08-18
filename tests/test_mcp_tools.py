@@ -30,11 +30,13 @@ async def test_sdk2_lifespan_exposes_complete_tool_catalog(
         dispatch = server_v2._build_tool_dispatch()
 
     tool_names = {tool.name for tool in result.tools}
-    assert len(tool_names) == 43
+    assert len(tool_names) == 46
     assert set(dispatch) == tool_names
     assert {
         "rc_add_evidence",
         "rc_propose_hypothesis",
+        "rc_audit_differential_breadth",
+        "rc_select_leading_hypothesis",
         "rc_think_aloud",
         "rc_audit_reasoning_state",
         "rc_detect_conflicts",
@@ -66,17 +68,19 @@ async def test_sdk2_clinical_profile_matches_dispatch_surface(
         frozen_result = await on_list_tools(context, None)
 
     tool_names = {tool.name for tool in result.tools}
-    assert len(tool_names) == 23
+    assert len(tool_names) == 25
     assert set(dispatch) == tool_names
     assert {tool.name for tool in frozen_result.tools} == tool_names
     assert "rc_add_evidence" in tool_names
+    assert "rc_audit_differential_breadth" in tool_names
+    assert "rc_select_leading_hypothesis" in tool_names
     assert "rc_export_fishbone" not in tool_names
 
 
 def test_sdk2_server_metadata() -> None:
     """The package advertises the SDK 2.0 server and alpha release version."""
     assert server.name == "rootcause-mcp"
-    assert server.version == "2.0.0a1"
+    assert server.version == "2.0.0a2"
 
 
 def test_propose_schema_deprecates_context_only_evidence_arrays() -> None:
@@ -110,6 +114,24 @@ async def test_only_link_tool_associates_evidence_with_hypothesis() -> None:
         source_document="cta.txt",
         auto_verify=False,
     )
+    calibration = orchestrator.add_evidence(
+        content="Published validation table reports LR 3.0 for this ECG pattern.",
+        evidence_type="LITERATURE",
+        source_document="literature.txt",
+        source_location="Table 2",
+        raw_snippet="Inferior ST elevation LR 3.0",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="sha256:" + "a" * 64,
+    )
+    orchestrator.evidence_store[calibration.id.value] = calibration
+    orchestrator.evidence_store[supporting.id.value] = supporting.mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
     handler = DDHandlers(state)
 
     proposed = await handler.handle(
@@ -142,6 +164,8 @@ async def test_only_link_tool_associates_evidence_with_hypothesis() -> None:
             "likelihood_ratio": 3.0,
             "supports": True,
             "rationale": "The observed ECG finding supports this hypothesis.",
+            "calibration_status": "SOURCE_CALIBRATED",
+            "calibration_source_ref": calibration.id.value,
         },
     )
     assert orchestrator.hypothesis_store[hypothesis_id].supporting_evidence_ids == [

@@ -12,6 +12,10 @@ from rootcause_mcp.domain.entities.fishbone import Fishbone
 from rootcause_mcp.domain.entities.hypothesis import Hypothesis
 from rootcause_mcp.domain.entities.reasoning_step import ReasoningChain
 from rootcause_mcp.domain.entities.why_node import WhyChain
+from rootcause_mcp.domain.value_objects.clinical_temporal import (
+    ClinicalTemporal,
+    resolve_clinical_temporal,
+)
 from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
 
 _FISHBONE_REFS = {
@@ -66,7 +70,7 @@ def _extract_time_key(text: str) -> str:
 
 
 def _absolute_time_key(value: object) -> float | None:
-    """Return a chronological key only when a full calendar date is available."""
+    """Return a key only for an absolute datetime with explicit timezone."""
     parsed: datetime | None = None
     if isinstance(value, datetime):
         parsed = value
@@ -75,19 +79,33 @@ def _absolute_time_key(value: object) -> float | None:
         try:
             parsed = datetime.fromisoformat(candidate)
         except ValueError:
-            for pattern in ("%Y/%m/%d %H:%M", "%Y/%m/%d"):
-                try:
-                    parsed = datetime.strptime(candidate, pattern)
-                    break
-                except ValueError:
-                    continue
-    if parsed is None:
+            return None
+    if parsed is None or parsed.tzinfo is None or parsed.utcoffset() is None:
         return None
-    if parsed.tzinfo is None:
-        # The source timezone remains unresolved, but a deterministic calendar
-        # order is still safer than lexicographic phase ordering.
-        parsed = parsed.replace(tzinfo=UTC)
-    return parsed.timestamp()
+    return parsed.astimezone(UTC).timestamp()
+
+
+def _custom_event_temporal(event: dict[str, Any]) -> ClinicalTemporal:
+    """Resolve custom timeline input without assigning a timezone or precision."""
+    if event.get("temporal") is not None:
+        return resolve_clinical_temporal(
+            event.get("temporal"),
+            event.get("event_timestamp") or event.get("timestamp"),
+        )
+    raw_time = (
+        event.get("event_timestamp") or event.get("timestamp") or event.get("time")
+    )
+    if raw_time is None:
+        return ClinicalTemporal.unknown()
+    try:
+        return ClinicalTemporal.from_legacy_event_timestamp(raw_time)
+    except ValueError:
+        raw_text = str(raw_time)
+        if re.fullmatch(r"\d{4}-\d{2}-\d{2}", raw_text):
+            return ClinicalTemporal.model_validate(
+                {"kind": "date", "raw_value": raw_text}
+            )
+        return ClinicalTemporal.from_lost_local_timestamp(raw_text)
 
 
 def _detect_pattern_from_text(text: str) -> str:
@@ -147,7 +165,11 @@ def _detect_pattern_from_text(text: str) -> str:
             "pre-op",
             "pre_anesthesia",
             "surgeon",
-            "or ",
+            "operating room",
+            "intraoperative",
+            "perioperative",
+            "surgery",
+            "surgical",
             "pacu",
             "tee",
             "propofol 80mg",
@@ -346,6 +368,39 @@ def _infer_perioperative_phase(text: str) -> str:
     if any(
         k in text
         for k in [
+            "cardiac arrest",
+            "arrest",
+            "pulseless",
+            "cpr",
+            "resuscitation",
+            "defibrillation",
+            "ventricular fibrillation",
+            " vf ",
+            "rosc",
+            "code blue",
+        ]
+    ):
+        phase = "5. Critical Collapse & Resuscitation"
+    elif any(
+        k in text
+        for k in [
+            "post-event",
+            "post event",
+            "post-crisis",
+            "post crisis",
+            "stabilized",
+            "stabilisation",
+            "stabilization",
+            "extubated",
+            "discharged",
+            "discharge",
+            "icu outcome",
+        ]
+    ):
+        phase = "6. Stabilization / Post-Crisis Outcome"
+    elif any(
+        k in text
+        for k in [
             "pre-op",
             "baseline",
             "admission",
@@ -354,8 +409,8 @@ def _infer_perioperative_phase(text: str) -> str:
             "pre_anesthesia",
         ]
     ):
-        return "1. Baseline & Pre-Op"
-    if any(
+        phase = "1. Baseline & Pre-Op"
+    elif any(
         k in text
         for k in [
             "induction",
@@ -368,8 +423,8 @@ def _infer_perioperative_phase(text: str) -> str:
             "surgical incision",
         ]
     ):
-        return "2. Induction & Surgical Events"
-    if any(
+        phase = "2. Induction & Surgical Events"
+    elif any(
         k in text
         for k in [
             "hypotension",
@@ -378,13 +433,16 @@ def _infer_perioperative_phase(text: str) -> str:
             "acidosis",
             "ephedrine",
             "epinephrine",
+            "vt alarm",
+            "ventricular tachycardia",
+            "rhythm deterioration",
             "08:12",
             "08:15",
             "08:18",
         ]
     ):
-        return "3. Crisis Progression & Deterioration"
-    if any(
+        phase = "3. Crisis Progression & Deterioration"
+    elif any(
         k in text
         for k in [
             "tee",
@@ -397,8 +455,10 @@ def _infer_perioperative_phase(text: str) -> str:
             "a-line waveform",
         ]
     ):
-        return "4. Diagnostic Findings & Rule-Outs"
-    return "5. Critical Collapse & Resuscitation"
+        phase = "4. Diagnostic Findings & Rule-Outs"
+    else:
+        phase = "5. Critical Collapse & Resuscitation"
+    return phase
 
 
 def _infer_phase(time_str: str, content: str, pattern: str = "auto") -> str:
@@ -437,14 +497,33 @@ def build_timeline(
     - 'custom'
     """
     events: list[dict[str, Any]] = []
+    evidence_items = list(evidence or [])
+    custom_items = list(custom_events or [])
+    if pattern == "auto":
+        pattern_text = " ".join(
+            [
+                *(
+                    f"{item.content} {item.source.raw_snippet or ''}"
+                    for item in evidence_items
+                ),
+                *(
+                    f"{item.get('content', '')} {item.get('description', '')}"
+                    for item in custom_items
+                ),
+            ]
+        ).lower()
+        selected_pattern = _detect_pattern_from_text(pattern_text)
+    else:
+        selected_pattern = pattern
 
     # 1. Ingest custom events if provided
-    if custom_events:
-        for ev in custom_events:
-            raw_time = ev.get("timestamp") or ev.get("time")
-            t_str = str(raw_time or "T_Event")
+    if custom_items:
+        for ev in custom_items:
+            temporal = _custom_event_temporal(ev)
+            instant = temporal.aware_instant
+            t_str = temporal.display_value()
             content = str(ev.get("content") or ev.get("description") or "")
-            phase = ev.get("phase") or _infer_phase(t_str, content, pattern)
+            phase = ev.get("phase") or _infer_phase(t_str, content, selected_pattern)
             events.append(
                 {
                     "id": str(ev.get("id") or f"EVT-{len(events) + 1}"),
@@ -458,29 +537,26 @@ def build_timeline(
                     "evidence_type": str(
                         ev.get("evidence_type") or ev.get("type") or "OBSERVATION"
                     ),
-                    "_sort_instant": _absolute_time_key(raw_time),
+                    "temporal": temporal.model_dump(mode="json"),
+                    "chronology_status": (
+                        "ORDERED_INSTANT" if instant is not None else "UNPOSITIONED"
+                    ),
+                    "_sort_instant": _absolute_time_key(instant),
+                    "_input_index": len(events),
                 }
             )
 
     # 2. Ingest domain Evidence items if provided
-    if evidence:
-        for item in evidence:
-            t_str = ""
-            if item.event_timestamp:
-                t_str = str(item.event_timestamp)
-            if not t_str and item.source.raw_snippet:
-                t_str = _extract_time_key(item.source.raw_snippet)
-            if not t_str:
-                t_str = _extract_time_key(item.content)
-            if not t_str and item.source.location:
-                t_str = _extract_time_key(item.source.location)
-            if not t_str:
-                t_str = "T_Event"
+    if evidence_items:
+        for item in evidence_items:
+            temporal = item.temporal
+            instant = temporal.aware_instant
+            t_str = temporal.display_value()
 
             phase = _infer_phase(
                 t_str,
                 f"{item.content} {item.source.raw_snippet or ''}",
-                pattern,
+                selected_pattern,
             )
             events.append(
                 {
@@ -491,30 +567,40 @@ def build_timeline(
                     "source_document": item.source.document_id,
                     "verified": item.verified,
                     "evidence_type": item.evidence_type.value,
-                    "_sort_instant": _absolute_time_key(item.event_timestamp),
+                    "temporal": temporal.model_dump(mode="json"),
+                    "chronology_status": (
+                        "ORDERED_INSTANT" if instant is not None else "UNPOSITIONED"
+                    ),
+                    "_sort_instant": _absolute_time_key(instant),
+                    "_input_index": len(events),
                 }
             )
 
-    events.sort(
-        key=lambda event: (
-            0 if event["_sort_instant"] is not None else 1,
-            event["_sort_instant"]
-            if event["_sort_instant"] is not None
-            else event["phase"],
-            "" if event["_sort_instant"] is not None else event["time"],
-            event["id"],
-        )
+    timed_events = sorted(
+        (event for event in events if event["_sort_instant"] is not None),
+        key=lambda event: (event["_sort_instant"], event["_input_index"]),
     )
+    # Preserve ingestion/ledger order for partial or unknown time. This is not a
+    # chronology and is labelled as such on every event and presentation.
+    untimed_events = [event for event in events if event["_sort_instant"] is None]
+    events = [*timed_events, *untimed_events]
     for event in events:
         event.pop("_sort_instant", None)
+        event.pop("_input_index", None)
     diagram_title = (
-        title or f"Clinical Chronology ({pattern.replace('_', ' ').title()})"
+        title or f"Clinical Chronology ({selected_pattern.replace('_', ' ').title()})"
     )
 
     return {
-        "pattern": pattern,
+        "pattern": selected_pattern,
         "title": diagram_title,
         "events": events,
+        "timed_event_count": len(timed_events),
+        "untimed_event_count": len(untimed_events),
+        "ordering_note": (
+            "Only ORDERED_INSTANT events are chronologically sorted; "
+            "UNPOSITIONED events retain ledger order and imply no chronology."
+        ),
         "mermaid": render_timeline_mermaid(events, title=diagram_title),
         "table": render_timeline_table(events),
     }
@@ -746,15 +832,17 @@ def render_timeline_mermaid(
     phases: dict[str, list[dict[str, Any]]] = {}
     for ev in events:
         phase = ev.get("phase", "General Sequence")
+        if ev.get("chronology_status") != "ORDERED_INSTANT":
+            phase = f"Unpositioned / partial time — {phase}"
         phases.setdefault(phase, []).append(ev)
 
-    for phase_name, phase_events in sorted(phases.items()):
+    for phase_name, phase_events in phases.items():
         clean_phase = escape_mermaid_label(phase_name, 40)
         lines.append(f"    section {clean_phase}")
         for ev in phase_events:
-            t = escape_mermaid_label(ev.get("time") or "Time", 24)
+            t = escape_mermaid_label(ev.get("time") or "Unknown time", 24)
             c = escape_timeline_text(ev.get("content", ""), 70)
-            verified_tag = " [Verified]" if ev.get("verified") else ""
+            verified_tag = " [Source checked]" if ev.get("verified") else ""
             lines.append(f"        {t} : {c}{verified_tag}")
 
     return mermaid_block("\n".join(lines))
@@ -763,20 +851,25 @@ def render_timeline_mermaid(
 def render_timeline_table(events: list[dict[str, Any]]) -> str:
     """Render a structured Markdown chronological event table."""
     lines = [
-        "| Time / Step | Phase | Clinical Event / Finding | Source Record | Verified |",
-        "| --- | --- | --- | --- | --- |",
+        "| Time expression | Temporal state | Phase | Clinical Event / Finding | Source Record | Provenance check |",
+        "| --- | --- | --- | --- | --- | --- |",
     ]
     if not events:
-        lines.append("| - | - | No timeline events recorded | - | - |")
+        lines.append("| - | - | - | No timeline events recorded | - | - |")
         return "\n".join(lines)
 
     for ev in events:
         t = ev.get("time") or "-"
+        temporal_kind = str((ev.get("temporal") or {}).get("kind") or "unknown")
+        chronology = ev.get("chronology_status") or "UNPOSITIONED"
         phase = ev.get("phase") or "General"
         content = ev.get("content") or "-"
         src = ev.get("source_document") or "Record"
         v = "✅ Yes" if ev.get("verified") else "❌ No"
-        lines.append(f"| `{t}` | **{phase}** | {content} | `{src}` | {v} |")
+        lines.append(
+            f"| `{t}` | `{temporal_kind}` / `{chronology}` | **{phase}** | "
+            f"{content} | `{src}` | {v} |"
+        )
 
     return "\n".join(lines)
 
@@ -789,6 +882,19 @@ def build_evidence_graph(
     evidence_items = sorted(evidence, key=lambda item: item.id.value)
     hypothesis_items = sorted(hypotheses, key=lambda item: item.id.value)
     hypothesis_ids = {item.id.value for item in hypothesis_items}
+    lr_relationships: dict[tuple[str, str], str] = {}
+    for hypothesis_item in hypothesis_items:
+        for likelihood in hypothesis_item.likelihood_ratios:
+            applied = likelihood.applied_likelihood_ratio
+            if applied is None or applied == 1.0:
+                relationship = "neutral"
+            elif applied > 1.0:
+                relationship = "supports"
+            else:
+                relationship = "contradicts"
+            lr_relationships[(likelihood.evidence_id, hypothesis_item.id.value)] = (
+                relationship
+            )
     nodes: list[dict[str, Any]] = []
     edge_keys: set[tuple[str, str, str]] = set()
     warnings: list[str] = []
@@ -821,16 +927,31 @@ def build_evidence_graph(
             add_hypothesis_edge(
                 evidence_item.id.value,
                 hypothesis_id,
-                "supports",
+                lr_relationships.get(
+                    (evidence_item.id.value, hypothesis_id), "supports"
+                ),
             )
         for hypothesis_id in sorted(evidence_item.contradicts_hypothesis_ids):
             add_hypothesis_edge(
                 evidence_item.id.value,
                 hypothesis_id,
-                "contradicts",
+                lr_relationships.get(
+                    (evidence_item.id.value, hypothesis_id), "contradicts"
+                ),
             )
         for cause_id in sorted(evidence_item.supports_cause_ids):
             edge_keys.add((evidence_item.id.value, cause_id, "supports_cause"))
+
+    evidence_ids = {item.id.value for item in evidence_items}
+    for (evidence_id, hypothesis_id), relationship in sorted(lr_relationships.items()):
+        if evidence_id not in evidence_ids:
+            warnings.append(
+                "Omitted "
+                f"{relationship} edge from missing evidence {evidence_id} "
+                f"to {hypothesis_id}"
+            )
+            continue
+        add_hypothesis_edge(evidence_id, hypothesis_id, relationship)
 
     for hypothesis_item in hypothesis_items:
         nodes.append(
@@ -839,7 +960,8 @@ def build_evidence_graph(
                 "type": "hypothesis",
                 "label": hypothesis_item.diagnosis.display,
                 "status": hypothesis_item.status.value,
-                "probability": hypothesis_item.current_probability,
+                "certainty": hypothesis_item.certainty.value,
+                "probability_semantics": "UNCALIBRATED_NOT_PRESENTED",
             }
         )
 
@@ -884,15 +1006,19 @@ def render_evidence_graph_mermaid(
             source = escape_mermaid_label(
                 node.get("source_document") or "source not recorded", 40
             )
-            verified = "Verified" if node.get("verified") else "Unverified"
+            verified = (
+                "Registered-source check true"
+                if node.get("verified")
+                else "Provenance check incomplete"
+            )
             lines.append(
                 f'    {node_ref}["Evidence<br/>{label}<br/>{source} | {verified}"]:::evidence'
             )
         elif node_type == "hypothesis":
-            probability = float(node.get("probability", 0.0))
             status = escape_mermaid_label(node.get("status", "UNKNOWN"), 20)
+            certainty = escape_mermaid_label(node.get("certainty", "UNKNOWN"), 24)
             lines.append(
-                f'    {node_ref}(["Hypothesis<br/>{label}<br/>{probability:.0%} | {status}"]):::hypothesis'
+                f'    {node_ref}(["Hypothesis<br/>{label}<br/>{certainty} | {status}"]):::hypothesis'
             )
         else:
             lines.append(f'    {node_ref}["Cause<br/>{label}"]:::cause')
@@ -907,6 +1033,8 @@ def render_evidence_graph_mermaid(
             lines.append(f'    {source_ref} -->|"supports"| {target_ref}')
         elif relationship == "contradicts":
             lines.append(f'    {source_ref} -. "contradicts" .-> {target_ref}')
+        elif relationship == "neutral":
+            lines.append(f'    {source_ref} -. "neutral LR=1" .-> {target_ref}')
         else:
             lines.append(f'    {source_ref} -. "supports cause" .-> {target_ref}')
 
@@ -1092,8 +1220,6 @@ def render_reasoning_chain_mermaid(chain: ReasoningChain) -> str:
             escape_mermaid_label(step.content, 88),
             f"Rationale: {escape_mermaid_label(step.rationale, 88)}",
         ]
-        if step.confidence is not None:
-            label_parts.append(f"Confidence: {step.confidence:.0%}")
         label = "<br/>".join(label_parts)
         lines.append(f'    {step_ref}["{label}"]:::step')
         if index > 1:

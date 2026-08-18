@@ -101,8 +101,10 @@ def get_why_tree_tools() -> list[Tool]:
                     },
                     "confidence": {
                         "type": "number",
-                        "description": "Confidence level (0.0-1.0)",
-                        "default": 0.8,
+                        "description": (
+                            "Optional caller-supplied compatibility metadata; not "
+                            "clinical probability or calibrated confidence"
+                        ),
                         "minimum": 0.0,
                         "maximum": 1.0,
                     },

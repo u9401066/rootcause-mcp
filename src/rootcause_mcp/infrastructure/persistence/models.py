@@ -282,7 +282,7 @@ class ThinkingStepModel(SQLModel, table=True):
     potential_biases: list[str] = Field(default_factory=list, sa_column=Column(JSON))
 
     # Confidence
-    confidence: float
+    confidence: float | None = None
 
     # Relationships (stored as JSON arrays)
     related_evidence_ids: list[str] = Field(

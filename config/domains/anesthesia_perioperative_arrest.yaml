@@ -5,6 +5,12 @@
 # 供 AI Agent 呼叫與麻醉專科醫師修訂之臨床判讀標準
 # ============================================================================
 
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings are prompts for source review, never pathognomonic conclusions."
+  - "Do not emit patient-specific treatment, dose, contraindication, or rescue instructions."
+  - "Use current local protocols and qualified-clinician judgment for active care."
+
 domain: "Anesthesiology & Perioperative Resuscitation"
 playbook_name: "Perioperative Collapse, Shock & Intraoperative Arrest Differential"
 
@@ -75,19 +81,19 @@ five_h_five_t_catalog:
       LAST:
         name: "局部麻醉藥全身毒性 (Local Anesthetic Systemic Toxicity)"
         clues: "神經阻斷術後或術野浸潤後，突發抽搐、意識喪失、心室頻脈、傳導阻滯、心跳停止"
-        rescue: "立即給予 20% 脂肪乳劑 (Lipid Emulsion / Intralipid: 1.5 ml/kg bolus -> 0.25 ml/kg/min)"
+        management_boundary: "Patient-specific management omitted; consult the current local LAST protocol."
       SAM_Dynamic_LVOT:
         name: "動態 LVOT 阻塞 / SAM 反常惡化"
         clues: "麻醉誘導後低血壓，給予 Ephedrine/Epinephrine 後血壓反常暴跌 (35/15)、A-line 出現 Bisferiens/Spike & dome 脈搏、TEE 出現 Dagger-shaped Doppler"
-        rescue: "停用強心劑、大量灌水 (Volume)、給予 Phenylephrine + Esmolol"
+        management_boundary: "Patient-specific management omitted; consult current echocardiography and local crisis protocols."
       PRIS:
         name: "Propofol 輸注症候群 (Propofol Infusion Syndrome)"
         clues: "Propofol >4-5 mg/kg/hr 超過 48 小時，難治性代謝性酸中毒、高血鉀、橫紋肌溶解 (CK>10,000)、綠尿、乳糜血、Brugada ECG"
-        rescue: "立即停用 Propofol、換 Midazolam/Dexmedetomidine、血液透析 (CRRT)"
+        management_boundary: "Patient-specific management omitted; consult current toxicology, ICU, and local protocols."
       Anaphylaxis:
         name: "嚴重過敏性休克 (Severe Perioperative Anaphylaxis)"
         clues: "給予神經肌肉阻斷劑、抗生素、乳膠後 5-10 分鐘，突發血管麻痺低血壓、氣管痙攣 (PIP 飆高)、皮膚紅疹 (可能被布單遮蔽)"
-        rescue: "Epinephrine 10-50 mcg IV 滴定、停用致敏原、給予大量輸液 + 抗組織胺 + 類固醇"
+        management_boundary: "Patient-specific management omitted; consult the current local anaphylaxis protocol."
 
   T4_Thrombosis_Pulmonary:
     name: "肺栓塞 / 骨水泥栓塞 / 氣體栓塞 (Pulmonary & Mechanical Embolism)"

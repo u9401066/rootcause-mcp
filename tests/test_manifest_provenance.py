@@ -17,6 +17,7 @@ from rootcause_mcp.domain.services.provenance_verifier import (
 from rootcause_mcp.domain.value_objects.case_manifest import (
     CaseInputManifest,
     SourceDocument,
+    SourceIndependenceStatus,
     SourceReviewStatus,
 )
 from rootcause_mcp.domain.value_objects.enums import CaseType
@@ -37,6 +38,83 @@ class _Harness:
 
 def _digest(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _source_document(
+    document_id: str,
+    *,
+    independence_status: SourceIndependenceStatus,
+    parent_document_id: str | None = None,
+    derivation_method: str | None = None,
+    source_group_id: str | None = None,
+) -> SourceDocument:
+    return SourceDocument(
+        document_id=document_id,
+        source_uri=f"host://case/{document_id}",
+        sha256="a" * 64,
+        media_type="text/plain",
+        source_kind="clinical_note",
+        status=SourceReviewStatus.REVIEWED,
+        de_identified=True,
+        independence_status=independence_status,
+        parent_document_id=parent_document_id,
+        derivation_method=derivation_method,
+        source_group_id=source_group_id,
+    )
+
+
+def test_manifest_accepts_explicit_independent_and_derived_lineage() -> None:
+    manifest = CaseInputManifest(
+        documents=(
+            _source_document(
+                "SRC-ROOT",
+                independence_status=SourceIndependenceStatus.INDEPENDENT,
+                source_group_id="GROUP-ROOT",
+            ),
+            _source_document(
+                "SRC-EXTRACT",
+                independence_status=SourceIndependenceStatus.DERIVED,
+                parent_document_id="SRC-ROOT",
+                derivation_method="local OOXML text extraction",
+                source_group_id="GROUP-ROOT",
+            ),
+        )
+    )
+
+    assert manifest.documents[1].parent_document_id == "SRC-ROOT"
+    assert manifest.documents[1].independence_status == "derived"
+
+
+def test_manifest_rejects_missing_or_cyclic_derivation_lineage() -> None:
+    with pytest.raises(ValueError, match="not in the manifest"):
+        CaseInputManifest(
+            documents=(
+                _source_document(
+                    "SRC-DERIVED",
+                    independence_status=SourceIndependenceStatus.DERIVED,
+                    parent_document_id="SRC-MISSING",
+                    derivation_method="manual transcription",
+                ),
+            )
+        )
+
+    with pytest.raises(ValueError, match="cycles"):
+        CaseInputManifest(
+            documents=(
+                _source_document(
+                    "SRC-A",
+                    independence_status=SourceIndependenceStatus.DERIVED,
+                    parent_document_id="SRC-B",
+                    derivation_method="first transform",
+                ),
+                _source_document(
+                    "SRC-B",
+                    independence_status=SourceIndependenceStatus.DERIVED,
+                    parent_document_id="SRC-A",
+                    derivation_method="second transform",
+                ),
+            )
+        )
 
 
 def _build_harness(

@@ -54,6 +54,25 @@ def get_contract_tools() -> list[Tool]:
                         "description": "Markdown artifact detail; ignored by JSON/FHIR",
                         "default": "standard",
                     },
+                    "locale": {
+                        "type": "string",
+                        "enum": ["en", "zh-TW"],
+                        "description": (
+                            "Built-in Markdown renderer locale; JSON/FHIR clinical "
+                            "data are not translated"
+                        ),
+                        "default": "en",
+                    },
+                    "audience": {
+                        "type": "string",
+                        "enum": ["general", "clinician"],
+                        "description": (
+                            "Markdown explanation audience. clinician preserves "
+                            "recorded English medical terminology and expands DDx "
+                            "evidence, unknowns, and discriminating tests"
+                        ),
+                        "default": "general",
+                    },
                     "template_file": {
                         "type": "string",
                         "description": "Optional path to custom Markdown report template file (e.g. 'config/templates/clinical_reasoning_report_template.md')",

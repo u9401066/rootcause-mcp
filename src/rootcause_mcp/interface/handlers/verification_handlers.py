@@ -107,6 +107,9 @@ class VerificationHandlers:
             "pattern": tl_res["pattern"],
             "title": tl_res["title"],
             "total_events": len(tl_res["events"]),
+            "timed_event_count": tl_res["timed_event_count"],
+            "untimed_event_count": tl_res["untimed_event_count"],
+            "ordering_note": tl_res["ordering_note"],
             "events": tl_res["events"],
             "mermaid": tl_res["mermaid"],
             "table": tl_res["table"] if include_table else None,
@@ -220,6 +223,24 @@ class VerificationHandlers:
             return (
                 f"Causation audit references unknown evidence IDs: {', '.join(unknown)}"
             )
+        for event_name, event, evidence_ids in (
+            ("cause", cause, submitted_cause_evidence),
+            ("effect", effect, submitted_effect_evidence),
+        ):
+            if event.timestamp is None:
+                continue
+            matching_instant = any(
+                (evidence := orchestrator.evidence_store.get(evidence_id)) is not None
+                and evidence.temporal.aware_instant is not None
+                and evidence.temporal.aware_instant == event.timestamp
+                for evidence_id in evidence_ids
+            )
+            if not matching_instant:
+                return (
+                    f"{event_name}.timestamp must exactly match an aware instant "
+                    f"in its linked evidence; date, range, relative, unknown, and "
+                    f"naive time cannot support causation temporality"
+                )
         return None
 
     def _persist_causation_result(
@@ -290,7 +311,7 @@ class VerificationHandlers:
             f"**Level:** {result.verification_level.value}",
             f"**Audit Disposition:** {result.overall_result.value}",
             "**Clinical Causality Established:** No",
-            f"**Confidence:** {result.confidence.value:.0%}",
+            "**Numeric Confidence:** Not calculated; audit disposition only",
             "",
             "## Test Results",
         ]

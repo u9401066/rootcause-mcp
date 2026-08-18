@@ -74,7 +74,10 @@ def get_thinking_tools() -> list[Tool]:
                         "type": "number",
                         "minimum": 0,
                         "maximum": 1,
-                        "description": "Confidence in this thinking step",
+                        "description": (
+                            "Optional caller-supplied compatibility metadata; not "
+                            "clinical probability or calibrated confidence"
+                        ),
                     },
                     "uncertainty_factors": {
                         "type": "array",
@@ -107,7 +110,6 @@ def get_thinking_tools() -> list[Tool]:
                     "thinking_type",
                     "content",
                     "internal_reasoning",
-                    "confidence",
                 ],
             },
         ),

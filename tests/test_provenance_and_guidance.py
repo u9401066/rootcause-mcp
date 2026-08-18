@@ -228,12 +228,31 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         verifier="SYSTEM_PROVENANCE_VERIFIER",
         verification_method="EXACT_SNIPPET_MATCH",
     )
+    calibration = orchestrator.add_evidence(
+        content="Published validation table reports the direct diagnostic LRs.",
+        evidence_type="LITERATURE",
+        source_document="chart.txt",
+        source_location="Reference appendix, Table 1",
+        raw_snippet="Validated findings LR 5.0, 10.0, and 1.5",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="sha256:" + "a" * 64,
+    )
+    orchestrator.evidence_store[calibration.id.value] = calibration
 
     # Propose 1 hypothesis -> Stage 2 DIFFERENTIAL_EXPANSION
     hyp1 = orchestrator.propose_hypothesis(
         diagnosis="Acute myocardial infarction",
         prior_probability=0.3,
         rationale="Hypotension and ST elevation support acute MI.",
+        mechanism_category="VASCULAR",
+        diagnostic_role="ETIOLOGIC",
+        certainty="POSSIBLE",
+        reasoning_basis="MECHANISM_INFERENCE",
+        uncertainty_factors=["Serial ECG and troponin remain pending"],
         planned_tests=[
             {
                 "name": "Serial ECG and troponin",
@@ -256,6 +275,11 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         prior_probability=0.2,
         rationale="Recent surgery increases DVT/PE risk.",
         must_not_miss=True,
+        mechanism_category="TRAUMATIC_MECHANICAL",
+        diagnostic_role="ETIOLOGIC",
+        certainty="POSSIBLE",
+        reasoning_basis="MECHANISM_INFERENCE",
+        uncertainty_factors=["Definitive pulmonary vascular imaging is pending"],
         planned_tests=[
             {
                 "name": "CT pulmonary angiography",
@@ -271,6 +295,78 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         diagnosis="Septic shock",
         prior_probability=0.1,
         rationale="Postoperative fever and hypotension.",
+        mechanism_category="INFECTIOUS",
+        diagnostic_role="ETIOLOGIC",
+        certainty="POSSIBLE",
+        reasoning_basis="MECHANISM_INFERENCE",
+        uncertainty_factors=["Microbiologic confirmation is unavailable"],
+    )
+    orchestrator.select_leading_hypothesis(
+        hyp1.id.value,
+        reason="Acute myocardial infarction is explicitly selected for challenge.",
+        changed_by="test-agent",
+    )
+    orchestrator.record_differential_breadth_audit(
+        {
+            "audit_id": "DBA-guidance-progression",
+            "framework": "VINDICATE",
+            "framework_rationale": (
+                "Postoperative shock warrants systematic vascular and infectious review."
+            ),
+            "role": "PRIMARY",
+            "cells": [
+                {
+                    "cell_id": cell_id,
+                    "status": (
+                        "CANDIDATES_PRESENT"
+                        if any(
+                            hypothesis.mechanism_category.value == cell_id
+                            for hypothesis in (hyp1, hyp2, hyp3)
+                        )
+                        else "REVIEWED_NO_PLAUSIBLE_CANDIDATE"
+                    ),
+                    "hypothesis_ids": [
+                        hypothesis.id.value
+                        for hypothesis in (hyp1, hyp2, hyp3)
+                        if hypothesis.mechanism_category.value == cell_id
+                    ],
+                    "mechanism_categories": (
+                        [cell_id]
+                        if any(
+                            hypothesis.mechanism_category.value == cell_id
+                            for hypothesis in (hyp1, hyp2, hyp3)
+                        )
+                        else []
+                    ),
+                    "rationale": (
+                        "Retained candidates represent this canonical mechanism."
+                        if any(
+                            hypothesis.mechanism_category.value == cell_id
+                            for hypothesis in (hyp1, hyp2, hyp3)
+                        )
+                        else "This canonical mechanism was reviewed without a plausible candidate."
+                    ),
+                    "unknowns": [],
+                    "planned_discriminators": [],
+                }
+                for cell_id in (
+                    "VASCULAR",
+                    "INFECTIOUS",
+                    "INFLAMMATORY_IMMUNE",
+                    "NEOPLASTIC",
+                    "DRUG_TOXIN_IATROGENIC",
+                    "METABOLIC_ENDOCRINE",
+                    "TRAUMATIC_MECHANICAL",
+                    "CONGENITAL_GENETIC",
+                    "DEGENERATIVE",
+                    "FUNCTIONAL_PHYSIOLOGIC",
+                )
+            ],
+            "stop_rationale": (
+                "Every canonical VINDICATE cell was reviewed before stopping expansion."
+            ),
+            "recorded_by": "test-agent",
+        }
     )
 
     # Step 3: Link evidence -> Stage 3 / 4
@@ -280,6 +376,8 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         likelihood_ratio=5.0,
         supports=True,
         rationale="Hypotension supports MI shock.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration.id.value,
     )
     orchestrator.link_evidence_to_hypothesis(
         evidence_id=ev2.id.value,
@@ -287,6 +385,8 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         likelihood_ratio=10.0,
         supports=True,
         rationale="ST elevation highly specific for STEMI.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration.id.value,
     )
     orchestrator.link_evidence_to_hypothesis(
         evidence_id=ev1.id.value,
@@ -294,6 +394,8 @@ async def test_multi_loop_clinical_guidance_progression() -> None:
         likelihood_ratio=1.5,
         supports=True,
         rationale="Acute postoperative hypotension keeps PE in the differential.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration.id.value,
     )
     # Disconfirming check on hyp3 (Sepsis ruled out)
     orchestrator.exclude_hypothesis(
@@ -341,7 +443,9 @@ def test_guidance_never_marks_incomplete_case_ready() -> None:
         orchestrator.link_evidence_to_hypothesis(
             evidence.id.value,
             hypothesis.id.value,
-            likelihood_ratio=2.0,
+            likelihood_ratio=1.0,
+            supports=None,
+            calibration_status="QUANTITATIVELY_UNKNOWN",
         )
 
     guidance = orchestrator.get_guidance()
@@ -349,6 +453,7 @@ def test_guidance_never_marks_incomplete_case_ready() -> None:
     assert guidance.is_ready_for_report is False
     assert guidance.current_stage is not ReasoningStage.READY_FOR_SYNTHESIS
     assert guidance.missing_prerequisites
+    assert guidance.checklist["unlinked_evidence_count"] == 0
     assert guidance.checklist["disconfirming_evidence_tested"] is False
 
 
@@ -418,7 +523,7 @@ async def test_handlers_include_guidance_and_audit_tool() -> None:
 
 
 @pytest.mark.asyncio
-async def test_refuting_direction_reduces_posterior_probability() -> None:
+async def test_legacy_weight_is_rejected_instead_of_inventing_an_lr() -> None:
     state = ServerState()
     evidence_handler = EvidenceHandlers(state)
     dd_handler = DDHandlers(state)
@@ -444,16 +549,22 @@ async def test_refuting_direction_reduces_posterior_probability() -> None:
             "session_id": session_id,
             "evidence_id": evidence["evidence_id"],
             "hypothesis_id": hypothesis["hypothesis_id"],
+            "calibration_status": "QUANTITATIVELY_UNKNOWN",
             "direction": "REFUTES",
             "weight": 0.9,
             "rationale": "Normal RV anatomy argues against massive PE.",
         }
     )
 
-    assert result["status"] == "success"
-    assert result["supports"] is False
-    assert result["applied_likelihood_ratio"] < 1.0
-    assert result["posterior_probability"] < 0.3
+    assert result["status"] == "error"
+    assert "weight is no longer accepted" in result["message"]
+    assert "direct likelihood_ratio" in result["message"]
+
+    orchestrator = await state.get_orchestrator(session_id)
+    assert orchestrator is not None
+    unchanged = orchestrator.hypothesis_store[hypothesis["hypothesis_id"]]
+    assert unchanged.current_probability == pytest.approx(0.3)
+    assert unchanged.bayesian_history == []
 
 
 @pytest.mark.asyncio
@@ -482,12 +593,20 @@ async def test_omitted_likelihood_ratio_is_neutral() -> None:
             "session_id": session_id,
             "evidence_id": evidence["evidence_id"],
             "hypothesis_id": hypothesis["hypothesis_id"],
+            "calibration_status": "QUANTITATIVELY_UNKNOWN",
         }
     )
 
     assert result["status"] == "success"
     assert result["applied_likelihood_ratio"] == 1.0
     assert result["posterior_probability"] == pytest.approx(0.3)
+    orchestrator = await state.get_orchestrator(session_id)
+    assert orchestrator is not None
+    relationship = orchestrator.hypothesis_store[
+        hypothesis["hypothesis_id"]
+    ].likelihood_ratios[-1]
+    assert relationship.lr_positive is None
+    assert relationship.lr_negative is None
 
 
 @pytest.mark.asyncio
@@ -551,16 +670,21 @@ async def test_custom_markdown_report_template_rendering() -> None:
             "prior_probability": 0.4,
         },
     )
-    await dd_handler.handle(
+    link = await dd_handler.handle(
         "rc_link_evidence_to_hypothesis",
         {
             "session_id": session_id,
             "hypothesis_id": h1["hypothesis_id"],
             "evidence_id": ev["evidence_id"],
-            "likelihood_ratio": 10.0,
-            "supports": True,
+            "likelihood_ratio": 1.0,
+            "supports": None,
+            "rationale": (
+                "Quantitative LR is unavailable in this renderer-only fixture."
+            ),
+            "calibration_status": "QUANTITATIVELY_UNKNOWN",
         },
     )
+    assert link["status"] == "success"
 
     template_path = Path("config/templates/clinical_reasoning_report_template.md")
     assert template_path.exists(), (
@@ -581,5 +705,7 @@ async def test_custom_markdown_report_template_rendering() -> None:
 
     assert "# 🏥 Clinical Reasoning & Root Cause Report" in rendered_md
     assert "Dynamic LVOT Obstruction (SAM)" in rendered_md
-    assert "Recommended Clinical Action Plan & Patient Safety Measures" in rendered_md
+    assert "Discriminating Data Requests & Safety Handoff" in rendered_md
+    assert "not patient-specific treatment orders" in rendered_md
+    assert "Posterior Probability" not in rendered_md
     assert "Audit Trail & Cryptographic Provenance" in rendered_md

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pydantic import ValidationError
@@ -41,7 +42,7 @@ def render_contract_report_fhir(report: ContractReport) -> dict[str, Any]:
     conclusion_codes: list[dict[str, list[dict[str, str]]]] = []
     for hypothesis in ranked_hypotheses[:3]:
         diagnosis = hypothesis.get("diagnosis")
-        if not isinstance(diagnosis, dict):
+        if not isinstance(diagnosis, Mapping):
             continue
         try:
             concept = ClinicalConcept.model_validate(diagnosis)
@@ -53,7 +54,7 @@ def render_contract_report_fhir(report: ContractReport) -> dict[str, Any]:
         leading_diagnosis = ranked_hypotheses[0].get("diagnosis")
         leading_display = (
             leading_diagnosis.get("display", "Unknown diagnosis")
-            if isinstance(leading_diagnosis, dict)
+            if isinstance(leading_diagnosis, Mapping)
             else "Unknown diagnosis"
         )
         conclusion = (
@@ -63,7 +64,8 @@ def render_contract_report_fhir(report: ContractReport) -> dict[str, Any]:
         )
     else:
         conclusion = (
-            "No active diagnosis hypothesis is eligible for conclusion; "
+            "No explicit leading diagnosis was selected through the audited DDx "
+            "mutation; no lead was inferred; "
             f"{len(report.hypotheses)} hypotheses remain in the audit record"
         )
     if report.root_causes:
@@ -92,12 +94,30 @@ def render_contract_report_fhir(report: ContractReport) -> dict[str, Any]:
         "performer": [{"display": report.generated_by}],
         "conclusion": conclusion,
         "conclusionCode": conclusion_codes,
+        "extension": [
+            {
+                "url": (
+                    "urn:rootcause-mcp:StructureDefinition/"
+                    "diagnostic-ordering-semantics"
+                ),
+                "valueCode": (
+                    "EXPLICIT_LEAD_THEN_WORKING_LEDGER_ORDER"
+                    if ranked_hypotheses
+                    else "NO_EXPLICIT_LEAD_SELECTED"
+                ),
+            },
+            {
+                "url": (
+                    "urn:rootcause-mcp:StructureDefinition/"
+                    "clinical-probability-established"
+                ),
+                "valueBoolean": False,
+            },
+        ],
     }
     if report.finalized_at is not None:
         resource["issued"] = report.finalized_at.isoformat()
-    extensions = _contract_report_extensions(report)
-    if extensions:
-        resource["extension"] = extensions
+    resource["extension"].extend(_contract_report_extensions(report))
     return resource
 
 
@@ -126,14 +146,14 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
 
     categories = (
         report.fishbone.get("categories", [])
-        if isinstance(report.fishbone, dict)
+        if isinstance(report.fishbone, Mapping)
         else []
     )
     for category in categories:
-        if not isinstance(category, dict):
+        if not isinstance(category, Mapping):
             continue
         for cause in category.get("causes", []):
-            if not isinstance(cause, dict):
+            if not isinstance(cause, Mapping):
                 continue
             extensions.append(
                 {
@@ -149,10 +169,10 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
             )
 
     why_nodes = (
-        report.why_tree.get("nodes", []) if isinstance(report.why_tree, dict) else []
+        report.why_tree.get("nodes", []) if isinstance(report.why_tree, Mapping) else []
     )
     for node in why_nodes:
-        if not isinstance(node, dict):
+        if not isinstance(node, Mapping):
             continue
         extensions.append(
             {
@@ -175,7 +195,7 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
                 "extension": _nested_extensions(
                     causeId=root_cause.get("id"),
                     description=root_cause.get("answer"),
-                    confidence=root_cause.get("confidence"),
+                    confidenceSemantics="UNCALIBRATED_LEGACY_NOT_PRESENTED",
                     evidenceCount=len(root_cause.get("evidence", [])),
                     causationResult=root_cause.get("causation_result"),
                     disposition=root_cause.get("disposition"),
@@ -187,10 +207,6 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
     for verification in report.causation_verifications:
         cause_event = verification.get("cause_event", {})
         effect_event = verification.get("effect_event", {})
-        confidence: object = verification.get("confidence", {})
-        confidence_value = (
-            confidence.get("value") if isinstance(confidence, dict) else confidence
-        )
         extensions.append(
             {
                 "url": f"{namespace}/causation-verification",
@@ -200,7 +216,7 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
                     cause=cause_event.get("description"),
                     effect=effect_event.get("description"),
                     result=verification.get("overall_result"),
-                    confidence=confidence_value,
+                    confidenceSemantics="UNCALIBRATED_LEGACY_NOT_PRESENTED",
                     auditScope=verification.get("audit_scope"),
                     clinicalCausalityEstablished=verification.get(
                         "clinical_causality_established"
@@ -218,7 +234,7 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
                 "extension": _nested_extensions(
                     causeId=classification.get("cause_id"),
                     code=classification.get("hfacs_code"),
-                    confidence=classification.get("confidence"),
+                    confidenceSemantics="HEURISTIC_RULE_MATCH_NOT_CALIBRATED",
                     source=classification.get("source"),
                 ),
             }
@@ -226,11 +242,11 @@ def _contract_report_extensions(report: ContractReport) -> list[dict[str, Any]]:
 
     conflicts = (
         report.gap_analysis.get("conflicts", [])
-        if isinstance(report.gap_analysis, dict)
+        if isinstance(report.gap_analysis, Mapping)
         else []
     )
     for conflict in conflicts:
-        if not isinstance(conflict, dict):
+        if not isinstance(conflict, Mapping):
             continue
         extensions.append(
             {
@@ -290,7 +306,9 @@ def _timeline_extensions(
 ) -> list[dict[str, Any]]:
     """Map canonical timeline events without duplicating clinical narrative text."""
     timeline_events = (
-        report.timeline.get("events", []) if isinstance(report.timeline, dict) else []
+        report.timeline.get("events", [])
+        if isinstance(report.timeline, Mapping)
+        else []
     )
     return [
         {
@@ -298,13 +316,16 @@ def _timeline_extensions(
             "extension": _nested_extensions(
                 evidenceId=event.get("id"),
                 eventTime=event.get("time"),
+                temporalKind=(event.get("temporal") or {}).get("kind"),
+                temporalPrecision=(event.get("temporal") or {}).get("precision"),
+                chronologyStatus=event.get("chronology_status"),
                 phase=event.get("phase"),
                 sourceDocument=event.get("source_document"),
                 verified=bool(event.get("verified")),
             ),
         }
         for event in timeline_events
-        if isinstance(event, dict)
+        if isinstance(event, Mapping)
     ]
 
 

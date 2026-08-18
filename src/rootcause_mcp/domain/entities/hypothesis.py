@@ -1,16 +1,17 @@
 """
 Hypothesis Entity for Differential Diagnosis.
 
-Implements Bayesian reasoning with:
-- Prior probability estimation
-- Likelihood ratio (LR) updating
-- Evidence-based posterior probability
+Implements a Bayesian compatibility ledger with:
+- An uncalibrated numeric starting value
+- Direct likelihood ratio (LR) updating
+- An uncalibrated numeric compatibility result
 - Inclusion/exclusion criteria tracking
 """
 
 from __future__ import annotations
 
 import math
+import re
 from datetime import UTC, datetime
 from enum import Enum
 from typing import Any, Self
@@ -31,6 +32,63 @@ class HypothesisStatus(str, Enum):
     ON_HOLD = "ON_HOLD"  # Temporarily suspended (insufficient evidence)
 
 
+class MechanismCategory(str, Enum):
+    """Broad etiologic mechanism used to audit DDx breadth.
+
+    The categories deliberately follow a VINDICATE-style axis instead of an
+    organ-system axis.  ``UNKNOWN`` is an honest preliminary value and never
+    counts toward the final mechanism-breadth gate.
+    """
+
+    VASCULAR = "VASCULAR"
+    INFECTIOUS = "INFECTIOUS"
+    INFLAMMATORY_IMMUNE = "INFLAMMATORY_IMMUNE"
+    NEOPLASTIC = "NEOPLASTIC"
+    DRUG_TOXIN_IATROGENIC = "DRUG_TOXIN_IATROGENIC"
+    METABOLIC_ENDOCRINE = "METABOLIC_ENDOCRINE"
+    TRAUMATIC_MECHANICAL = "TRAUMATIC_MECHANICAL"
+    CONGENITAL_GENETIC = "CONGENITAL_GENETIC"
+    DEGENERATIVE = "DEGENERATIVE"
+    FUNCTIONAL_PHYSIOLOGIC = "FUNCTIONAL_PHYSIOLOGIC"
+    OTHER = "OTHER"
+    UNKNOWN = "UNKNOWN"
+
+
+class DiagnosticRole(str, Enum):
+    """Role played by a candidate within the clinical explanation."""
+
+    ETIOLOGIC = "ETIOLOGIC"
+    SYNDROMIC = "SYNDROMIC"
+    COMPLICATION = "COMPLICATION"
+    MIMIC = "MIMIC"
+    UNKNOWN = "UNKNOWN"
+
+
+class DiagnosticCertainty(str, Enum):
+    """Human/agent-declared qualitative certainty, separate from probability."""
+
+    UNKNOWN = "UNKNOWN"
+    POSSIBLE = "POSSIBLE"
+    PROBABLE = "PROBABLE"
+    HIGH_CONFIDENCE = "HIGH_CONFIDENCE"
+    CONFIRMED = "CONFIRMED"
+    EXCLUDED = "EXCLUDED"
+
+
+class DiagnosticReasoningBasis(str, Enum):
+    """Epistemic origin of the candidate diagnosis.
+
+    ``OBSERVED_DIAGNOSIS`` means the diagnosis itself is explicitly documented
+    in a source; the associated source still belongs in the evidence ledger.
+    ``MECHANISM_INFERENCE`` identifies a clinical inference from observations.
+    It is not causal proof. ``UNKNOWN`` is retained instead of inventing a basis.
+    """
+
+    OBSERVED_DIAGNOSIS = "OBSERVED_DIAGNOSIS"
+    MECHANISM_INFERENCE = "MECHANISM_INFERENCE"
+    UNKNOWN = "UNKNOWN"
+
+
 class DiagnosticTestStatus(str, Enum):
     """Machine-readable lifecycle for a hypothesis-specific diagnostic test."""
 
@@ -47,6 +105,33 @@ class DiagnosticTestPurpose(str, Enum):
     RULE_OUT = "RULE_OUT"
     CONFIRM = "CONFIRM"
     DISCRIMINATE = "DISCRIMINATE"
+
+
+class DiagnosticTestResultDisposition(str, Enum):
+    """Typed interpretation of a completed test relative to its hypothesis."""
+
+    SUPPORTS_HYPOTHESIS = "SUPPORTS_HYPOTHESIS"
+    REFUTES_HYPOTHESIS = "REFUTES_HYPOTHESIS"
+    NEUTRAL = "NEUTRAL"
+    INDETERMINATE = "INDETERMINATE"
+
+
+class LikelihoodRatioCalibrationStatus(str, Enum):
+    """Whether a direct LR has an identifiable quantitative calibration source."""
+
+    SOURCE_CALIBRATED = "SOURCE_CALIBRATED"
+    QUANTITATIVELY_UNKNOWN = "QUANTITATIVELY_UNKNOWN"
+
+
+def is_calibration_evidence_ref(value: str | None) -> bool:
+    """Require a cross-reference into the case evidence ledger.
+
+    A citation-looking caller string is not evidence that a quantitative value
+    was retrieved or applies to this population.  Admission therefore uses a
+    stable ``EVD-*`` record; the runtime and final conformance evaluator inspect
+    that record's type, verification state, exact snippet, hash, and location.
+    """
+    return re.fullmatch(r"EVD-[A-Za-z0-9_-]+", str(value or "").strip()) is not None
 
 
 class PlannedDiagnosticTest(BaseModel):
@@ -76,6 +161,7 @@ class PlannedDiagnosticTest(BaseModel):
     status: DiagnosticTestStatus = Field(default=DiagnosticTestStatus.PLANNED)
     result_evidence_id: str | None = Field(default=None, max_length=64)
     result_summary: str | None = Field(default=None, max_length=1000)
+    result_disposition: DiagnosticTestResultDisposition | None = None
 
     @field_validator(
         "name",
@@ -93,13 +179,22 @@ class PlannedDiagnosticTest(BaseModel):
     @model_validator(mode="after")
     def validate_result_metadata(self) -> Self:
         """Keep completed/cancelled dispositions explicit and auditable."""
-        if (
-            self.status is DiagnosticTestStatus.COMPLETED
-            and not self.result_evidence_id
+        if self.status is DiagnosticTestStatus.COMPLETED and (
+            not self.result_evidence_id
+            or not self.result_summary
+            or self.result_disposition is None
         ):
-            raise ValueError("COMPLETED diagnostic tests require result_evidence_id")
+            raise ValueError(
+                "COMPLETED diagnostic tests require result_evidence_id, "
+                "result_summary, and typed result_disposition"
+            )
         if self.status is DiagnosticTestStatus.CANCELLED and not self.result_summary:
             raise ValueError("CANCELLED diagnostic tests require result_summary")
+        if (
+            self.status is not DiagnosticTestStatus.COMPLETED
+            and self.result_disposition is not None
+        ):
+            raise ValueError("result_disposition is only valid for COMPLETED tests")
         return self
 
     model_config = {"frozen": True, "extra": "forbid"}
@@ -133,6 +228,7 @@ class LikelihoodRatio(BaseModel):
     applied_likelihood_ratio: float | None = Field(
         None,
         gt=0,
+        le=100,
         description="The LR actually applied to the Bayesian update",
     )
     supports: bool | None = Field(
@@ -140,6 +236,8 @@ class LikelihoodRatio(BaseModel):
         description="Whether the observed evidence supports or contradicts the hypothesis",
     )
     rationale: str = Field(..., description="Why this LR value?")
+    calibration_status: LikelihoodRatioCalibrationStatus
+    calibration_source_ref: str | None = Field(default=None, max_length=500)
 
     @field_validator("lr_positive", "lr_negative")
     @classmethod
@@ -149,18 +247,69 @@ class LikelihoodRatio(BaseModel):
             raise ValueError(f"LR {v} outside reasonable range [0.01, 100]")
         return v
 
-    model_config = {"frozen": True}
+    @field_validator("rationale")
+    @classmethod
+    def validate_rationale(cls, value: str) -> str:
+        """Every quantitative relationship needs an explicit rationale."""
+        normalized = " ".join(value.split())
+        if not normalized:
+            raise ValueError("Likelihood ratio rationale cannot be blank")
+        return normalized
+
+    @model_validator(mode="after")
+    def validate_calibration(self) -> Self:
+        """Block invented non-neutral LRs and unverifiable calibration claims."""
+        if self.calibration_status is (
+            LikelihoodRatioCalibrationStatus.SOURCE_CALIBRATED
+        ):
+            if not is_calibration_evidence_ref(self.calibration_source_ref):
+                raise ValueError(
+                    "SOURCE_CALIBRATED requires calibration_source_ref to be an "
+                    "EVD-* literature/calibration record in the case evidence ledger"
+                )
+        elif self.applied_likelihood_ratio is not None and not math.isclose(
+            self.applied_likelihood_ratio, 1.0
+        ):
+            raise ValueError("QUANTITATIVELY_UNKNOWN requires likelihood_ratio=1.0")
+        applied = self.applied_likelihood_ratio
+        if applied is not None:
+            if math.isclose(applied, 1.0):
+                if self.supports is not None:
+                    raise ValueError(
+                        "likelihood_ratio=1.0 is neutral and requires supports=null"
+                    )
+            elif applied > 1.0 and self.supports is not True:
+                raise ValueError("likelihood_ratio>1 requires supports=true")
+            elif applied < 1.0 and self.supports is not False:
+                raise ValueError("likelihood_ratio<1 requires supports=false")
+        return self
+
+    model_config = {"frozen": True, "allow_inf_nan": False}
 
 
 class BayesianUpdate(BaseModel):
-    """Record of a single Bayesian update."""
+    """Record of a single uncalibrated compatibility update."""
 
     timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     evidence_id: str = Field(..., description="Evidence used for update")
-    prior_probability: float = Field(..., ge=0, le=1, description="P(H) before update")
+    prior_probability: float = Field(
+        ...,
+        ge=0,
+        le=1,
+        description=(
+            "Uncalibrated compatibility value before the direct LR update; not "
+            "clinical probability, rank, or certainty"
+        ),
+    )
     likelihood_ratio: float = Field(..., gt=0, description="LR applied")
     posterior_probability: float = Field(
-        ..., ge=0, le=1, description="P(H|E) after update"
+        ...,
+        ge=0,
+        le=1,
+        description=(
+            "Uncalibrated compatibility value after the direct LR update; not "
+            "clinical probability, rank, or certainty"
+        ),
     )
     updated_by: str = Field(..., description="Who performed this update")
 
@@ -201,10 +350,22 @@ class Hypothesis(BaseModel):
 
     # Bayesian reasoning
     prior_probability: float = Field(
-        ..., ge=0, le=1, description="Prior probability P(H) before any evidence"
+        ...,
+        ge=0,
+        le=1,
+        description=(
+            "Uncalibrated Bayesian compatibility baseline; not clinical probability, "
+            "rank, or certainty"
+        ),
     )
     current_probability: float = Field(
-        ..., ge=0, le=1, description="Current posterior probability P(H|E)"
+        ...,
+        ge=0,
+        le=1,
+        description=(
+            "Current uncalibrated compatibility value; not clinical probability, "
+            "rank, or certainty"
+        ),
     )
 
     # Criteria
@@ -218,9 +379,37 @@ class Hypothesis(BaseModel):
         default=False,
         description="Whether this is an explicitly reviewed high-harm rule-out",
     )
+    mechanism_category: MechanismCategory = Field(
+        default=MechanismCategory.UNKNOWN,
+        description=(
+            "Broad etiologic mechanism used to demonstrate differential breadth; "
+            "UNKNOWN is allowed for preliminary work but does not satisfy breadth"
+        ),
+    )
+    diagnostic_role: DiagnosticRole = Field(
+        default=DiagnosticRole.UNKNOWN,
+        description="Whether the candidate is etiologic, syndromic, a complication, or a mimic",
+    )
+    certainty: DiagnosticCertainty = Field(
+        default=DiagnosticCertainty.UNKNOWN,
+        description=(
+            "Qualitative certainty label; independent of the numeric Bayesian "
+            "placeholder/probability"
+        ),
+    )
+    reasoning_basis: DiagnosticReasoningBasis = Field(
+        default=DiagnosticReasoningBasis.UNKNOWN,
+        description=(
+            "Whether the diagnosis was explicitly observed/documented, inferred "
+            "through a mechanism, or remains unknown"
+        ),
+    )
     alternatives_considered: list[dict[str, Any]] = Field(
         default_factory=list,
-        description="Agent-authored competing diagnoses and disposition rationale",
+        description=(
+            "Deprecated context-only alternative notes; plausible diagnoses belong "
+            "in their own hypothesis records and the typed breadth audit"
+        ),
     )
     uncertainty_factors: list[str] = Field(
         default_factory=list,
@@ -228,7 +417,10 @@ class Hypothesis(BaseModel):
     )
     confidence_rationale: str = Field(
         default="",
-        description="Why the prior probability was selected",
+        description=(
+            "Why the candidate is considered and the calibration/source limitations "
+            "of any numeric starting value"
+        ),
     )
     planned_tests: list[PlannedDiagnosticTest] = Field(
         default_factory=list,
@@ -292,7 +484,7 @@ class Hypothesis(BaseModel):
         evidence_id: str,
         likelihood_ratio: float,
         updated_by: str,
-        supports: bool = True,
+        supports: bool | None = None,
     ) -> Self:
         """
         Perform Bayesian update with new evidence.
@@ -311,14 +503,18 @@ class Hypothesis(BaseModel):
             Posterior Odds = Prior Odds × LR
             Posterior P = Posterior Odds / (1 + Posterior Odds)
         """
-        if supports and likelihood_ratio < 1.0:
+        if not math.isfinite(likelihood_ratio) or not 0 < likelihood_ratio <= 100:
+            raise ValueError("Applied likelihood ratio must be finite and in (0, 100]")
+        if supports is True and likelihood_ratio <= 1.0:
             raise ValueError(
-                "Supporting evidence requires an applied likelihood ratio >= 1.0"
+                "Supporting evidence requires an applied likelihood ratio > 1.0"
             )
-        if not supports and likelihood_ratio > 1.0:
+        if supports is False and likelihood_ratio >= 1.0:
             raise ValueError(
-                "Contradicting evidence requires an applied likelihood ratio <= 1.0"
+                "Contradicting evidence requires an applied likelihood ratio < 1.0"
             )
+        if supports is None and not math.isclose(likelihood_ratio, 1.0):
+            raise ValueError("Only likelihood_ratio=1.0 may use a neutral direction")
 
         # ``likelihood_ratio`` is already the applied LR.  Older code inverted a
         # contradicting LR here even though the MCP contract supplies LR- (< 1),
@@ -343,12 +539,15 @@ class Hypothesis(BaseModel):
         )
 
         # Update evidence lists
-        if supports:
+        if supports is True:
             updated_supporting = [*self.supporting_evidence_ids, evidence_id]
             updated_contradicting = self.contradicting_evidence_ids
-        else:
+        elif supports is False:
             updated_supporting = self.supporting_evidence_ids
             updated_contradicting = [*self.contradicting_evidence_ids, evidence_id]
+        else:
+            updated_supporting = self.supporting_evidence_ids
+            updated_contradicting = self.contradicting_evidence_ids
 
         # Return new instance
         return self.model_copy(
@@ -366,6 +565,8 @@ class Hypothesis(BaseModel):
         lr_positive: float | None,
         lr_negative: float | None,
         rationale: str,
+        calibration_status: LikelihoodRatioCalibrationStatus,
+        calibration_source_ref: str | None,
         applied_likelihood_ratio: float | None = None,
         supports: bool | None = None,
     ) -> Self:
@@ -388,6 +589,8 @@ class Hypothesis(BaseModel):
             lr_positive=lr_positive,
             lr_negative=lr_negative,
             rationale=rationale,
+            calibration_status=calibration_status,
+            calibration_source_ref=calibration_source_ref,
             applied_likelihood_ratio=applied_likelihood_ratio,
             supports=supports,
         )
@@ -424,12 +627,18 @@ class Hypothesis(BaseModel):
             changed_by=changed_by,
             reason=reason,
         )
-        return self.model_copy(
-            update={
-                "status": new_status,
-                "status_history": [*self.status_history, change],
-            }
-        )
+        certainty_update: DiagnosticCertainty | None = None
+        if new_status is HypothesisStatus.CONFIRMED:
+            certainty_update = DiagnosticCertainty.CONFIRMED
+        elif new_status is HypothesisStatus.EXCLUDED:
+            certainty_update = DiagnosticCertainty.EXCLUDED
+        updates: dict[str, Any] = {
+            "status": new_status,
+            "status_history": [*self.status_history, change],
+        }
+        if certainty_update is not None:
+            updates["certainty"] = certainty_update
+        return self.model_copy(update=updates)
 
     def get_confidence_interval(
         self, confidence_level: float = 0.95

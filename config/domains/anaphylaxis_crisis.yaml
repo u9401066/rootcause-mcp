@@ -1,45 +1,44 @@
 # Clinical Domain Playbook: Perioperative Anaphylaxis & Vasoplegic Collapse
 # 麻醉科專科知識庫：術中急性過敏性休克 vs 迷走神經反射 vs 血管麻痺鑑別
 
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings are prompts for source review, never pathognomonic conclusions."
+  - "Do not emit patient-specific treatment, dose, contraindication, or rescue instructions."
+  - "Use current local protocols and qualified-clinician judgment for active care."
+
 domain: "Anesthesiology & Clinical Immunology"
 scenario: "Intraoperative Acute Cardiovascular Collapse, Bronchospasm, and Urticaria"
 
-pathophysiology:
-  primary_mechanism: "IgE-mediated mast cell degranulation releasing massive histamine, tryptase, leukotrienes, and prostaglandins"
-  common_culprits:
+mechanisms_to_review:
+  candidate: "Mast-cell mediator release, including IgE- and non-IgE-mediated pathways"
+  exposure_categories_requiring_source_confirmation:
     - "Neuromuscular Blocking Agents (NMBAs: Rocuronium, Suxamethonium, Atracurium)"
     - "Antibiotics (Cefazolin, Vancomycin, Penicillins)"
     - "Latex, Chlorhexidine, Colloids (Gelofusine, Voluven)"
     - "Blood products and reversal agents (Sugammadex, Protamine)"
 
-pathognomonic_findings:
+candidate_findings_requiring_confirmation:
   - marker: "Sudden unexplained refractory hypotension accompanied by acute bronchospasm (High PIP > 40 cmH2O)"
     modality: "Ventilator & Hemodynamic Monitor"
     significance: "Combined severe vasodilation and airway resistance"
   - marker: "Erythema, urticaria, or facial/airway angioedema (often hidden under surgical drapes)"
     modality: "Physical Inspection under Drapes"
-    significance: "Cutaneous hallmarks of systemic histamine release"
+    significance: "Potentially supportive cutaneous finding; absence does not exclude the mechanism"
   - marker: "Serum Tryptase elevation (> 11.4 mcg/L or > 1.2 x baseline + 2)"
     modality: "Laboratory (Drawn at 1-2h post-event)"
-    significance: "Confirms acute mast cell degranulation"
+    significance: "May support mast-cell activation when timing, paired baseline, assay, and clinical context are adequate; it is not independently confirmatory"
 
-diagnostic_rules_to_rule_out:
+differential_questions:
   - diagnosis: "Dynamic LVOT Obstruction (SAM)"
-    discriminator: "Anaphylaxis responds favorably to intravenous Epinephrine with improved BP, whereas SAM paradoxically collapses further"
+    discriminator: "Compare source-linked airway/skin findings, echocardiography, exposure timing, and the non-specific hemodynamic response; medication response alone does not establish either diagnosis"
   - diagnosis: "Massive Pulmonary Embolism (PE)"
-    discriminator: "Anaphylaxis features severe airway resistance and responds to epinephrine; PE has normal lung compliance and dilated RV on TEE"
+    discriminator: "Review airway pressures/compliance, RV findings, exposure timing, and imaging quality; no single response pattern excludes either candidate"
   - diagnosis: "Tension Pneumothorax"
-    discriminator: "Bilateral wheezing without unilateral absent breath sounds or tracheal deviation"
+    discriminator: "Review bilateral examination, airway pressures, imaging/ultrasound, and procedure timing; missing findings remain unknown"
 
-treatment_protocol:
-  strictly_contraindicated:
-    - "Delaying Epinephrine administration (Epinephrine is the ONLY life-saving first-line drug)"
-    - "Giving further doses of the suspected triggering agent or other NMBAs"
-  recommended_rescue:
-    - "STOP ALL POTENTIAL TRIGGERING AGENTS IMMEDIATELY"
-    - "Call for immediate help and 100% FiO2"
-    - "First-line Epinephrine IV bolus: Grade 2 (10-20 mcg), Grade 3 shock (50-100 mcg), Grade 4 arrest (1 mg ACLS)"
-    - "Continuous Epinephrine infusion (0.05 - 0.2 mcg/kg/min)"
-    - "Aggressive fluid resuscitation: 20-30 ml/kg crystalloids"
-    - "Secondary therapies: H1/H2 blockers (Diphenhydramine 50mg + Famotidine 20mg), Hydrocortisone 200mg"
-    - "Draw acute Serum Tryptase at 1h, 2h, and 24h baseline"
+management_boundary:
+  omitted: true
+  reason: >-
+    Patient-specific management and doses are intentionally excluded from this
+    retrospective DDx resource. Consult the current local anaphylaxis protocol.

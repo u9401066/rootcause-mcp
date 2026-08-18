@@ -96,6 +96,8 @@ class ContractHandlers:
         """
         session_id = args["session_id"]
         report_format = args.get("format", "json")
+        locale = args.get("locale", "en")
+        audience = args.get("audience", "general")
         finalize = args.get("finalize", False)
         approved_by = args.get("approved_by")
         include_reasoning_chain = args.get("include_reasoning_chain", True)
@@ -114,6 +116,16 @@ class ContractHandlers:
             return {
                 "status": "error",
                 "message": f"Unsupported detail level: {detail_level}",
+            }
+        if locale not in {"en", "zh-TW"}:
+            return {
+                "status": "error",
+                "message": f"Unsupported report locale: {locale}",
+            }
+        if audience not in {"general", "clinician"}:
+            return {
+                "status": "error",
+                "message": f"Unsupported report audience: {audience}",
             }
 
         rca_session = (
@@ -184,11 +196,7 @@ class ContractHandlers:
             ),
         )
 
-        ranked_hypotheses = sorted(
-            orch.hypothesis_store.values() if orch else [],
-            key=lambda hypothesis: hypothesis.current_probability,
-            reverse=True,
-        )
+        working_hypotheses = list(orch.hypothesis_store.values() if orch else [])
         fishbone, why_tree = self._load_rca_artifacts(session_id)
         fishbone_payload = fishbone.to_dict() if fishbone else None
         source_manifest = (
@@ -202,6 +210,19 @@ class ContractHandlers:
         source_inventory = self._build_source_inventory(
             all_evidence,
             source_manifest,
+            (
+                rca_session.get_latest_source_reviews()
+                if rca_session is not None
+                else None
+            ),
+        )
+        source_review_ledger = (
+            [
+                event.model_dump(mode="json")
+                for event in rca_session.get_source_review_ledger()
+            ]
+            if rca_session is not None
+            else []
         )
         gap_analysis = (
             ClinicalGapAnalyzer.analyze(
@@ -216,25 +237,46 @@ class ContractHandlers:
         )
         report_readiness = orch.get_guidance().model_dump(mode="json") if orch else None
         hypothesis_payloads = [
-            self._serialize_hypothesis(hypothesis) for hypothesis in ranked_hypotheses
+            self._serialize_hypothesis(hypothesis) for hypothesis in working_hypotheses
         ]
         evidence_payloads = [self._serialize_evidence(item) for item in all_evidence]
+        evidence_by_id = {item.id.value: item for item in all_evidence}
         reasoning_payloads = [
-            self._serialize_reasoning_step(step) for step in reasoning_steps
+            self._serialize_reasoning_step(step, evidence_by_id)
+            for step in reasoning_steps
         ]
-        thinking_payloads = [step.model_dump(mode="json") for step in thinking_steps]
+        thinking_payloads = [
+            {
+                **step.model_dump(mode="json"),
+                "confidence_semantics": "UNCALIBRATED_LEGACY_NOT_PRESENTED",
+            }
+            for step in thinking_steps
+        ]
+        breadth_audit_payloads = (
+            [
+                audit.model_dump(mode="json")
+                for audit in orch.get_differential_breadth_audits()
+            ]
+            if orch
+            else []
+        )
         report_fields: dict[str, Any] = {
-            "report_id": f"RPT-{session_id[:8]}",
+            "report_id": f"RPT-{session_id}",
             "session_id": session_id,
             "generated_by": "agent",
+            "leading_hypothesis_id": (
+                orch.get_leading_hypothesis_id() if orch else None
+            ),
             "hypotheses": hypothesis_payloads,
+            "differential_breadth_audits": breadth_audit_payloads,
             "evidence": evidence_payloads,
             "source_inventory": source_inventory,
+            "source_review_ledger": source_review_ledger,
             "timeline": build_timeline(all_evidence),
             "reasoning_chain": (reasoning_payloads if include_reasoning_chain else []),
             "thinking_chain": thinking_payloads if include_thinking_chain else [],
             "evidence_graph": (
-                build_evidence_graph(all_evidence, ranked_hypotheses)
+                build_evidence_graph(all_evidence, working_hypotheses)
                 if include_evidence_graph
                 else None
             ),
@@ -316,7 +358,35 @@ class ContractHandlers:
         # Finalize if requested
         if finalize:
             assert isinstance(approved_by, str)
-            report.finalize(finalized_by=approved_by.strip())
+            try:
+                report.finalize(
+                    finalized_by=approved_by.strip(),
+                    authorized_reviewers=authorized_reviewers,
+                )
+            except ValueError as exc:
+                lifecycle_failure = {
+                    "code": (
+                        "TYPED_REPORT_SCHEMA"
+                        if "typed final report schema" in str(exc)
+                        else "FINALIZATION_LIFECYCLE"
+                    ),
+                    "status": "FAIL",
+                    "severity": "HARD",
+                    "message": str(exc),
+                    "refs": ["#/"],
+                }
+                return {
+                    "status": "error",
+                    "message": "Report finalization blocked by final snapshot validation",
+                    "session_id": session_id,
+                    "finalized": False,
+                    "blockers": [lifecycle_failure],
+                    "conformance_checks": [
+                        *conformance_checks,
+                        lifecycle_failure,
+                    ],
+                    "preliminary_available": True,
+                }
 
         # Export based on format
         template_file = args.get("template_file") or args.get("template_path")
@@ -329,6 +399,8 @@ class ContractHandlers:
                     detail_level,
                     template_path=template_file,
                     template_root=self._template_root,
+                    locale=locale,
+                    audience=audience,
                 )
             except ValueError as exc:
                 return {"status": "error", "message": str(exc)}
@@ -358,6 +430,8 @@ class ContractHandlers:
             "report_id": report.report_id,
             "format": report_format,
             "detail_level": detail_level,
+            "locale": locale,
+            "audience": audience,
             "finalized": report.is_finalized,
             "content": content,
             "artifact_bytes": len(artifact_bytes),
@@ -397,6 +471,8 @@ class ContractHandlers:
         """Normalize strong IDs while retaining the complete typed DDx payload."""
         payload: dict[str, Any] = hypothesis.model_dump(mode="json")
         payload["id"] = hypothesis.id.value
+        payload["probability_semantics"] = "UNCALIBRATED_COMPATIBILITY_ONLY"
+        payload["clinical_probability_established"] = False
         return payload
 
     @staticmethod
@@ -404,13 +480,43 @@ class ContractHandlers:
         """Normalize an evidence ID to the stable public string form."""
         payload: dict[str, Any] = evidence.model_dump(mode="json")
         payload["id"] = evidence.id.value
+        source = payload.get("source")
+        if isinstance(source, dict) and source.get("content_hash") is not None:
+            source["content_hash"] = (
+                str(source["content_hash"]).removeprefix("sha256:").lower()
+            )
         return payload
 
     @staticmethod
-    def _serialize_reasoning_step(step: Any) -> dict[str, Any]:
-        """Normalize the reasoning-step ID for the typed report contract."""
+    def _serialize_reasoning_step(
+        step: Any,
+        evidence_by_id: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Normalize IDs and expose current evidence provenance in the snapshot.
+
+        Evidence is commonly verified after its ingestion reasoning step is
+        created.  The historical rationale therefore must not masquerade as the
+        current provenance state in a generated report.
+        """
         payload: dict[str, Any] = step.model_dump(mode="json")
         payload["id"] = step.id.value
+        states = []
+        for evidence_id in payload.get("evidence_ids", []):
+            evidence = evidence_by_id.get(str(evidence_id))
+            if evidence is None:
+                continue
+            states.append(
+                {
+                    "evidence_id": str(evidence_id),
+                    "verified": bool(evidence.verified),
+                    "verification_method": evidence.verification_method,
+                }
+            )
+        payload["evidence_verification_states"] = states
+        payload["confidence_semantics"] = "UNCALIBRATED_LEGACY_NOT_PRESENTED"
+        rationale = str(payload.get("rationale", ""))
+        if states and ", Verified:" in rationale:
+            payload["rationale"] = rationale.split(", Verified:", 1)[0]
         return payload
 
     def _load_rca_artifacts(
@@ -438,6 +544,7 @@ class ContractHandlers:
     def _build_source_inventory(
         evidence: list[Any],
         manifest: CaseInputManifest | None = None,
+        latest_reviews: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
         """Merge the declared input manifest with registered evidence coverage.
 
@@ -452,6 +559,22 @@ class ContractHandlers:
                 metadata = document.model_dump(mode="json")
                 document_id = metadata.pop("document_id")
                 coverage_status = metadata.pop("status")
+                review = (latest_reviews or {}).get(document_id)
+                if review is not None:
+                    coverage_status = review.status.value
+                    metadata.update(
+                        {
+                            "de_identified": review.de_identified,
+                            "independence_status": review.independence_status.value,
+                            "source_group_id": review.source_group_id,
+                            "parent_document_id": review.parent_document_id,
+                            "derivation_method": review.derivation_method,
+                            "source_review_adjudication_id": review.adjudication_id,
+                            "source_reviewed_by": review.reviewed_by,
+                            "source_reviewed_at": review.reviewed_at.isoformat(),
+                            "source_review_reason": review.reason,
+                        }
+                    )
                 inventory[document.document_id] = {
                     "document": document_id,
                     **metadata,
@@ -483,6 +606,10 @@ class ContractHandlers:
                     "parser_name": None,
                     "parser_version": None,
                     "de_identified": None,
+                    "independence_status": "unknown",
+                    "source_group_id": None,
+                    "parent_document_id": None,
+                    "derivation_method": None,
                 },
             )
             entry["evidence_count"] += 1
@@ -515,6 +642,7 @@ class ContractHandlers:
             "source_document_count": (
                 len(source_manifest.documents) if source_manifest is not None else 0
             ),
+            "source_review_event_count": len(session.get_source_review_ledger()),
         }
 
     @staticmethod
@@ -550,6 +678,7 @@ class ContractHandlers:
                     "parent_id": str(node.parent_id) if node.parent_id else None,
                     "evidence": list(node.evidence),
                     "confidence": node.confidence.value if node.confidence else None,
+                    "confidence_semantics": "UNCALIBRATED_LEGACY_NOT_PRESENTED",
                     "causation_verification_id": verification.get("verification_id"),
                     "causation_result": verification.get("overall_result"),
                     "disposition": disposition,
@@ -572,7 +701,16 @@ class ContractHandlers:
         for item in raw_items:
             if not isinstance(item, dict):
                 continue
-            normalized.append(dict(item))
+            normalized_item = {
+                **item,
+                "confidence_semantics": "UNCALIBRATED_LEGACY_NOT_PRESENTED",
+            }
+            # Confidence is optional for conservative INSUFFICIENT_DATA audits.
+            # Preserve the typed contract by omitting the optional key rather than
+            # serializing an invalid null value.
+            if normalized_item.get("confidence") is None:
+                normalized_item.pop("confidence", None)
+            normalized.append(normalized_item)
         return normalized
 
     @staticmethod
@@ -583,17 +721,24 @@ class ContractHandlers:
             return []
         classifications: list[dict[str, Any]] = []
         for cause in fishbone.get_all_causes():
-            if not cause.hfacs_code:
-                continue
             classifications.append(
                 {
                     "cause_id": str(cause.cause_id),
                     "cause": cause.description,
                     "category": cause.category.value,
                     "hfacs_code": cause.hfacs_code,
+                    "review_status": cause.hfacs_review_status.value,
+                    "reviewed_by": cause.hfacs_reviewed_by,
+                    "reviewed_at": (
+                        cause.hfacs_reviewed_at.isoformat()
+                        if cause.hfacs_reviewed_at
+                        else None
+                    ),
+                    "review_reason": cause.hfacs_review_reason,
                     "confidence": (
                         cause.hfacs_confidence.value if cause.hfacs_confidence else None
                     ),
+                    "confidence_semantics": "HEURISTIC_RULE_MATCH_NOT_CALIBRATED",
                     "evidence": list(cause.evidence),
                     "verified": cause.verified,
                     "source": "fishbone_cause",

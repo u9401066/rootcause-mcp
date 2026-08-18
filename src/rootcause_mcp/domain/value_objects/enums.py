@@ -101,6 +101,14 @@ class FishboneCategoryType(str, Enum):
         return list(cls)
 
 
+class HFACSReviewStatus(str, Enum):
+    """Persisted human-review disposition for one Fishbone cause."""
+
+    UNREVIEWED = "UNREVIEWED"
+    CONFIRMED = "CONFIRMED"
+    NOT_APPLICABLE = "NOT_APPLICABLE"
+
+
 class VerificationResult(str, Enum):
     """Conservative causation-audit disposition (not clinical proof)."""
 

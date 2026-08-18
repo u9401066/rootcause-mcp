@@ -36,6 +36,11 @@ class LikelihoodRatioRecord(TypedDict, total=False, extra_items=JsonValue):
     applied_likelihood_ratio: float | None
     supports: bool | None
     rationale: str
+    calibration_status: Literal[
+        "SOURCE_CALIBRATED",
+        "QUANTITATIVELY_UNKNOWN",
+    ]
+    calibration_source_ref: str | None
 
 
 class BayesianUpdateRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -98,9 +103,45 @@ class HypothesisRecord(TypedDict, total=False, extra_items=JsonValue):
     diagnosis: ClinicalConceptRecord
     prior_probability: float
     current_probability: float
+    probability_semantics: Literal["UNCALIBRATED_COMPATIBILITY_ONLY"]
+    clinical_probability_established: bool
     inclusion_criteria: list[str]
     exclusion_criteria: list[str]
     must_not_miss: bool
+    mechanism_category: Literal[
+        "VASCULAR",
+        "INFECTIOUS",
+        "INFLAMMATORY_IMMUNE",
+        "NEOPLASTIC",
+        "DRUG_TOXIN_IATROGENIC",
+        "METABOLIC_ENDOCRINE",
+        "TRAUMATIC_MECHANICAL",
+        "CONGENITAL_GENETIC",
+        "DEGENERATIVE",
+        "FUNCTIONAL_PHYSIOLOGIC",
+        "OTHER",
+        "UNKNOWN",
+    ]
+    diagnostic_role: Literal[
+        "ETIOLOGIC",
+        "SYNDROMIC",
+        "COMPLICATION",
+        "MIMIC",
+        "UNKNOWN",
+    ]
+    certainty: Literal[
+        "UNKNOWN",
+        "POSSIBLE",
+        "PROBABLE",
+        "HIGH_CONFIDENCE",
+        "CONFIRMED",
+        "EXCLUDED",
+    ]
+    reasoning_basis: Literal[
+        "OBSERVED_DIAGNOSIS",
+        "MECHANISM_INFERENCE",
+        "UNKNOWN",
+    ]
     alternatives_considered: list[DiagnosticAlternativeRecord]
     uncertainty_factors: list[str]
     confidence_rationale: str
@@ -115,6 +156,58 @@ class HypothesisRecord(TypedDict, total=False, extra_items=JsonValue):
     created_by: str
     bayesian_history: list[BayesianUpdateRecord]
     clinical_rationale: str
+
+
+class BreadthDiscriminatorRecord(TypedDict, total=False, extra_items=JsonValue):
+    """Prospective data/test needed to resolve one insufficient-data cell."""
+
+    name: str
+    kind: Literal[
+        "DATA_RETRIEVAL",
+        "DIAGNOSTIC_TEST",
+        "SPECIALIST_REVIEW",
+        "MONITORING",
+    ]
+    expected_supporting_result: str
+    expected_refuting_result: str
+    status: Literal["PLANNED", "ORDERED"]
+
+
+class DifferentialBreadthCellRecord(TypedDict, total=False, extra_items=JsonValue):
+    """Machine-readable disposition of one systematic DDx framework cell."""
+
+    cell_id: str
+    status: Literal[
+        "CANDIDATES_PRESENT",
+        "REVIEWED_NO_PLAUSIBLE_CANDIDATE",
+        "REVIEWED_INSUFFICIENT_DATA",
+        "NOT_ASSESSED",
+    ]
+    hypothesis_ids: list[str]
+    mechanism_categories: list[str]
+    rationale: str
+    unknowns: list[str]
+    planned_discriminators: list[BreadthDiscriminatorRecord]
+
+
+class DifferentialBreadthAuditRecord(TypedDict, total=False, extra_items=JsonValue):
+    """Persisted syndrome-appropriate systematic DDx coverage artifact."""
+
+    audit_id: str
+    framework: Literal[
+        "VINDICATE",
+        "FIVE_H_FIVE_T",
+        "ANATOMIC_SYSTEM",
+        "MEDICATION_DEVICE_EXPOSURE",
+        "CUSTOM",
+    ]
+    framework_name: str | None
+    framework_rationale: str
+    role: Literal["PRIMARY", "SUPPLEMENTAL"]
+    cells: list[DifferentialBreadthCellRecord]
+    stop_rationale: str
+    recorded_by: str
+    recorded_at: datetime
 
 
 class EvidenceQualityRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -137,6 +230,29 @@ class EvidenceSourceRecord(TypedDict, total=False, extra_items=JsonValue):
     source_system: str | None
 
 
+class ClinicalTemporalRecord(TypedDict, total=False, extra_items=JsonValue):
+    """Source-faithful clinical time; only aware ``instant`` is sortable."""
+
+    kind: Literal["instant", "date", "range", "relative", "unknown"]
+    raw_value: str | None
+    precision: Literal[
+        "day",
+        "minute",
+        "second",
+        "subsecond",
+        "relative",
+        "unknown",
+    ]
+    normalized_start: str | None
+    normalized_end: str | None
+    timezone_provenance: Literal[
+        "source_explicit_offset",
+        "not_applicable",
+        "source_local_unknown",
+        "unknown",
+    ]
+
+
 class EvidenceRecord(TypedDict, total=False, extra_items=JsonValue):
     """Atomic evidence observation and its links."""
 
@@ -146,6 +262,7 @@ class EvidenceRecord(TypedDict, total=False, extra_items=JsonValue):
     clinical_context: str | None
     quality: EvidenceQualityRecord
     source: EvidenceSourceRecord
+    temporal: ClinicalTemporalRecord
     event_timestamp: datetime | None
     supports_cause_ids: list[str]
     supports_hypothesis_ids: list[str]
@@ -171,9 +288,34 @@ class SourceInventoryRecord(TypedDict, total=False, extra_items=JsonValue):
     parser_name: str | None
     parser_version: str | None
     de_identified: bool | None
+    independence_status: Literal["unknown", "independent", "derived"]
+    source_group_id: str | None
+    parent_document_id: str | None
+    derivation_method: str | None
     evidence_count: int
     verified_count: int
     coverage_status: str
+    source_review_adjudication_id: str | None
+    source_reviewed_by: str | None
+    source_reviewed_at: datetime | None
+    source_review_reason: str | None
+
+
+class SourceReviewLedgerRecord(TypedDict, total=False, extra_items=JsonValue):
+    """One immutable source-processing/review event bound to the manifest."""
+
+    adjudication_id: str
+    manifest_digest: str
+    document_id: str
+    status: Literal["extracted", "reviewed", "failed"]
+    de_identified: bool | None
+    independence_status: Literal["unknown", "independent", "derived"]
+    source_group_id: str | None
+    parent_document_id: str | None
+    derivation_method: str | None
+    reviewed_by: str
+    reason: str
+    reviewed_at: datetime
 
 
 class TimelineEventRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -186,6 +328,8 @@ class TimelineEventRecord(TypedDict, total=False, extra_items=JsonValue):
     source_document: str | None
     verified: bool
     evidence_type: str
+    temporal: ClinicalTemporalRecord
+    chronology_status: Literal["ORDERED_INSTANT", "UNPOSITIONED"]
 
 
 class TimelineRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -194,8 +338,21 @@ class TimelineRecord(TypedDict, total=False, extra_items=JsonValue):
     pattern: str
     title: str
     events: list[TimelineEventRecord]
+    timed_event_count: int
+    untimed_event_count: int
+    ordering_note: str
     mermaid: str
     table: str
+
+
+class ReasoningEvidenceVerificationRecord(
+    TypedDict, total=False, extra_items=JsonValue
+):
+    """Current provenance state for evidence referenced by a reasoning step."""
+
+    evidence_id: str
+    verified: bool
+    verification_method: str | None
 
 
 class ReasoningStepRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -213,8 +370,10 @@ class ReasoningStepRecord(TypedDict, total=False, extra_items=JsonValue):
     agent_id: str
     agent_model: str | None
     confidence: float | None
+    confidence_semantics: Literal["UNCALIBRATED_LEGACY_NOT_PRESENTED"]
     tokens_used: int | None
     chain_of_thought: dict[str, JsonValue] | None
+    evidence_verification_states: list[ReasoningEvidenceVerificationRecord]
 
 
 class AlternativeRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -234,7 +393,8 @@ class ThinkingStepRecord(TypedDict, total=False, extra_items=JsonValue):
     content: str
     internal_reasoning: str
     alternatives: list[AlternativeRecord]
-    confidence: float
+    confidence: float | None
+    confidence_semantics: Literal["UNCALIBRATED_LEGACY_NOT_PRESENTED"]
     uncertainty_factors: list[str]
     related_evidence_ids: list[str]
     related_hypothesis_ids: list[str]
@@ -251,6 +411,8 @@ class EvidenceGraphNodeRecord(TypedDict, total=False, extra_items=JsonValue):
     label: str
     status: str
     probability: float
+    probability_semantics: Literal["UNCALIBRATED_NOT_PRESENTED"]
+    certainty: str
 
 
 class EvidenceGraphEdgeRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -286,6 +448,7 @@ class RCASessionRecord(TypedDict, total=False, extra_items=JsonValue):
     created_by: str
     source_manifest_digest: str | None
     source_document_count: int
+    source_review_event_count: int
 
 
 class FishboneCauseRecord(TypedDict, total=False, extra_items=JsonValue):
@@ -295,6 +458,10 @@ class FishboneCauseRecord(TypedDict, total=False, extra_items=JsonValue):
     description: str
     sub_causes: list[str]
     hfacs_code: str | None
+    hfacs_review_status: Literal["UNREVIEWED", "CONFIRMED", "NOT_APPLICABLE"]
+    hfacs_reviewed_by: str | None
+    hfacs_reviewed_at: datetime | None
+    hfacs_review_reason: str | None
     evidence: list[str]
     verified: bool
 
@@ -370,6 +537,7 @@ class RootCauseRecord(TypedDict, total=False, extra_items=JsonValue):
     parent_id: str | None
     evidence: list[str]
     confidence: float | None
+    confidence_semantics: Literal["UNCALIBRATED_LEGACY_NOT_PRESENTED"]
     causation_verification_id: str | None
     causation_result: str | None
     disposition: Literal["PROPOSED", "AUDIT_OBLIGATIONS_PASSED"]
@@ -381,8 +549,13 @@ class HFACSClassificationRecord(TypedDict, total=False, extra_items=JsonValue):
     cause_id: str
     cause: str
     category: str
-    hfacs_code: str
+    hfacs_code: str | None
+    review_status: Literal["UNREVIEWED", "CONFIRMED", "NOT_APPLICABLE"]
+    reviewed_by: str | None
+    reviewed_at: datetime | None
+    review_reason: str | None
     confidence: float | None
+    confidence_semantics: Literal["HEURISTIC_RULE_MATCH_NOT_CALIBRATED"]
     evidence: list[str]
     verified: bool
     source: str
@@ -419,7 +592,7 @@ class NecessityTestRecord(TypedDict, total=False, extra_items=JsonValue):
     passed: bool
     counterfactual_question: str
     counterfactual_answer: str
-    confidence: ConfidenceRecord | float
+    confidence: ConfidenceRecord | float | None
     reasoning: str
 
 
@@ -462,6 +635,7 @@ class CausationVerificationRecord(TypedDict, total=False, extra_items=JsonValue)
     tests: CausationTestsRecord
     overall_result: str
     confidence: ConfidenceRecord | float
+    confidence_semantics: Literal["UNCALIBRATED_LEGACY_NOT_PRESENTED"]
     causal_strength: str | None
     interpretation: str
     next_steps: list[str] | None

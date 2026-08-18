@@ -51,7 +51,10 @@ async def _assert_markdown_report_levels(
     assert "## Automated Completeness Checks" in markdown
     assert "## Deterministic Conformance Checks" in markdown
     assert "this snapshot cannot be treated as final" not in markdown
-    assert "1 evidence record(s) have not been independently verified" in markdown
+    assert (
+        "1 evidence record(s) have no successful registered-source provenance check"
+        in markdown
+    )
     assert "## Evidence Graph" in markdown
     assert "Cardiogenic shock" in markdown
     assert "**1 evidence record**" in markdown
@@ -214,13 +217,16 @@ async def test_complete_clinical_reasoning_workflow(
             "session_id": session_id,
             "evidence_id": evd1["evidence_id"],
             "hypothesis_id": hyp1["hypothesis_id"],
-            "likelihood_ratio": 5.0,
-            "supports": True,
-            "rationale": "Hypotension strongly supports cardiogenic shock in post-CABG patient",
+            "likelihood_ratio": 1.0,
+            "supports": None,
+            "rationale": (
+                "No verified calibration record is loaded in this workflow fixture."
+            ),
+            "calibration_status": "QUANTITATIVELY_UNKNOWN",
         },
     )
     assert link1["status"] == "success"
-    assert link1["posterior_probability"] > 0.3  # Prior was 0.3
+    assert link1["posterior_probability"] == pytest.approx(0.3)
 
     # Step 5: Get differential diagnosis
     ddx = await dd_handler.handle(
@@ -274,7 +280,7 @@ async def test_complete_clinical_reasoning_workflow(
         {
             "source": evd1["evidence_id"],
             "target": hyp1["hypothesis_id"],
-            "relationship": "supports",
+            "relationship": "neutral",
         }
     ]
     assert graph["mermaid"].startswith("```mermaid\nflowchart LR")
@@ -345,8 +351,10 @@ async def test_contract_report_vo() -> None:
         report_id="RPT-001",
         session_id="test_session",
         generated_by="test_agent",
+        leading_hypothesis_id="HYP-pneumonia",
         hypotheses=[
             {
+                "id": "HYP-malformed",
                 "diagnosis": {
                     "code": "not-a-snomed-code",
                     "display": "Malformed persisted diagnosis",
@@ -355,6 +363,7 @@ async def test_contract_report_vo() -> None:
                 "current_probability": 0.99,
             },
             {
+                "id": "HYP-pneumonia",
                 "diagnosis": {
                     "code": "233604007",
                     "display": "Pneumonia",
@@ -364,6 +373,7 @@ async def test_contract_report_vo() -> None:
                 "current_probability": 0.2,
             },
             {
+                "id": "HYP-ami",
                 "diagnosis": {
                     "code": "I21.9",
                     "display": "Acute myocardial infarction",
@@ -383,7 +393,7 @@ async def test_contract_report_vo() -> None:
     # A typed preliminary envelope is renderable, but an incomplete clinical/RCA
     # aggregate must never be promoted to a final snapshot.
     with pytest.raises(ValueError, match="deterministic conformance failed"):
-        report.finalize("test_reviewer")
+        report.finalize("test_reviewer", authorized_reviewers={"test_reviewer"})
     assert report.is_finalized is False
     assert report.content_hash is None
 
@@ -399,12 +409,13 @@ async def test_contract_report_vo() -> None:
     }
     conclusion_codings = [entry["coding"][0] for entry in fhir["conclusionCode"]]
     assert [coding["code"] for coding in conclusion_codings] == [
-        "I21.9",
         "233604007",
+        "I21.9",
     ]
+    assert "Leading eligible diagnosis: Pneumonia" in fhir["conclusion"]
     assert [coding["system"] for coding in conclusion_codings] == [
-        "http://hl7.org/fhir/sid/icd-10",
         "http://snomed.info/sct",
+        "http://hl7.org/fhir/sid/icd-10",
     ]
     markdown = render_contract_report_markdown(report)
     assert "INVALID CODE: SNOMED_CT:not-a-snomed-code" in markdown
@@ -430,7 +441,7 @@ def test_markdown_omits_timeline_only_for_invalid_persisted_evidence(
     assert "persisted evidence failed Evidence schema validation" in caplog.text
 
 
-def test_contract_hash_ignores_derived_mermaid_presentation() -> None:
+def test_contract_hash_covers_persisted_mermaid_presentation() -> None:
     from rootcause_mcp.domain.value_objects.contract_report import ContractReport
 
     graph = {
@@ -454,7 +465,7 @@ def test_contract_hash_ignores_derived_mermaid_presentation() -> None:
         evidence_graph={**graph, "mermaid": "style version two"},
     )
 
-    assert first.compute_content_hash() == second.compute_content_hash()
+    assert first.compute_content_hash() != second.compute_content_hash()
 
     changed_identity = second.model_copy(update={"report_id": "RPT-2"})
     assert first.compute_content_hash() != changed_identity.compute_content_hash()

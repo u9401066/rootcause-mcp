@@ -9,6 +9,10 @@ Defines Causation Verification and Diagram Rendering/Auditing MCP tools:
 
 from mcp.types import Tool
 
+from rootcause_mcp.interface.tools.schema_fragments import (
+    timeline_event_input_schema,
+)
+
 
 def get_verification_tools() -> list[Tool]:
     """Return Verification and Diagram tool definitions."""
@@ -168,32 +172,7 @@ def get_verification_tools() -> list[Tool]:
                     },
                     "events": {
                         "type": "array",
-                        "items": {
-                            "type": "object",
-                            "properties": {
-                                "time": {
-                                    "type": "string",
-                                    "description": "Timestamp or time label (e.g., '08:00', 'POD 1 16:00')",
-                                },
-                                "phase": {
-                                    "type": "string",
-                                    "description": "Clinical phase/stage for grouping (optional)",
-                                },
-                                "content": {
-                                    "type": "string",
-                                    "description": "Clinical event or finding description",
-                                },
-                                "source_document": {
-                                    "type": "string",
-                                    "description": "Source document ID (optional)",
-                                },
-                                "verified": {
-                                    "type": "boolean",
-                                    "description": "Whether evidence is verified (optional)",
-                                },
-                            },
-                            "required": ["content"],
-                        },
+                        "items": timeline_event_input_schema(),
                         "description": "Custom list of timeline events (optional)",
                     },
                     "pattern": {

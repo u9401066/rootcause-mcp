@@ -4,7 +4,7 @@ MCP Tool definitions package.
 Contains tool schema definitions organized by domain:
 - Condensed facade tools (8 unified tools) - NEW for ultra-low token budget
 - Evidence management tools (3 tools)
-- Differential diagnosis tools (4 tools)
+- Differential diagnosis tools (6 tools)
 - Reasoning chain, conflict detection & checkpoint tools (7 tools)
 - CONTRACT report tools (1 tool)
 - Cognitive transparency tools (5 tools)
@@ -14,7 +14,7 @@ Contains tool schema definitions organized by domain:
 - Why Tree analysis tools (6 tools)
 - Verification & diagram tools (3 tools)
 
-Total: 43 discrete tools across clinical (23), RCA (23), all (43), or condensed (8 unified facade tools).
+Total: 46 discrete tools across clinical (25), RCA (24), all (46), or condensed (8 unified facade tools).
 """
 
 from mcp.types import Tool
@@ -39,9 +39,14 @@ TOOL_OUTPUT_SCHEMA = {
             "description": "success, error, or not_found",
         },
         "content": {
-            "type": "array",
-            "items": {"type": "string"},
-            "description": "Human-readable content returned by legacy RCA tools",
+            "oneOf": [
+                {"type": "string"},
+                {"type": "array", "items": {"type": "string"}},
+            ],
+            "description": (
+                "Generated report text or human-readable content returned by "
+                "legacy RCA tools"
+            ),
         },
     },
     "required": ["status"],

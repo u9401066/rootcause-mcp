@@ -7,8 +7,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rootcause-mcp"
-version = "2.0.0a1"
-description = "Clinical Root Cause Analysis MCP Server - 臨床根因分析工具"
+version = "2.0.0a2"
+description = "Evidence-grounded clinical reasoning ledger and conservative medical RCA MCP harness"
 readme = "README.md"
 license = "Apache-2.0"
 requires-python = ">=3.12"
@@ -37,6 +37,7 @@ dependencies = [
     # Data & Validation
     "pydantic>=2.0",
     "pydantic-settings>=2.14.2",
+    "jsonschema>=4.26.0",
     # Persistence
     "sqlmodel>=0.0.22",
     "aiosqlite>=0.20.0",
@@ -55,7 +56,9 @@ dependencies = [
 
 # Phase 3: Causal Inference
 causal = [
-    "dowhy[gcm]>=0.11",
+    # DoWhy 0.14 ships GCM in the base distribution and no longer declares a
+    # separate `gcm` extra. Keeping the obsolete extra makes uv emit a warning.
+    "dowhy>=0.14",
     "causal-learn>=0.1.3",
     "numpy>=1.26",
     "pandas>=2.0",
@@ -81,7 +84,7 @@ dev = [
 rootcause-mcp = "rootcause_mcp.server_v2:main"
 
 [project.urls]
-Documentation = "https://github.com/u9401066/rootcause-mcp#readme"
+Documentation = "https://u9401066.github.io/rootcause-mcp/"
 Issues = "https://github.com/u9401066/rootcause-mcp/issues"
 Source = "https://github.com/u9401066/rootcause-mcp"
 

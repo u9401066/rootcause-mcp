@@ -102,8 +102,14 @@ class ThinkingStep(BaseModel):
     )
 
     # Confidence & Uncertainty
-    confidence: float = Field(
-        ..., ge=0, le=1, description="Confidence in this thinking step"
+    confidence: float | None = Field(
+        default=None,
+        ge=0,
+        le=1,
+        description=(
+            "Optional caller-supplied compatibility metadata; never inferred or "
+            "presented as clinical confidence"
+        ),
     )
     uncertainty_factors: list[str] = Field(
         default_factory=list, description="Factors contributing to uncertainty"
@@ -169,9 +175,6 @@ class ThinkingStep(BaseModel):
             lines.append("   ⚠️  Potential Biases:")
             for bias in self.potential_biases:
                 lines.append(f"     - {bias}")
-
-        lines.append("")
-        lines.append(f"   Confidence: {self.confidence:.0%}")
 
         return "\n".join(lines)
 

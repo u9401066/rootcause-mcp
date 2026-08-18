@@ -303,7 +303,11 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:  # noqa: PLR0915
     )
 
     # Existing RCA handlers
-    hfacs_handlers = HFACSHandlers(hfacs_suggester, learned_rules_service)
+    hfacs_handlers = HFACSHandlers(
+        hfacs_suggester,
+        learned_rules_service,
+        fishbone_repository=fishbone_repo,
+    )
     session_handlers = SessionHandlers(session_repo, progress_tracker)
     fishbone_handlers = FishboneHandlers(
         fishbone_repo,
@@ -443,7 +447,9 @@ def _build_tool_dispatch(profile: str | None = None) -> dict[str, ToolHandler]:
             name: partial(_dd_handlers.handle, name)
             for name in (
                 "rc_propose_hypothesis",
+                "rc_audit_differential_breadth",
                 "rc_link_evidence_to_hypothesis",
+                "rc_select_leading_hypothesis",
                 "rc_get_differential_diagnosis",
                 "rc_exclude_hypothesis",
             )
@@ -479,6 +485,7 @@ def _build_tool_dispatch(profile: str | None = None) -> dict[str, ToolHandler]:
                 _call_without_arguments, _hfacs_handlers.handle_reload_rules
             ),
             "rc_start_session": _session_handlers.handle_start_session,
+            "rc_adjudicate_source": _session_handlers.handle_adjudicate_source,
             "rc_get_session": _session_handlers.handle_get_session,
             "rc_list_sessions": _session_handlers.handle_list_sessions,
             "rc_archive_session": _session_handlers.handle_archive_session,
@@ -538,7 +545,8 @@ def _compact_structured_text(result: dict[str, Any]) -> str:
         "output_path",
         "finalized",
         "verified",
-        "posterior_probability",
+        "probability_semantics",
+        "clinical_probability_established",
         "quality_score",
     )
     for key in preferred_keys:
@@ -823,22 +831,28 @@ async def on_get_prompt(
 # Create server instance with SDK 2.0 API, resources, prompts, and instructions
 server = Server(
     "rootcause-mcp",
-    version="2.0.0a1",
+    version="2.0.0a2",
     title="RootCause MCP: Clinical Reasoning & Medical RCA Harness",
     description=(
-        "Deterministic medical reasoning, Bayesian differential diagnosis, "
-        "physical provenance verification, and 4-tier perioperative M&M root cause analysis."
+        "Auditable evidence ledger, broad differential-diagnosis workflow, "
+        "provenance checks, and conservative medical root-cause analysis."
     ),
     instructions=(
-        "RootCause MCP is a deterministic medical reasoning and clinical root cause analysis (RCA) harness. "
-        "Operate according to the 5-stage progression: 1) EVIDENCE_COLLECTION (anchor verbatim snippets against raw records), "
-        "2) DIFFERENTIAL_EXPANSION (propose >=3 competing hypotheses including emergency rule-outs), "
-        "3) BAYESIAN_EVALUATION (link evidence and evaluate disconfirming tests), "
-        "4) COGNITIVE_AUDIT (review anchoring bias, confirmation bias, and declare clinical gaps), "
-        "5) READY_FOR_SYNTHESIS (generate deterministic Markdown/FHIR reports). "
-        "For perioperative cardiac arrest / shock cases, follow the 4-Tier backward causal protocol (Tier 0 Rhythm -> "
-        "Tier 1 5H5T -> Tier 2 Tri-stream Triggers [Patient vs Surgical vs Anesthesia] -> Tier 3 HFACS Latent Gaps). "
-        "Inspect clinical:// playbooks and templates via resources, or invoke prompts for pre-configured guided workflows."
+        "RootCause MCP does not reason, diagnose, or prove clinical causality. It persists and validates the host "
+        "Agent's evidence-linked case model for qualified-clinician review. Use Traditional Chinese prose for "
+        "clinician-facing discussion while keeping medical terminology in English. Separate exact observations, "
+        "clinical inferences, unknowns, planned tests, and causal claims. First anchor atomic evidence to source "
+        "snippets, locations, hashes, and time precision. Then select a syndrome-appropriate mechanism framework "
+        "such as 5H5T, VINDICATE, anatomic/system localization, or medication/device/exposure review. Expand the "
+        "DDx beyond the minimum three until another candidate adds no distinct mechanism, safety risk, or "
+        "discriminating test; avoid unprioritized rare-disease lists. For every active DDx record why it is plausible, "
+        "evidence for and against, neutral context, case-specific unknowns, a typed rule-out/disconfirm/discriminate "
+        "plan when evidence is incomplete, and qualitative certainty. Apply only justified direct likelihood ratios; "
+        "LR=1.0 is neutral and cannot satisfy support or disconfirmation. Keep medical DDx separate from Fishbone, "
+        "5-Why, HFACS, and conservative causation audit. Preview reports before finalization. A final report requires "
+        "all hard conformance checks plus an authorized named human reviewer and remains decision support, not a "
+        "validated diagnosis or treatment recommendation. Inspect clinical:// contracts at runtime; bundled domain "
+        "playbooks are non-normative retrospective DDx prompts and never patient-specific management guidance."
     ),
     lifespan=lifespan,
     on_list_tools=on_list_tools,

@@ -15,8 +15,13 @@ from enum import Enum
 from typing import Any, Self
 from uuid import uuid4
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
+from rootcause_mcp.domain.value_objects.clinical_temporal import (
+    ClinicalTemporal,
+    ClinicalTemporalKind,
+    resolve_clinical_temporal,
+)
 from rootcause_mcp.domain.value_objects.evidence_quality import EvidenceQuality
 from rootcause_mcp.domain.value_objects.identifiers import EvidenceId
 
@@ -155,8 +160,19 @@ class Evidence(BaseModel):
     source: EvidenceSource = Field(..., description="Evidence provenance")
 
     # Temporal
+    temporal: ClinicalTemporal = Field(
+        default_factory=ClinicalTemporal.unknown,
+        description=(
+            "Source-faithful instant/date/range/relative/unknown time semantics; "
+            "only an aware instant is chronologically sortable"
+        ),
+    )
     event_timestamp: datetime | None = Field(
-        default=None, description="When the clinical event occurred (if applicable)"
+        default=None,
+        description=(
+            "Legacy aware-instant compatibility field; null for date, range, "
+            "relative, and unknown temporal records"
+        ),
     )
 
     # Relationships (IDs only, actual linking done via repositories)
@@ -172,7 +188,11 @@ class Evidence(BaseModel):
 
     # Metadata & Verification
     verified: bool = Field(
-        default=False, description="Has this evidence been independently verified?"
+        default=False,
+        description=(
+            "Has this evidence passed its recorded provenance check? This does not "
+            "establish source independence or clinical truth."
+        ),
     )
     verifier: str | None = Field(default=None, description="Who verified this evidence")
     verification_method: str | None = Field(
@@ -196,6 +216,27 @@ class Evidence(BaseModel):
         if not v.strip():
             raise ValueError("Evidence content cannot be empty or whitespace")
         return v.strip()
+
+    @model_validator(mode="before")
+    @classmethod
+    def normalize_temporal_semantics(cls, value: Any) -> Any:
+        """Map only legacy aware timestamps to instants and retain all weaker time."""
+        if isinstance(value, cls):
+            return value
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        resolved = resolve_clinical_temporal(
+            payload.get("temporal"),
+            payload.get("event_timestamp"),
+        )
+        payload["temporal"] = resolved
+        payload["event_timestamp"] = (
+            resolved.source_aware_instant
+            if resolved.kind is ClinicalTemporalKind.INSTANT
+            else None
+        )
+        return payload
 
     def link_to_cause(self, cause_id: str) -> Self:
         """
@@ -240,7 +281,7 @@ class Evidence(BaseModel):
         content_hash: str | None = None,
     ) -> Self:
         """
-        Mark evidence as independently verified with provenance audit details.
+        Mark evidence with a successful recorded provenance check and audit details.
 
         Args:
             verifier: ID/name of the person or automated service verifying
@@ -286,6 +327,7 @@ class DocumentEvidence:
         location: str,
         collected_by: str,
         event_timestamp: datetime | None = None,
+        temporal: ClinicalTemporal | dict[str, Any] | None = None,
     ) -> Evidence:
         """Create evidence from clinical chart/flowsheet."""
         from rootcause_mcp.domain.value_objects.evidence_quality import (
@@ -294,6 +336,7 @@ class DocumentEvidence:
             EvidenceStrength,
         )
 
+        resolved_temporal = resolve_clinical_temporal(temporal, event_timestamp)
         return Evidence(
             content=content,
             evidence_type=EvidenceType.DOCUMENT,
@@ -308,6 +351,7 @@ class DocumentEvidence:
                 collected_by=collected_by,
                 source_system=None,
             ),
+            temporal=resolved_temporal,
             event_timestamp=event_timestamp,
             verified=False,
             verifier=None,

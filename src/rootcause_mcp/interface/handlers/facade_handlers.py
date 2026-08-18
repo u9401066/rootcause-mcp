@@ -66,8 +66,12 @@ class FacadeHandlers:
         action = args.get("action", "propose").lower()
         if action == "propose":
             return await self.dd.handle("rc_propose_hypothesis", args)
+        elif action == "audit_breadth":
+            return await self.dd.handle("rc_audit_differential_breadth", args)
         elif action in {"link", "evaluate"}:
             return await self.dd.handle("rc_link_evidence_to_hypothesis", args)
+        elif action == "select_leading":
+            return await self.dd.handle("rc_select_leading_hypothesis", args)
         elif action in {"rank", "list", "get"}:
             return await self.dd.handle("rc_get_differential_diagnosis", args)
         elif action == "exclude":
@@ -144,6 +148,8 @@ class FacadeHandlers:
                 return await self.session.handle_list_sessions(args)
             elif sub == "archive":
                 return await self.session.handle_archive_session(args)
+            elif sub == "adjudicate_source":
+                return await self.session.handle_adjudicate_source(args)
         elif action.startswith("fishbone_"):
             sub = action.replace("fishbone_", "")
             if sub == "init":

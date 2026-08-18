@@ -76,6 +76,7 @@ def test_bayesian_update_handles_probability_boundaries() -> None:
         evidence_id="EVD-zero",
         likelihood_ratio=5.0,
         updated_by="test-agent",
+        supports=True,
     )
     certain = _hypothesis(1.0).bayesian_update(
         evidence_id="EVD-one",
@@ -118,9 +119,37 @@ def test_bayesian_update_rejects_directionally_inconsistent_lr(
         )
 
 
+def _verified_case_evidence(orchestrator: ClinicalReasoningOrchestrator, content: str):
+    evidence = orchestrator.add_evidence(content, auto_verify=False).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+    )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    return evidence
+
+
+def _calibration_evidence(orchestrator: ClinicalReasoningOrchestrator) -> str:
+    evidence = orchestrator.add_evidence(
+        "Published validation table reports direct LR values.",
+        evidence_type="LITERATURE",
+        source_document="calibration.txt",
+        source_location="Table 1",
+        raw_snippet="Validated direct LR values 5.0, 3.0, and 0.2",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="sha256:" + "a" * 64,
+    )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    return evidence.id.value
+
+
 def test_orchestrator_rejects_duplicate_evidence_update() -> None:
     orchestrator = ClinicalReasoningOrchestrator("no-double-counting")
-    evidence = orchestrator.add_evidence("A source-grounded finding", auto_verify=False)
+    evidence = _verified_case_evidence(orchestrator, "A source-grounded finding")
+    calibration_id = _calibration_evidence(orchestrator)
     hypothesis = orchestrator.propose_hypothesis(
         diagnosis="Test diagnosis",
         prior_probability=0.2,
@@ -130,6 +159,9 @@ def test_orchestrator_rejects_duplicate_evidence_update() -> None:
         evidence.id.value,
         hypothesis.id.value,
         likelihood_ratio=3.0,
+        supports=True,
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration_id,
     )
 
     with pytest.raises(ValueError, match="duplicate Bayesian updates"):
@@ -137,13 +169,17 @@ def test_orchestrator_rejects_duplicate_evidence_update() -> None:
             evidence.id.value,
             hypothesis.id.value,
             likelihood_ratio=3.0,
+            supports=True,
+            calibration_status="SOURCE_CALIBRATED",
+            calibration_source_ref=calibration_id,
         )
 
 
 def test_likelihood_metadata_does_not_invent_reciprocal_test_values() -> None:
     orchestrator = ClinicalReasoningOrchestrator("lr-metadata")
-    supporting = orchestrator.add_evidence("Supporting finding", auto_verify=False)
-    contradicting = orchestrator.add_evidence("Refuting finding", auto_verify=False)
+    supporting = _verified_case_evidence(orchestrator, "Supporting finding")
+    contradicting = _verified_case_evidence(orchestrator, "Refuting finding")
+    calibration_id = _calibration_evidence(orchestrator)
     hypothesis = orchestrator.propose_hypothesis(
         diagnosis="Test diagnosis",
         prior_probability=0.4,
@@ -155,12 +191,16 @@ def test_likelihood_metadata_does_not_invent_reciprocal_test_values() -> None:
         hypothesis.id.value,
         likelihood_ratio=5.0,
         supports=True,
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration_id,
     )
     after_refute = orchestrator.link_evidence_to_hypothesis(
         contradicting.id.value,
         hypothesis.id.value,
         likelihood_ratio=0.2,
         supports=False,
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration_id,
     )
 
     support_assessment, refute_assessment = after_refute.likelihood_ratios

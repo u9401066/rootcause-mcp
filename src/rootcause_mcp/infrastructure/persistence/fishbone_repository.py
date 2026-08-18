@@ -17,7 +17,10 @@ from rootcause_mcp.domain.entities.fishbone import (
     FishboneCause,
 )
 from rootcause_mcp.domain.repositories.fishbone_repository import FishboneRepository
-from rootcause_mcp.domain.value_objects.enums import FishboneCategoryType
+from rootcause_mcp.domain.value_objects.enums import (
+    FishboneCategoryType,
+    HFACSReviewStatus,
+)
 from rootcause_mcp.domain.value_objects.identifiers import (
     CauseId,
     FishboneId,
@@ -119,6 +122,14 @@ class SQLiteFishboneRepository(FishboneRepository):
                         "hfacs_confidence": float(cause.hfacs_confidence)
                         if cause.hfacs_confidence
                         else None,
+                        "hfacs_review_status": cause.hfacs_review_status.value,
+                        "hfacs_reviewed_by": cause.hfacs_reviewed_by,
+                        "hfacs_reviewed_at": (
+                            cause.hfacs_reviewed_at.isoformat()
+                            if cause.hfacs_reviewed_at
+                            else None
+                        ),
+                        "hfacs_review_reason": cause.hfacs_review_reason,
                         "evidence": cause.evidence,
                         "confidence": float(cause.confidence)
                         if cause.confidence
@@ -159,6 +170,16 @@ class SQLiteFishboneRepository(FishboneRepository):
                             if cause_data.get("hfacs_confidence")
                             else None
                         ),
+                        hfacs_review_status=HFACSReviewStatus(
+                            cause_data.get("hfacs_review_status", "UNREVIEWED")
+                        ),
+                        hfacs_reviewed_by=cause_data.get("hfacs_reviewed_by"),
+                        hfacs_reviewed_at=(
+                            datetime.fromisoformat(cause_data["hfacs_reviewed_at"])
+                            if cause_data.get("hfacs_reviewed_at")
+                            else None
+                        ),
+                        hfacs_review_reason=cause_data.get("hfacs_review_reason"),
                         evidence=cause_data.get("evidence", []),
                         confidence=(
                             ConfidenceScore(cause_data["confidence"])

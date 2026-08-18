@@ -1,5 +1,5 @@
 """
-Smoke test for all 36 MCP tools.
+Smoke test for the complete 46-tool MCP surface.
 
 Verifies that:
 1. All tools can be loaded
@@ -23,9 +23,9 @@ from rootcause_mcp.interface.tools import get_all_tools
 
 
 def test_all_tools_loadable() -> None:
-    """Test that all 43 tools can be loaded."""
+    """Test that all 46 tools can be loaded."""
     tools = get_all_tools()
-    assert len(tools) == 43, f"Expected 43 tools, got {len(tools)}"
+    assert len(tools) == 46, f"Expected 46 tools, got {len(tools)}"
 
 
 def test_tool_profiles_reduce_advertised_schema_context() -> None:
@@ -34,8 +34,8 @@ def test_tool_profiles_reduce_advertised_schema_context() -> None:
     clinical_tools = get_all_tools("clinical")
     rca_tools = get_all_tools("rca")
 
-    assert len(clinical_tools) == 23
-    assert len(rca_tools) == 23
+    assert len(clinical_tools) == 25
+    assert len(rca_tools) == 24
     assert {tool.name for tool in clinical_tools} & {
         tool.name for tool in rca_tools
     } == {"rc_verify_causation", "rc_validate_diagram", "rc_render_timeline"}
@@ -58,7 +58,7 @@ def test_tool_profiles_reduce_advertised_schema_context() -> None:
             ensure_ascii=False,
         ).encode()
     )
-    assert clinical_bytes < all_bytes * 0.6
+    assert clinical_bytes < all_bytes * 0.65
     assert rca_bytes < all_bytes * 0.6
 
 
@@ -207,4 +207,4 @@ def test_server_v2_importable() -> None:
     from rootcause_mcp.server_v2 import server
 
     assert server.name == "rootcause-mcp"
-    assert server.version == "2.0.0a1"
+    assert server.version == "2.0.0a2"

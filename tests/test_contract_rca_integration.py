@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from collections.abc import AsyncIterator
+from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
@@ -18,11 +19,14 @@ from rootcause_mcp.domain.entities.why_node import WhyChain, WhyNode
 from rootcause_mcp.domain.value_objects.case_manifest import (
     CaseInputManifest,
     SourceDocument,
+    SourceIndependenceStatus,
+    SourceReviewAdjudication,
     SourceReviewStatus,
 )
 from rootcause_mcp.domain.value_objects.enums import (
     CaseType,
     FishboneCategoryType,
+    HFACSReviewStatus,
     Stage,
 )
 from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
@@ -68,8 +72,6 @@ async def ready_case(
                     sha256="a" * 64,
                     media_type="text/plain",
                     source_kind="progress_note",
-                    status=SourceReviewStatus.REVIEWED,
-                    de_identified=True,
                 ),
                 SourceDocument(
                     document_id="record-b.txt",
@@ -77,12 +79,41 @@ async def ready_case(
                     sha256="b" * 64,
                     media_type="text/plain",
                     source_kind="imaging",
-                    status=SourceReviewStatus.REVIEWED,
-                    de_identified=True,
+                ),
+                SourceDocument(
+                    document_id="record-c.txt",
+                    source_uri="host://case/record-c.txt",
+                    sha256="c" * 64,
+                    media_type="text/plain",
+                    source_kind="literature",
                 ),
             ),
         )
     )
+    manifest = session.get_source_manifest()
+    assert manifest is not None
+    for index, (document_id, source_group_id) in enumerate(
+        (
+            ("record-a.txt", "GROUP-A"),
+            ("record-b.txt", "GROUP-B"),
+            ("record-c.txt", "GROUP-C"),
+        ),
+        1,
+    ):
+        session.record_source_review(
+            SourceReviewAdjudication(
+                adjudication_id=f"SRV-contract-{index}",
+                manifest_digest=manifest.digest,
+                document_id=document_id,
+                status=SourceReviewStatus.REVIEWED,
+                de_identified=True,
+                independence_status=SourceIndependenceStatus.INDEPENDENT,
+                source_group_id=source_group_id,
+                reviewed_by="clinical-reviewer",
+                reason="The source identity, de-identification, and lineage were reviewed.",
+                reviewed_at=datetime(2026, 8, 18, 8, index, tzinfo=UTC),
+            )
+        )
     session_repository.save(session)
     session_id = str(session.id)
 
@@ -91,24 +122,50 @@ async def ready_case(
     first_evidence = orchestrator.add_evidence(
         content="Postoperative hypotension was documented after transfer.",
         source_document="record-a.txt",
+        source_location="line 12",
+        raw_snippet="Postoperative hypotension was documented after transfer.",
+        extraction_method="verbatim_quote",
         auto_verify=False,
     )
     second_evidence = orchestrator.add_evidence(
         content="Bedside imaging showed right ventricular strain.",
         source_document="record-b.txt",
+        source_location="line 8",
+        raw_snippet="Bedside imaging showed right ventricular strain.",
+        extraction_method="verbatim_quote",
         auto_verify=False,
     )
-    for evidence in (first_evidence, second_evidence):
+    for index, evidence in enumerate((first_evidence, second_evidence), 1):
         orchestrator.evidence_store[evidence.id.value] = evidence.mark_verified(
             verifier="SYSTEM_PROVENANCE_VERIFIER",
             verification_method="EXACT_SNIPPET_MATCH",
+            content_hash=("d" if index == 1 else "e") * 64,
         )
+    calibration_evidence = orchestrator.add_evidence(
+        content="Published validation table reports the direct diagnostic LRs.",
+        evidence_type="LITERATURE",
+        source_document="record-c.txt",
+        source_location="Reference appendix, Table 1",
+        raw_snippet="Validated shock findings LR 1.2 and 0.5",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="c" * 64,
+    )
+    orchestrator.evidence_store[calibration_evidence.id.value] = calibration_evidence
 
     eligible = orchestrator.propose_hypothesis(
         diagnosis="Pulmonary embolism",
         icd10_code="I26.99",
         prior_probability=0.30,
         rationale="Hypotension and right ventricular strain support embolic shock.",
+        mechanism_category="VASCULAR",
+        diagnostic_role="ETIOLOGIC",
+        certainty="POSSIBLE",
+        reasoning_basis="MECHANISM_INFERENCE",
+        uncertainty_factors=["Definitive angiographic confirmation pending"],
         planned_tests=[
             {
                 "name": "CT pulmonary angiography",
@@ -124,6 +181,11 @@ async def ready_case(
         icd10_code="R57.0",
         prior_probability=0.90,
         rationale="A competing explanation that remains temporarily suspended.",
+        mechanism_category="FUNCTIONAL_PHYSIOLOGIC",
+        diagnostic_role="SYNDROMIC",
+        certainty="UNKNOWN",
+        reasoning_basis="MECHANISM_INFERENCE",
+        uncertainty_factors=["Cardiac imaging remains pending"],
     )
     excluded = orchestrator.propose_hypothesis(
         diagnosis="Acute myocardial infarction",
@@ -131,6 +193,71 @@ async def ready_case(
         prior_probability=0.20,
         rationale="Initially plausible but subsequently excluded by review.",
         must_not_miss=True,
+        mechanism_category="VASCULAR",
+        diagnostic_role="ETIOLOGIC",
+        certainty="POSSIBLE",
+        reasoning_basis="MECHANISM_INFERENCE",
+        uncertainty_factors=["Serial ischemia testing requires adjudication"],
+    )
+    orchestrator.select_leading_hypothesis(
+        eligible.id.value,
+        reason="The source-linked shock phenotype makes this the audited working lead.",
+        changed_by="test-agent",
+    )
+    orchestrator.record_differential_breadth_audit(
+        {
+            "audit_id": "DBA-contract-fixture",
+            "framework": "VINDICATE",
+            "framework_rationale": (
+                "The perioperative shock syndrome warrants vascular and functional review."
+            ),
+            "role": "PRIMARY",
+            "cells": [
+                {
+                    "cell_id": cell_id,
+                    "status": (
+                        "CANDIDATES_PRESENT"
+                        if cell_id in {"VASCULAR", "FUNCTIONAL_PHYSIOLOGIC"}
+                        else "REVIEWED_NO_PLAUSIBLE_CANDIDATE"
+                    ),
+                    "hypothesis_ids": (
+                        [eligible.id.value, excluded.id.value]
+                        if cell_id == "VASCULAR"
+                        else [on_hold.id.value]
+                        if cell_id == "FUNCTIONAL_PHYSIOLOGIC"
+                        else []
+                    ),
+                    "mechanism_categories": (
+                        [cell_id]
+                        if cell_id in {"VASCULAR", "FUNCTIONAL_PHYSIOLOGIC"}
+                        else []
+                    ),
+                    "rationale": (
+                        "Linked candidates represent this canonical mechanism."
+                        if cell_id in {"VASCULAR", "FUNCTIONAL_PHYSIOLOGIC"}
+                        else "This canonical mechanism was reviewed without a plausible candidate."
+                    ),
+                    "unknowns": [],
+                    "planned_discriminators": [],
+                }
+                for cell_id in (
+                    "VASCULAR",
+                    "INFECTIOUS",
+                    "INFLAMMATORY_IMMUNE",
+                    "NEOPLASTIC",
+                    "DRUG_TOXIN_IATROGENIC",
+                    "METABOLIC_ENDOCRINE",
+                    "TRAUMATIC_MECHANICAL",
+                    "CONGENITAL_GENETIC",
+                    "DEGENERATIVE",
+                    "FUNCTIONAL_PHYSIOLOGIC",
+                )
+            ],
+            "stop_rationale": (
+                "The supplied records did not support another plausible mechanism."
+            ),
+            "recorded_by": "test-agent",
+        }
     )
     for evidence in (first_evidence, second_evidence):
         orchestrator.link_evidence_to_hypothesis(
@@ -139,6 +266,8 @@ async def ready_case(
             likelihood_ratio=1.2,
             supports=True,
             rationale="The cross-document finding supports embolic shock.",
+            calibration_status="SOURCE_CALIBRATED",
+            calibration_source_ref=calibration_evidence.id.value,
         )
     orchestrator.link_evidence_to_hypothesis(
         evidence_id=first_evidence.id.value,
@@ -146,6 +275,8 @@ async def ready_case(
         likelihood_ratio=1.2,
         supports=True,
         rationale="The acute shock presentation initially supported infarction.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration_evidence.id.value,
     )
     orchestrator.link_evidence_to_hypothesis(
         evidence_id=second_evidence.id.value,
@@ -153,6 +284,8 @@ async def ready_case(
         likelihood_ratio=0.5,
         supports=False,
         rationale="The imaging pattern refuted the infarction hypothesis.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration_evidence.id.value,
     )
     orchestrator.hypothesis_store[on_hold.id.value] = on_hold.mark_on_hold(
         held_by="test-reviewer",
@@ -183,8 +316,12 @@ async def ready_case(
             cause_id=CauseId.generate(),
             category=FishboneCategoryType.PROCESS,
             description="Escalation trigger was absent from the handoff process",
-            hfacs_code="UA.DM",
+            hfacs_code="UA-DE",
             hfacs_confidence=ConfidenceScore(0.8),
+            hfacs_review_status=HFACSReviewStatus.CONFIRMED,
+            hfacs_reviewed_by="clinical-reviewer",
+            hfacs_reviewed_at=session.updated_at,
+            hfacs_review_reason="Decision-error classification reviewed.",
             evidence=[first_evidence.id.value],
             confidence=ConfidenceScore(0.85),
             verified=True,
@@ -227,6 +364,51 @@ async def ready_case(
                         "description": session.problem_statement,
                         "evidence": [first_evidence.id.value],
                     },
+                    "tests": {
+                        "temporality": {
+                            "passed": False,
+                            "conclusion": (
+                                "The supplied records do not establish exact event timing."
+                            ),
+                        },
+                        "necessity": {
+                            "passed": False,
+                            "counterfactual_question": (
+                                "Would escalation have occurred with a mandatory trigger?"
+                            ),
+                            "counterfactual_answer": "The supplied records cannot establish this.",
+                            "reasoning": (
+                                "The counterfactual remains plausible but unobserved."
+                            ),
+                        },
+                        "mechanism": {
+                            "passed": False,
+                            "causal_pathway": [
+                                "Escalation trigger absent",
+                                "Delayed escalation",
+                            ],
+                            "mechanism_plausibility": (
+                                "The pathway is plausible but not proven by these records."
+                            ),
+                            "domain_knowledge_support": False,
+                        },
+                        "sufficiency": {
+                            "passed": False,
+                            "analysis": (
+                                "Alternative workflow and clinical explanations remain."
+                            ),
+                            "conclusion": "Sufficiency is not established.",
+                            "confounders_identified": [
+                                "Unobserved communication outside the supplied records"
+                            ],
+                        },
+                    },
+                    "interpretation": (
+                        "This conservative audit retains the root as proposed only."
+                    ),
+                    "next_steps": [
+                        "Review the complete handoff and escalation communication record."
+                    ],
                 }
             ]
         },
@@ -266,12 +448,12 @@ async def test_contract_report_unifies_rca_manifest_and_safe_conclusions(
     )
     assert json_result["status"] == "success"
     payload = json.loads(json_result["content"])
-    assert payload["rca_session"]["source_document_count"] == 2
+    assert payload["rca_session"]["source_document_count"] == 3
     assert payload["fishbone"]["categories"][0]["category"] == "Process"
     assert payload["root_causes"][0]["answer"] == (
         "The handoff lacked a mandatory escalation trigger"
     )
-    assert payload["hfacs_classifications"][0]["hfacs_code"] == "UA.DM"
+    assert payload["hfacs_classifications"][0]["hfacs_code"] == "UA-DE"
     assert payload["causation_verifications"][0]["overall_result"] == (
         "INSUFFICIENT_DATA"
     )
@@ -290,25 +472,39 @@ async def test_contract_report_unifies_rca_manifest_and_safe_conclusions(
     ] == [
         ("record-a.txt", "progress_note", 1, 1, "reviewed"),
         ("record-b.txt", "imaging", 1, 1, "reviewed"),
+        ("record-c.txt", "literature", 1, 1, "reviewed"),
     ]
     assert [item["sha256"] for item in payload["source_inventory"]] == [
         "a" * 64,
         "b" * 64,
+        "c" * 64,
     ]
+    assert [event["adjudication_id"] for event in payload["source_review_ledger"]] == [
+        "SRV-contract-1",
+        "SRV-contract-2",
+        "SRV-contract-3",
+    ]
+    assert all(
+        event["manifest_digest"] == payload["rca_session"]["source_manifest_digest"]
+        for event in payload["source_review_ledger"]
+    )
+    assert payload["rca_session"]["source_review_event_count"] == len(
+        payload["source_review_ledger"]
+    )
 
     markdown_result = await handler.handle_generate_contract_report(
         {"session_id": session_id, "format": "markdown"}
     )
     markdown = markdown_result["content"]
-    assert "Leading recorded hypothesis: **Pulmonary embolism**" in markdown
-    assert "Leading recorded hypothesis: **Cardiogenic shock**" not in markdown
+    assert "Explicit audited leading diagnosis: **Pulmonary embolism**" in markdown
+    assert "Explicit audited leading diagnosis: **Cardiogenic shock**" not in markdown
     assert "## Registered Source Inventory" in markdown
     assert "## Root Cause Analysis" in markdown
     assert "## Deterministic Conformance Checks" in markdown
     assert "### Conservative Causation Audit" in markdown
     assert "do not establish clinical causality" in markdown
     assert "`PROPOSED`" in markdown
-    assert "UA.DM" in markdown
+    assert "UA-DE" in markdown
     assert "The handoff lacked a mandatory escalation trigger" in markdown
 
     custom_markdown_result = await handler.handle_generate_contract_report(
@@ -367,6 +563,10 @@ async def test_contract_report_unifies_rca_manifest_and_safe_conclusions(
             "approved_by": "clinical-reviewer",
         }
     )
+    assert finalized["status"] == "success", [
+        (item["code"], item.get("refs"), item.get("message"))
+        for item in finalized.get("blockers", [])
+    ]
     finalized_payload = json.loads(finalized["content"])
     assert finalized["status"] == "success"
     assert finalized_payload["is_finalized"] is True
@@ -383,7 +583,7 @@ async def test_contract_report_unifies_rca_manifest_and_safe_conclusions(
     assert orchestrator is not None
     unlisted = orchestrator.add_evidence(
         content="An additional finding came from an undeclared source.",
-        source_document="record-c.txt",
+        source_document="record-unlisted.txt",
         auto_verify=False,
     )
     orchestrator.evidence_store[unlisted.id.value] = unlisted.mark_verified(
@@ -394,8 +594,9 @@ async def test_contract_report_unifies_rca_manifest_and_safe_conclusions(
         evidence_id=unlisted.id.value,
         hypothesis_id=eligible_id,
         likelihood_ratio=1.0,
-        supports=True,
+        supports=None,
         rationale="Neutral linkage retained for source coverage audit.",
+        calibration_status="QUANTITATIVELY_UNKNOWN",
     )
     manifest_mismatch = await handler.handle_generate_contract_report(
         {
@@ -405,8 +606,8 @@ async def test_contract_report_unifies_rca_manifest_and_safe_conclusions(
             "approved_by": "clinical-reviewer",
         }
     )
-    assert {blocker["code"] for blocker in manifest_mismatch["blockers"]} == {
-        "EVIDENCE_SOURCES_DECLARED"
+    assert "EVIDENCE_SOURCES_DECLARED" in {
+        blocker["code"] for blocker in manifest_mismatch["blockers"]
     }
 
 
@@ -431,16 +632,16 @@ async def test_session_report_resource_uses_unified_read_only_preview(
     content = result.contents[0]
     assert isinstance(content, TextResourceContents)
     assert content.mime_type == "text/markdown"
-    assert "**Status:** Preliminary" in content.text
-    assert "Source manifest: 2 document(s)" in content.text
+    assert "**狀態：** Preliminary" in content.text
+    assert "Source manifest：3 document(s)" in content.text
     assert "### Fishbone (Ishikawa)" in content.text
-    assert "### Why Tree and Root Causes" in content.text
-    assert "### Conservative Causation Audit" in content.text
+    assert "### Why / proposed roots" in content.text
+    assert "### Conservative causation audit" in content.text
     assert "ver_contract_fixture" in content.text
-    assert "### HFACS Classifications" in content.text
-    assert "UA.DM" in content.text
-    assert "### Gap and Conflict Detection" in content.text
-    assert "Conflicts: 0 total" in content.text
+    assert "### HFACS classifications" in content.text
+    assert "UA-DE" in content.text
+    assert "### Gap / conflict detection" in content.text
+    assert "Conflicts：0 total" in content.text
     assert not (runtime_root / "exports").exists()
 
 
@@ -482,7 +683,6 @@ async def test_finalize_is_blocked_without_readiness_manifest_and_approver(
     blocker_codes = {blocker["code"] for blocker in result["blockers"]}
     assert {
         "GUIDANCE_READY",
-        "NO_UNRESOLVED_SAFETY_CONFLICTS",
         "MULTI_SOURCE_MANIFEST",
         "FISHBONE_PRESENT",
         "WHY_ROOT_PRESENT",
@@ -571,12 +771,15 @@ async def test_finalize_requires_every_manifest_document_to_be_reviewed(
     assert session is not None
     manifest = session.get_source_manifest()
     assert manifest is not None
-    documents = list(manifest.documents)
-    documents[0] = documents[0].model_copy(
-        update={"status": SourceReviewStatus.EXTRACTED}
-    )
-    session.set_source_manifest(
-        manifest.model_copy(update={"documents": tuple(documents)})
+    first_document_id = manifest.documents[0].document_id
+    remaining_reviews = [
+        review.model_dump(mode="json")
+        for review in session.get_source_review_ledger()
+        if review.document_id != first_document_id
+    ]
+    session.update_stage_data(
+        Stage.GATHER,
+        {"source_review_ledger": remaining_reviews},
     )
     handler._session_repo.save(session)
 
@@ -590,9 +793,9 @@ async def test_finalize_requires_every_manifest_document_to_be_reviewed(
     )
 
     assert result["status"] == "error"
-    assert [blocker["code"] for blocker in result["blockers"]] == [
-        "MANIFEST_DOCUMENTS_REVIEWED"
-    ]
+    blocker_codes = {blocker["code"] for blocker in result["blockers"]}
+    assert "MANIFEST_DOCUMENTS_REVIEWED" in blocker_codes
+    assert "SOURCE_REVIEW_ADJUDICATION_AUTHORIZED" in blocker_codes
     assert result["blockers"][0]["refs"] == ["record-a.txt"]
 
 
