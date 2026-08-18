@@ -19,7 +19,7 @@ a case; their schemas override copied examples in this guide.
 RootCause MCP is NOT a diagnostic AI. It's a **reasoning harness** that helps you:
 - Structure your differential diagnosis process
 - Track evidence with provenance
-- Quantify uncertainty
+- Express uncertainty without inventing precision
 - Generate auditable reports
 
 The Agent performs the clinical interpretation. MCP has no independent thinking
@@ -27,6 +27,12 @@ ability and does not parse raw PDF, DOCX, image, scan, spreadsheet, or EHR batch
 The host or an approved extractor must preserve citation-ready text/cells, source
 locations, hashes, time precision, units, negation, OCR corrections, and extraction
 method before registering atomic evidence.
+
+For clinician-facing output, use Traditional Chinese prose while keeping canonical
+diagnosis, test, drug, device, and procedure names in English. An established
+abbreviation may receive an optional Traditional Chinese gloss on first use; exact
+source quotations and units remain unchanged. The focused harness reference is
+[Clinician DDx Discussion (zh-TW)](../.codex/skills/rootcause-clinical-reasoning-harness/references/clinician-ddx-discussion-zh-tw.md).
 
 ### Token-efficient operating mode
 
@@ -43,6 +49,8 @@ to write the report. Generate a preliminary artifact first:
     "session_id": "sess_001",
     "format": "markdown",
     "detail_level": "standard",
+    "locale": "zh-TW",
+    "audience": "clinician",
     "finalize": false
 }
 ```
@@ -54,8 +62,9 @@ context-efficient checkpoints and `full` for human audit.
 
 `finalize=true` recomputes every hard check and fails closed. It requires a reviewed
 multi-source manifest, complete final sections, no high/critical conflicts, at least
-three unique diagnoses with typed evidence/test dispositions, safe leading and
-must-not-miss challenges, Fishbone/Why artifacts, exact root/audit/evidence lineage,
+three unique diagnoses across at least two non-`UNKNOWN` mechanisms with typed
+candidate/evidence/test dispositions, safe leading and must-not-miss challenges,
+Fishbone/Why artifacts, exact root/audit/evidence lineage,
 safe root dispositions, and an `approved_by` identity in
 `ROOTCAUSE_AUTHORIZED_REVIEWERS`. Finalization adds reviewer/time/hash metadata and
 recursively freezes the domain snapshot. Durable WORM storage still belongs to the
@@ -66,7 +75,7 @@ clinician. The deployment must verify the reviewer role independently.
 
 ---
 
-## 🚨 Critical: Required Fields Force Transparency
+## 🚨 Critical: Candidate Records Force Transparency
 
 Our tools have **required fields** that force you to expose your reasoning:
 
@@ -75,12 +84,12 @@ Our tools have **required fields** that force you to expose your reasoning:
 ```json
 {
   "session_id": "sess_001",
-  "diagnosis": "Acute MI",
-  "prior_probability": 0.3
+  "diagnosis": "Acute Myocardial Infarction"
 }
 ```
 
-**Problem**: We don't know WHY you think it's MI, WHAT ELSE you considered, or WHAT makes you uncertain.
+**Problem**: We do not know why it was considered, which mechanisms were searched,
+which evidence is source-linked, or what remains unknown.
 
 ---
 
@@ -89,44 +98,25 @@ Our tools have **required fields** that force you to expose your reasoning:
 ```json
 {
   "session_id": "sess_001",
-  "diagnosis": "Acute MI",
+  "diagnosis": "Acute Myocardial Infarction",
   "icd10_code": "I21.9",
-  "prior_probability": 0.3,
+  "mechanism_category": "VASCULAR",
+  "diagnostic_role": "ETIOLOGIC",
+  "reasoning_basis": "MECHANISM_INFERENCE",
+  "certainty": "POSSIBLE",
   "must_not_miss": true,
-  
-  "clinical_reasoning": "65M with acute onset substernal chest pain radiating to left arm, elevated troponin I (2.5 ng/mL), and ST elevation in leads II, III, aVF. Recent CABG 3 days ago increases suspicion for graft failure or perioperative MI.",
-  
-  "differential_diagnoses_considered": [
-    {
-      "diagnosis": "Pulmonary Embolism",
-      "reason_rejected": "No dyspnea, no disproportionate tachycardia, and no right-heart strain. Recent surgery still makes PE a must-not-miss condition, so an adequate definitive imaging plan is required.",
-      "likelihood_if_not_rejected": "moderate"
-    },
-    {
-      "diagnosis": "Aortic Dissection",
-      "reason_rejected": "Pain is not tearing/ripping quality, no blood pressure differential between arms, no widened mediastinum on portable CXR.",
-      "likelihood_if_not_rejected": "low"
-    },
-    {
-      "diagnosis": "Pneumonia",
-      "reason_rejected": "No fever, no productive cough, WBC normal, no infiltrate on CXR.",
-      "likelihood_if_not_rejected": "low"
-    },
-    {
-      "diagnosis": "Post-pericardiotomy Syndrome",
-      "reason_rejected": "No pericardial friction rub, pain is not positional, troponin is elevated (not typical for post-pericardiotomy).",
-      "likelihood_if_not_rejected": "moderate"
-    }
-  ],
-  
+
+  "clinical_reasoning": "Inference: EV-001 and EV-002 form a compatible ischemic phenotype; Acute Myocardial Infarction is considered, but the mechanism is not confirmed.",
+
+  "differential_diagnoses_considered": [],
+
   "uncertainty_factors": [
-    "Troponin trend pending (only one value available)",
-    "No prior ECG for comparison",
-    "Patient on beta-blockers which may blunt tachycardic response",
-    "Recent surgery makes interpretation of inflammatory markers difficult"
+    "not measured: serial ECG; competing ischemic and non-ischemic mechanisms remain open",
+    "not documented: prior ECG comparison",
+    "unverified: EV-002 exact source match"
   ],
-  
-  "confidence_rationale": "Assigned moderate prior probability (0.3) because: (1) Classic presentation with chest pain + troponin elevation, (2) Recent CABG is a strong risk factor, (3) However, atypical features (no diaphoresis, patient on beta-blockers) and pending troponin trend prevent higher confidence.",
+
+  "confidence_rationale": "POSSIBLE: compatible source-linked observations exist, but no completed discriminating test supports a higher certainty label. Any server compatibility prior is an implementation placeholder, not a clinical probability.",
   "planned_tests": [
     {
       "name": "Serial ECG",
@@ -138,6 +128,13 @@ Our tools have **required fields** that force you to expose your reasoning:
   ]
 }
 ```
+
+The example records one candidate; it is not a complete differential. Expand the
+phenotype/time course across the maximum reasonable distinct mechanisms, then prune
+synonyms and candidates with no plausible mechanism or decision impact. Three unique
+diagnoses, two non-`UNKNOWN` mechanisms, and one applicable must-not-miss diagnosis are
+finalization floors, not a clinical target or cap. Each active candidate needs its own
+why-considered rationale, uncertainty, evidence/test disposition, and certainty label.
 
 The legacy `evidence_supporting` and `evidence_contradicting` proposal fields are
 deprecated context-only inputs: they do not create or persist an association. Call
@@ -175,7 +172,7 @@ await rc_think_aloud(
             "reason_rejected": "No hypoxemia or right-heart strain"
         }
     ],
-    confidence=0.7,
+    confidence=agent_declared_workflow_confidence,
     uncertainty_factors=["Serial ECG pending"]
 )
 
@@ -184,16 +181,17 @@ await rc_propose_hypothesis(
     session_id="sess_001",
     diagnosis="Acute myocardial infarction",
     icd10_code="I21.9",
-    prior_probability=0.3,
+    mechanism_category="VASCULAR",
+    diagnostic_role="ETIOLOGIC",
+    reasoning_basis="MECHANISM_INFERENCE",
+    certainty="POSSIBLE",
     clinical_reasoning="Chest pain, ECG findings, and troponin support acute MI.",
-    differential_diagnoses_considered=[
-        {
-            "diagnosis": "Pulmonary embolism",
-            "reason_rejected": "No hypoxemia or right-heart strain"
-        }
-    ],
+    differential_diagnoses_considered=[],
     uncertainty_factors=["Serial ECG pending"],
-    confidence_rationale="Typical presentation with one important pending test",
+    confidence_rationale=(
+        "POSSIBLE because observations are compatible but the discriminating test "
+        "is pending; any compatibility prior is not a clinical probability"
+    ),
     planned_tests=[
         {
             "name": "Serial ECG",
@@ -208,9 +206,23 @@ await rc_propose_hypothesis(
 )
 ```
 
-Repeat the proposal for at least three normalized, non-duplicate diagnoses. The
-server assigns each planned test a stable `test_id` and binds it to the new
+Repeat across the maximum reasonable distinct mechanisms. The deterministic report
+floor is at least three normalized diagnoses across two non-`UNKNOWN` mechanisms plus
+one applicable must-not-miss entry; it is not a breadth target or cap. The server
+assigns each planned test a stable `test_id` and binds it to the new
 `target_hypothesis_id`; free-text gaps are not equivalent to a typed test.
+
+Select a syndrome-appropriate framework and call `rc_audit_differential_breadth`
+(condensed: `rc_hypothesis(action="audit_breadth")`). Built-in `VINDICATE`,
+`FIVE_H_FIVE_T`, `ANATOMIC_SYSTEM`, and `MEDICATION_DEVICE_EXPOSURE` audits require
+every exact canonical cell from the live tool schema. A `CUSTOM` audit requires an
+explicit name and at least two cells.
+
+Every cell must be `CANDIDATES_PRESENT`, `REVIEWED_NO_PLAUSIBLE_CANDIDATE`,
+`REVIEWED_INSUFFICIENT_DATA`, or `NOT_ASSESSED`. A final PRIMARY audit may contain no
+`NOT_ASSESSED`. Insufficient data is still reviewed coverage only when the cell keeps
+explicit unknowns and typed planned discriminators; it is never evidence of exclusion.
+The breadth audit demonstrates systematic review, not clinical correctness.
 
 ---
 
@@ -256,7 +268,7 @@ await rc_think_aloud(
     thinking_type="DECISION_POINT",
     content="Initial differential includes ACS, PE, and aortic dissection",
     internal_reasoning="Acute chest pain requires simultaneous exclusion of time-critical causes.",
-    confidence=0.5
+    confidence=agent_declared_workflow_confidence
 )
 
 # Decision point 2: After ECG
@@ -265,7 +277,7 @@ await rc_think_aloud(
     thinking_type="EVIDENCE_EVALUATED",
     content="Inferior STEMI pattern identified",
     internal_reasoning="ST elevation in II, III, aVF with reciprocal changes supports inferior STEMI.",
-    confidence=0.85
+    confidence=agent_declared_workflow_confidence
 )
 
 # Reflection after key evidence
@@ -349,31 +361,27 @@ Resolve hard failures through the corresponding evidence, hypothesis, RCA, or
 review workflow. Do not edit the rendered report or fabricate `PASS` entries. Only
 an operator-authorized, independently qualified reviewer may request `finalize=true`.
 
-### 1. Always Consider Alternatives
+### 1. Explore Bounded Mechanism Breadth
 
-**Don't just propose ONE diagnosis. Show us what else you considered.**
+Do not stop at one pattern-matched diagnosis or at the three-item conformance floor.
+Define the phenotype and time course, map the plausible mechanism categories, retain
+applicable must-not-miss candidates, and ask which feasible discriminator would alter
+the disposition. Merge synonyms and prune candidates with no plausible mechanism or
+decision impact. This produces maximum reasonable breadth without an infinite laundry
+list.
 
-```python
-# ❌ Bad
-await rc_propose_hypothesis(diagnosis="MI", ...)
-
-# ✅ Good
-await rc_propose_hypothesis(
-    diagnosis="MI",
-    differential_diagnoses_considered=[
-        {"diagnosis": "PE", "reason_rejected": "...", ...},
-        {"diagnosis": "Pneumonia", "reason_rejected": "...", ...},
-        {"diagnosis": "Aortic dissection", "reason_rejected": "...", ...}
-    ],
-    ...
-)
-```
+For every candidate, persist canonical English diagnosis, `mechanism_category`,
+`diagnostic_role`, `reasoning_basis`, qualitative `certainty`, why considered,
+source-linked supporting/refuting/neutral evidence, candidate-specific unknowns, and a
+discriminating test. Safety priority and certainty are separate dimensions.
 
 ---
 
-### 2. Quantify Your Uncertainty
+### 2. Make Unknowns Decision-Relevant
 
-**Don't just say "I'm not sure". Tell us WHAT makes you unsure.**
+Classify an unknown as `not documented`, `not measured`, `pending`, `conflicting`,
+`unverified`, or `unknown`. It is not negative evidence. State which mechanisms remain
+open, which candidates it affects, and what source/test/review could resolve it.
 
 ```python
 # ❌ Bad
@@ -381,33 +389,35 @@ uncertainty_factors=["Not sure"]
 
 # ✅ Good
 uncertainty_factors=[
-    "Troponin trend pending (only one value)",
-    "No prior ECG for comparison",
-    "Patient on beta-blockers (may mask tachycardia)",
-    "Recent surgery makes inflammatory markers hard to interpret"
+    "pending: serial ECG; affects VASCULAR candidate certainty",
+    "not documented: prior ECG; baseline comparison remains open",
+    "unverified: EV-002 exact source match; do not treat as confirmed"
 ]
 ```
 
 ---
 
-### 3. Explain Your Confidence
+### 3. Use Qualitative Certainty Without False Precision
 
-**Don't just give a number. Explain WHY.**
+Use `UNKNOWN`, `POSSIBLE`, `PROBABLE`, `HIGH_CONFIDENCE`, `CONFIRMED`, or `EXCLUDED`
+and explain the evidence/test basis. `PROBABLE` or higher requires genuine evidence or
+a completed discriminating test; `CONFIRMED` must match lifecycle status.
 
 ```python
-# ❌ Bad
-prior_probability=0.3
+# ❌ Bad: unexplained number presented as a clinical probability
+prior_probability=guessed_number
 
-# ✅ Good
-prior_probability=0.3,
-confidence_rationale="""
-Moderate confidence (0.3) because:
-- Classic presentation (chest pain + troponin elevation) → increases confidence
-- Recent CABG (strong risk factor) → increases confidence
-- BUT: Atypical features (no diaphoresis, on beta-blockers) → decreases confidence
-- AND: Troponin trend pending → prevents higher confidence
-"""
+# ✅ Good: qualitative label plus source-linked basis and a discriminator
+certainty="POSSIBLE",
+confidence_rationale=(
+    "EV-001 is compatible but not specific; EV-002 is unverified and the serial "
+    "ECG discriminator remains pending"
+)
 ```
+
+When the server supplies a numeric compatibility default, disclose it as an
+implementation placeholder. Do not show it as clinical probability, ranking, or
+certainty. A posterior number never automatically determines the certainty enum.
 
 ---
 
@@ -494,12 +504,14 @@ System: "Here's the recorded reasoning chain, including alternatives considered,
 
 - Source manifest coverage and verification state
 - Typed evidence graph and source-to-claim lineage
-- At least three unique diagnoses with active/test dispositions and must-not-miss flags
+- A complete PRIMARY framework breadth audit plus the deterministic DDx floors, typed
+  candidate/evidence/test dispositions, and must-not-miss flags
 - Reasoning chain
 - Thinking chain
 - Fishbone, Why Tree/root causes, HFACS, and conflict/readiness sections
 - Conservative causation audits with explicit non-proof scope and safe root dispositions
-- Quality metrics (evidence coverage, hypothesis coverage, avg confidence)
+- Quality metrics (evidence coverage and hypothesis coverage; any workflow confidence
+  scalar remains separate from clinical probability/certainty)
 - Machine-readable `conformance_checks[]`
 - Final-only reviewer, timezone-aware finalization time, and recomputable content hash
 
@@ -507,10 +519,10 @@ System: "Here's the recorded reasoning chain, including alternatives considered,
 
 ## 🎯 Summary: Your Responsibilities as an Agent
 
-1. **Think deeply** — Don't just pattern match, reason through the case
-2. **Consider alternatives** — Always list what else you considered
-3. **Quantify uncertainty** — Tell us what makes you unsure
-4. **Explain confidence** — Don't just give a number, explain why
+1. **Think explicitly** — Separate observation, clinical inference, and causal claim
+2. **Cover mechanisms** — Build maximum reasonable breadth, not a fixed-three or infinite list
+3. **Use unknowns** — State what remains open and what would discriminate it
+4. **Label certainty** — Use qualitative labels with evidence/test support, not invented precision
 5. **Acknowledge biases** — We all have them, identify yours
 6. **Record decision points** — Use `rc_think_aloud` when the ranking changes
 7. **Reflect regularly** — Use rc_reflect to audit your own reasoning
@@ -524,9 +536,14 @@ System: "Here's the recorded reasoning chain, including alternatives considered,
 2. Call `rc_add_evidence` for each atomic traceable finding, preserving exact snippet,
    source location, and canonical event time when defensible.
 3. Call `rc_think_aloud` to record the explicit decision frame.
-4. Maintain at least three hypotheses, flag applicable must-not-miss conditions, and
-   call `rc_propose_hypothesis` with full explicit rationale and typed
-   `planned_tests` where observed refuting evidence is not yet available.
+4. Build the maximum reasonable mechanism-based DDx, choose a syndrome-appropriate
+   framework, and record every cell with `rc_audit_differential_breadth` (or condensed
+   `rc_hypothesis(action="audit_breadth")`). Treat three unique diagnoses,
+   two non-`UNKNOWN` mechanisms, and one applicable must-not-miss entry as finalization
+   floors, then call `rc_propose_hypothesis` with candidate classifications, rationale,
+   uncertainty, certainty, and typed `planned_tests` where a discriminator is pending.
+   A final PRIMARY breadth audit cannot leave `NOT_ASSESSED`; reviewed insufficient
+   data stays open with unknowns and typed discriminators.
 5. Call `rc_link_evidence_to_hypothesis` with the direct applied LR for supporting and
    disconfirming evidence.
 6. Call `rc_reflect`, conflict detection, the conservative causation audit, and the
@@ -534,9 +551,11 @@ System: "Here's the recorded reasoning chain, including alternatives considered,
    omit rejected claims and keep insufficient-data candidates proposed.
 7. Run `rc_audit_reasoning_state` until every prerequisite is resolved or explicitly
    left as a preliminary limitation.
-8. Call `rc_generate_contract_report(format="markdown", finalize=false)` for review.
-   Inspect `conformance_checks[]`; only a named, operator-authorized, independently
-   qualified human may approve a gated final artifact.
+8. Call `rc_generate_contract_report(format="markdown", locale="zh-TW",
+   audience="clinician", finalize=false)` for clinician review. This localization is
+   for the built-in Markdown renderer; custom templates retain their own language and
+   JSON/FHIR values are not translated. Inspect `conformance_checks[]`; only a named,
+   operator-authorized, independently qualified human may approve a gated final artifact.
 
 ## Agent MVP Evaluation Status
 
@@ -562,6 +581,8 @@ Agent MVP.
 
 ---
 
-**Version**: 1.3
-**Last Updated**: 2026-08-17
+**Version**: 2.0.0a2
+
+**Last Updated**: 2026-08-18
+
 **For**: All AI Agents (Claude Code, Codex, OpenClaw, Cline, Z.ai, etc.)

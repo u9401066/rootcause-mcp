@@ -53,6 +53,9 @@
 | 2026-08-17 | **不得把工程 alpha 宣稱為自主診斷或臨床 production system** | 人工審閱、RBAC、tenant isolation、encryption-at-rest、retention、正式 migration 與受監管驗證仍是 production 前置條件 |
 | 2026-08-17 | **Final report 必須 deterministic recompute，不信任 Agent 自報 PASS** | Typed nested schema、完整 `conformance_checks[]`、root/audit lineage、DDx/test disposition、reviewer/time/hash 與 recursive immutability 共同構成 fail-closed final boundary |
 | 2026-08-17 | **Public eval corpus 不是 blinded case/gold** | 正式 Agent MVP 評估需要 repo 外 private case bundle、分離的 private holdout、至少三個真實 runtime、可信 server/proxy trace、36 個 clean-root jobs，以及每個 job 兩名 clinical reviewers 盲評與分歧裁決；目前為 `AGENT_EVAL_NOT_ESTABLISHED` |
+| 2026-08-18 | **Unknown 與來源時間是 typed evidence，不是陰性或假 chronology** | Evidence 使用 `instant/date/range/relative/unknown`；只有來源自帶 offset 的 instant 可排序或支持 temporality，其他狀態合法保留為 unpositioned |
+| 2026-08-18 | **Final clinical semantics 必須由 explicit ledger state 決定** | Leading diagnosis 由 append-only selection event 指定；非中性 LR cross-link verified LITERATURE calibration evidence；source 與 HFACS review 均需 allowlisted reviewer，不能信任 array order、caller citation 或 suggestion |
+| 2026-08-18 | **2.0.0a2 仍標示 engineering alpha** | Deterministic conformance 可證明 artifact mechanics 與 unsafe finalization 阻擋，不證明 unseen-case DDx、臨床有效性或 causal truth；formal private 36-run 與雙 clinician 盲評仍未建立 |
 
 ---
 

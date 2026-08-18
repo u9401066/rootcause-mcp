@@ -95,9 +95,9 @@ bandit>=1.7
 ## Project Description
 
 RootCause MCP v2.0.0-alpha 是醫學推理專用 MCP Harness。核心賣點不是取代
-Agent 閱讀 raw 病歷或做臨床判斷，而是把可重複的 schema context、Bayesian 計算、
-持久化、圖表、完整性檢查與專業報告組裝移到 deterministic code。36 個工具可透過
-clinical(16)、RCA(21) 或 all(36) profiles 曝光；SDK 2.0 compact structured transport
+Agent 閱讀 raw 病歷或做臨床判斷，而是把可重複的 schema context、evidence relation、
+持久化、圖表、完整性檢查與專業報告組裝移到 deterministic code。46 個離散工具可透過
+clinical(25)、RCA(24) 或 all(46) profiles 曝光，另有 8-tool condensed facade；SDK 2.0 compact structured transport
 避免 text/JSON duplication，brief/standard/full Markdown 報告不呼叫 server-side LLM。
 
 
@@ -115,6 +115,7 @@ Interface (profiled MCP tools, Mermaid/FHIR/Markdown presenters)
 - Python 3.12+
 - MCP SDK 2.0
 - Pydantic v2
+- JSON Schema 2020-12 validation (`jsonschema`)
 - SQLModel
 - SQLite
 - NetworkX
@@ -127,8 +128,8 @@ Interface (profiled MCP tools, Mermaid/FHIR/Markdown presenters)
 
 - mcp>=2.0.0
 - pydantic>=2.0
+- jsonschema>=4.26.0
 - sqlmodel>=0.0.22
 - aiosqlite>=0.20.0
 - networkx>=3.0
 - structlog>=24.0
-

@@ -1,5 +1,13 @@
 # 深度推理追蹤架構：從「薄 MCP」到「認知層 MCP」
 
+> [!CAUTION]
+> **歷史設計文件（non-normative）。** 本文保留早期「認知層 MCP」構想，部分
+> 欄位、工具名稱與完成狀態已過時。RootCause MCP 不會讀取 Agent 的 hidden
+> chain-of-thought，也不自行產生醫療推理；現行系統只保存 Agent 明確提交、可供
+> 稽核的 rationale、evidence/test disposition 與結構化 audit record。請以
+> [API reference](../api.md) 及
+> [MVP conformance and Agent evaluation](../mvp_conformance_and_evaluation.md) 為準。
+
 > **問題**：如何讓 Agent 的複雜內部思考過程變得透明且可稽核？  
 > **答案**：建立「認知層 MCP」，捕捉思考過程而非僅記錄結果
 

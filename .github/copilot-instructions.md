@@ -6,9 +6,15 @@
 
 ## 專案概述
 
-這是 **RootCause MCP 2.x 臨床推理與醫療根因分析專案**。它以 MCP SDK 2 提供 43 個 discrete tools 或 8 個 condensed facade tools，讓不同 host agent 將多來源、去識別化病歷整理成具來源血緣的時間線、鑑別診斷、Bayesian evidence links、認知偏誤審查、Fishbone／Why／HFACS 因果分析與標準化交接產物。
+這是 **RootCause MCP 2.x 臨床推理與醫療根因分析專案**。它以 MCP SDK 2 提供 46 個 discrete tools 或 8 個 condensed facade tools，讓不同 host agent 將多來源、去識別化病歷整理成具來源血緣的時間線、鑑別診斷、evidence links、認知偏誤審查、Fishbone／Why／HFACS 保守因果稽核與標準化交接產物。
 
 RootCause 是回溯性決策支援與稽核 harness，不是自主診斷或治療系統。所有 case workflow 必須遵守 exact provenance、PHI 最小化、保守因果判定及 qualified-human review。
+
+MCP 本身不會思考或下診斷；host Agent 負責臨床推論，RootCause MCP 只保存、驗證與約束可稽核產物。對醫師的敘述使用繁體中文，diagnosis、test、drug、procedure 等標準名稱保留 English；首次出現的既定縮寫可附繁中對照，來源中的原文與單位不得翻譯改寫。
+
+建立 DDx 時，先以 phenotype、time course 與不同 mechanism category 展開最大合理廣度，再選 syndrome-appropriate framework 逐一審查所有 required cells。Final PRIMARY breadth audit 不得留下 `NOT_ASSESSED`；`REVIEWED_INSUFFICIENT_DATA` 必須保留 unknowns 與 typed planned discriminators，不能視為排除。三個不重複候選是 deterministic finalization floor，不是推理目標或上限；同時避免同義重複與無限 laundry list。每個 active candidate 都要說明 why considered、source-linked support／refute／neutral evidence、unknown、discriminating test 與 qualitative certainty，並用具理由的 mutation 明確選擇 leading diagnosis。`unknown` 不是 negative finding；不得捏造 probability 或 LR，`LR=1.0` 只能表示 neutral／quantitatively unknown。非中性 LR 必須另外連到 verified `LITERATURE` calibration evidence，不能只寫一個看似合法的 citation 字串。
+
+時間必須保留來源精度：只有來源自帶 offset 的 `instant` 可排序或支持 temporality；`date`、`range`、`relative`、`unknown` 都是合法 final 狀態，但不可被補成假時間。Pinned manifest 的 identity/digest 不可改；抽取後以 allowlisted reviewer 的 `rc_adjudicate_source` append review/independence event。每個 Fishbone cause 也必須由 allowlisted reviewer persist HFACS `CONFIRMED` 或 `NOT_APPLICABLE` disposition，不能把 suggestion 或 `rc_add_cause` 的任意 code 當人工確認。
 
 ---
 

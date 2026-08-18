@@ -3,11 +3,17 @@
 > MCP SDK 2.0 tool index. The live JSON Schemas returned by `tools/list` are the
 > authoritative contract.
 
-RootCause MCP is an engineering-alpha reasoning ledger. The Agent supplies clinical
+RootCause MCP 2.0.0a2 (2026-08-18) is an engineering-alpha reasoning ledger, not a
+clinically validated diagnostic system. The Agent supplies clinical
 interpretation; the server supplies schemas, persistence, deterministic calculations,
 workflow gates, and standardized artifacts. It does not think, diagnose, or parse
 raw PDF/DOCX/image/scan/spreadsheet/EHR batches. A host or approved extractor must
 preserve citation-ready source spans before calling the evidence tools.
+
+For built-in clinician-facing Markdown, the host may request Traditional Chinese
+explanatory copy while persisted diagnosis, test, drug, device, procedure, quote, ID,
+code, enum, JSON, and FHIR values remain unchanged. MCP localization does not add
+clinical reasoning; the host Agent must still construct the source-grounded DDx.
 
 ## Common Contract
 
@@ -36,9 +42,9 @@ Use `ROOTCAUSE_TOOL_PROFILE` to reduce the schema catalog placed in Agent contex
 | Profile | Advertised tools | Intended workflow |
 | --- | ---: | --- |
 | `condensed` | 8 | Unified polymorphic facades (`rc_evidence`, `rc_hypothesis`, `rc_thinking`, `rc_audit`, `rc_report`, `rc_diagram`, `rc_checkpoint`, `rc_rca`) for a smaller discovery surface |
-| `clinical` | 23 | Evidence, DDx, cognitive audit, conflict detection, checkpoints, reasoning, guidance, report, causation |
-| `rca` | 23 | Session, HFACS, Fishbone, Why Tree, checkpoints, diagrams, causation |
-| `all` | 43 | Complete catalog; default for full compatibility |
+| `clinical` | 25 | Evidence, DDx, breadth/leading audit, cognitive audit, conflict detection, checkpoints, reasoning, guidance, report, causation |
+| `rca` | 24 | Session/source review, HFACS, Fishbone, Why Tree, checkpoints, diagrams, causation |
+| `all` | 46 | Complete catalog; default for full compatibility |
 
 Hidden profile tools are not dispatchable. This prevents accidental calls and makes
 the advertised catalog match the executable surface.
@@ -53,8 +59,12 @@ When using `ROOTCAUSE_TOOL_PROFILE=condensed`, the tool surface is consolidated 
    - `action="verify"`: Perform physical file snippet matching and SHA-256 validation.
 2. `rc_hypothesis`:
    - `action="propose"`: Propose differential diagnosis hypothesis.
+   - `action="audit_breadth"`: Persist a syndrome-framework coverage audit.
    - `action="link"`: Link evidence with likelihood ratios.
-   - `action="rank"`: Retrieve posterior-ranked differential list.
+   - `action="select_leading"`: Select one active leading hypothesis and append
+     a reasoned transition record; array order and compatibility values cannot select it.
+   - `action="rank"`: Retrieve the differential ledger in stable insertion order;
+     the response identifies any explicitly selected leading hypothesis.
    - `action="exclude"`: Exclude hypothesis with clinical justification.
 3. `rc_thinking`:
    - `action="think"`: Record explicit diagnostic rationale and confidence.
@@ -81,7 +91,11 @@ When using `ROOTCAUSE_TOOL_PROFILE=condensed`, the tool surface is consolidated 
    - `action="restore"`: Restore session to previously saved checkpoint.
    - `action="list"`: List existing checkpoints for a session.
 8. `rc_rca`:
-   - Route session lifecycle (`session_start`, `session_get`, `session_list`, `session_archive`), traditional 6M Fishbone (`fishbone_init`, `fishbone_add_cause`, `fishbone_get`, `fishbone_export`), 5-Why Tree (`why_ask`, `why_get`, `why_link`, `why_mark_root`, `why_export`, `why_teach`), and HFACS-MES (`hfacs_suggest`, `hfacs_confirm`, `hfacs_framework`).
+   - Route session lifecycle (`session_start`, `session_adjudicate_source`,
+     `session_get`, `session_list`, `session_archive`), traditional 6M Fishbone
+     (`fishbone_init`, `fishbone_add_cause`, `fishbone_get`, `fishbone_export`),
+     5-Why Tree (`why_ask`, `why_get`, `why_link`, `why_mark_root`, `why_export`,
+     `why_teach`), and HFACS-MES (`hfacs_suggest`, `hfacs_confirm`, `hfacs_framework`).
 
 `rc_get_reasoning_chain`, learned-rule administration, and the 6M/HFACS mapping
 remain discrete-only. Read the live `tools/list` response rather than calling an
@@ -95,8 +109,10 @@ undocumented facade action.
 | `rc_get_evidence` | Retrieve evidence by ID |
 | `rc_verify_evidence` | Deterministically verify raw snippet against files on disk or record reviewer audit |
 | `rc_propose_hypothesis` | Create a diagnosis hypothesis with prior and explicit rationale |
+| `rc_audit_differential_breadth` | Persist exact-cell review of a syndrome-appropriate DDx framework |
 | `rc_link_evidence_to_hypothesis` | Apply a likelihood ratio and retain its rationale |
-| `rc_get_differential_diagnosis` | Return active hypotheses ranked by posterior probability |
+| `rc_select_leading_hypothesis` | Explicitly select the active lead with actor, reason, time, and append-only history |
+| `rc_get_differential_diagnosis` | Return the stable differential ledger and explicit leading selection; uncalibrated compatibility values never control order |
 | `rc_exclude_hypothesis` | Exclude a hypothesis with reviewer and reason |
 | `rc_detect_conflicts` | Detect diagnostic contradictions, paradoxical drug reactions, and guideline omissions |
 | `rc_create_checkpoint` | Create an integrity-checked JSON state snapshot with SHA-256 hash |
@@ -108,6 +124,7 @@ undocumented facade action.
 | `rc_generate_contract_report` | Generate JSON, FHIR-compatible, or deterministic Markdown output |
 | `rc_validate_diagram` | Audit, validate, and auto-sanitize Mermaid syntax across all diagram types |
 | `rc_render_timeline` | Render structured event timelines with clinical pattern clustering |
+| `rc_adjudicate_source` | Append an allowlisted-reviewer transition for extraction, de-identification, and source-independence state without changing the manifest digest |
 
 ## MCP Resources & Prompts
 
@@ -119,7 +136,8 @@ undocumented facade action.
 - `clinical://protocols/clinical-reasoning-sop`: Core diagnostic investigation playbook.
 - `clinical://templates/anesthesia-mm-rca-report-template`: Anesthesia M&M Markdown template.
 - `clinical://templates/near-miss-adverse-event-rca-template`: Near-miss & barrier failure template.
-- `clinical://domains/*`: Specialized crisis playbooks.
+- `clinical://domains/*`: Non-normative retrospective DDx prompts; never active-care
+  management, treatment/rescue instructions, or patient-specific dosing.
 
 ### Dynamic Resource Templates
 
@@ -135,6 +153,10 @@ undocumented facade action.
 - `perioperative_crisis_differential`: Crisis differential expansion.
 - `near_miss_barrier_analysis`: Swiss Cheese non-death adverse event analysis.
 - `delayed_diagnosis_investigation`: Diagnostic trajectory and cognitive bias investigation.
+- `clinician_ddx_discussion_zh_tw`: General mechanism-based DDx discussion in
+  Traditional Chinese with English canonical medical names, explicit unknowns,
+  candidate-level evidence/test disposition, and qualitative certainty. Arguments:
+  required `case_context`, optional `clinical_question`, and optional `known_unknowns`.
 
 ### `rc_validate_diagram`
 
@@ -185,7 +207,11 @@ Important optional fields:
 - `source_document`: File path or record ID (e.g., `"DATA_SOURCE_01_PRE_ANESTHESIA_EVALUATION.txt"`)
 - `source_location`: Specific location within document (e.g., `"Line 14"`)
 - `raw_snippet`: Exact verbatim excerpt from the physical file for cryptographic lineage
-- `event_timestamp`: Canonical ISO 8601 clinical event time, separate from ingestion time
+- `temporal`: Source-faithful object with `kind` (`instant`, `date`, `range`,
+  `relative`, or `unknown`), exact `raw_value`, derived precision, canonical bounds
+  when defensible, and timezone provenance
+- `event_timestamp`: Legacy alias for `temporal.kind="instant"`; requires `T` plus
+  `Z` or a numeric offset and must not be used for date-only or unknown local time
 - `content_hash`: Optional SHA-256 digest (computed automatically if omitted)
 - `extraction_method`: `"verbatim_quote"`, `"table_cell"`, `"structured_field"`, `"inference"`
 - `auto_verify`: Automatically verify snippet against physical disk file (`default: true`)
@@ -201,6 +227,12 @@ Important optional fields:
   "source_document": "DATA_SOURCE_01_PRE_ANESTHESIA_EVALUATION.txt",
   "source_location": "CV line 14",
   "raw_snippet": "CV: RRR, Grade 2/6 Systolic Murmur at LSB (Left Sternal Border).",
+  "temporal": {
+    "kind": "date",
+    "raw_value": "2026-08-17",
+    "precision": "date",
+    "timezone_provenance": "not_applicable"
+  },
   "clinical_strength": "STRONG",
   "source_reliability": "GRADE_A"
 }
@@ -213,13 +245,47 @@ existence or a line locator alone never verifies the finding. Manual confirmatio
 requires `manual_confirmation=true` and a `verified_by` identity present in the
 operator-controlled `ROOTCAUSE_AUTHORIZED_REVIEWERS` allowlist.
 
+### `rc_adjudicate_source`
+
+The schema-version `1.0` manifest remains immutable after session creation.
+Extraction, de-identification, and independence decisions are appended as review
+events instead of being written back into the manifest. Each event records the
+manifest digest, document ID, state, reviewer, reason, timezone-aware server time,
+and independent/derived lineage. `reviewed_by` must be present in
+`ROOTCAUSE_AUTHORIZED_REVIEWERS`; a source that reached `reviewed` cannot regress.
+
+Finalization uses the latest event for every document and requires all manifest
+documents to be reviewed, de-identified, and explicitly grouped as independent or
+derived. The final report carries the complete typed `source_review_ledger`; its
+inventory projection, manifest binding, event count/order, reviewer, time, and reason
+are recomputed from that ledger. Merely declaring `status="reviewed"` in the initial
+manifest does not satisfy this gate.
+Two records with identical whole-source SHA-256 bytes cannot become independent
+clinical sources merely by assigning different group IDs.
+The manifest payload and digest remain unchanged throughout the lifecycle.
+
+```json
+{
+  "session_id": "case-001",
+  "document_id": "SRC-001",
+  "source_status": "reviewed",
+  "de_identified": true,
+  "independence_status": "independent",
+  "source_group_id": "GROUP-001",
+  "reviewed_by": "Dr Example",
+  "reason": "Exact extraction, de-identification, and source identity reviewed."
+}
+```
+
 ### `rc_audit_reasoning_state`
 
 Evaluates the multi-loop reasoning progress for AI agents (especially lightweight Flash/mini models). Returns:
 
 - `current_stage`: Current clinical reasoning stage (`EVIDENCE_COLLECTION`, `DIFFERENTIAL_EXPANSION`, `BAYESIAN_EVALUATION`, `COGNITIVE_AUDIT`, `READY_FOR_SYNTHESIS`)
 - `completeness_score`: Numerical score (0.0 to 1.0)
-- `checklist`: Detailed readiness checks (minimum 3 hypotheses, evidence linkage, disconfirming tests, uncertainty acknowledged, bias audited)
+- `checklist`: Detailed readiness checks (the deterministic DDx floors, typed
+  classifications, evidence/test dispositions, uncertainty, certainty support, and
+  bias audit). Three diagnoses are a conformance floor, not a clinical breadth target.
 - `next_recommended_actions`: Actionable tool call directives for the agent's next turn
 - `push_questions`: Socratic clinical prompts to deepen analysis
 
@@ -232,6 +298,10 @@ Tree/root causes, HFACS, conflicts, readiness, and artifact hash. Supports:
 
 - `format`: `"json"`, `"fhir"`, or `"markdown"` (default: `"json"`)
 - `detail_level`: `"brief"`, `"standard"`, or `"full"` (default: `"standard"`)
+- `locale`: `"en"` or `"zh-TW"` (default: `"en"`); affects only fixed copy in the
+  built-in Markdown renderer
+- `audience`: `"general"` or `"clinician"` (default: `"general"`); the clinician
+  renderer expands candidate evidence, unknowns, and discriminating tests
 - `template_file`: Optional relative Markdown filename under the configured template allowlist
 - `finalize`: Request gated, content-hashed finalization; defaults to `false`
 - `approved_by`: Explicit approver identity required for finalization; it must be
@@ -251,16 +321,26 @@ set server-side and is rejected unless all of these conditions hold:
 - A `REJECTED` audit result is absent from the root-cause bucket;
   `INSUFFICIENT_DATA` remains `PROPOSED`; an audit pass is labelled
   `AUDIT_OBLIGATIONS_PASSED`, never clinical causal proof.
-- At least three normalized unique diagnoses exist. Every active diagnosis has a
-  genuine evidence/test disposition; the leading and every must-not-miss diagnosis
-  have genuine support plus contradiction or a typed pending disconfirm/rule-out
-  test.
+- At least three normalized unique diagnoses across two non-`UNKNOWN` mechanism
+  categories and one applicable must-not-miss entry exist. These are finalization
+  floors, not the clinical stopping target or cap. Every candidate has typed
+  mechanism/role/certainty/reasoning-basis labels; every active diagnosis has rationale,
+  candidate-specific uncertainty, and genuine `LR != 1.0` evidence or a typed pending
+  discriminating test. The leading and every must-not-miss diagnosis have genuine
+  support plus contradiction or a typed pending disconfirm/rule-out test.
+- At least one `PRIMARY` differential-breadth audit uses a syndrome-appropriate
+  framework, contains every required cell, and leaves no cell `NOT_ASSESSED`.
+  `REVIEWED_INSUFFICIENT_DATA` remains acceptable only with explicit unknowns and
+  typed planned discriminators; it is not exclusion.
 - `approved_by` is operator-authorized.
 
 The finalized nested object is recursively immutable and carries `reviewed_by`,
 `approved_by`, a timezone-aware `finalized_at`, all conformance results, and a
 recomputable SHA-256 `content_hash`. This integrity boundary is not a substitute for
-an approved write-once records repository. Generate a preview while any gate remains
+an approved write-once records repository, digital signature, or authenticity proof.
+Loading a finalized JSON object through `ContractReport.model_validate(...)` requires
+an operator-controlled `context={"authorized_reviewers": ...}`; without that external
+authorization context the load fails closed. Generate a preview while any gate remains
 open. See [MVP conformance and evaluation](mvp_conformance_and_evaluation.md) for the
 stable hard-check codes and release interpretation.
 
@@ -269,10 +349,15 @@ stable hard-check codes and release interpretation.
   "session_id": "case-001",
   "format": "markdown",
   "detail_level": "full",
-  "template_file": "anesthesia_mm_rca_report_template.md",
+  "locale": "zh-TW",
+  "audience": "clinician",
   "finalize": false
 }
 ```
+
+`locale="zh-TW"` plus `audience="clinician"` applies only to the built-in Markdown
+renderer. A custom `template_file` keeps the template's authored language. JSON/FHIR
+data and persisted English medical strings are never machine-translated.
 
 One final `conformance_checks[]` item has this stable machine-readable shape:
 
@@ -300,6 +385,25 @@ Required fields include the diagnosis plus explicit reasoning controls:
 - `uncertainty_factors`
 - `confidence_rationale`
 
+Typed candidate classifications are accepted by both discrete proposal and condensed
+`rc_hypothesis(action="propose")`:
+
+- `mechanism_category`: `VASCULAR`, `INFECTIOUS`, `INFLAMMATORY_IMMUNE`,
+  `NEOPLASTIC`, `DRUG_TOXIN_IATROGENIC`, `METABOLIC_ENDOCRINE`,
+  `TRAUMATIC_MECHANICAL`, `CONGENITAL_GENETIC`, `DEGENERATIVE`,
+  `FUNCTIONAL_PHYSIOLOGIC`, `OTHER`, or `UNKNOWN`
+- `diagnostic_role`: `ETIOLOGIC`, `SYNDROMIC`, `COMPLICATION`, `MIMIC`, or `UNKNOWN`
+- `certainty`: `UNKNOWN`, `POSSIBLE`, `PROBABLE`, `HIGH_CONFIDENCE`, `CONFIRMED`,
+  or `EXCLUDED`
+- `reasoning_basis`: `OBSERVED_DIAGNOSIS`, `MECHANISM_INFERENCE`, or `UNKNOWN`
+
+`UNKNOWN` is valid during preliminary work and must trigger further assessment, not be
+treated as a negative finding. `must_not_miss` is safety priority, not likelihood.
+`PROBABLE` or higher requires genuine evidence or a completed discriminating test;
+`CONFIRMED` and `EXCLUDED` must agree with lifecycle status. Omit `prior_probability`
+when no calibrated prior exists; if a compatibility default is persisted, disclose it
+as an implementation placeholder, never clinical probability, ranking, or certainty.
+
 Optional `planned_tests` entries use a typed disposition rather than free text:
 
 - `name`
@@ -317,16 +421,14 @@ purpose is `DISCONFIRM` or `RULE_OUT` and both expected-result fields are presen
   "session_id": "case-001",
   "diagnosis": "Acute myocardial infarction",
   "icd10_code": "I21.9",
-  "prior_probability": 0.3,
+  "mechanism_category": "VASCULAR",
+  "diagnostic_role": "ETIOLOGIC",
+  "certainty": "POSSIBLE",
+  "reasoning_basis": "MECHANISM_INFERENCE",
   "clinical_reasoning": "Chest pain, ECG findings, and troponin support acute MI.",
-  "differential_diagnoses_considered": [
-    {
-      "diagnosis": "Pulmonary embolism",
-      "reason_rejected": "No hypoxemia or right-heart strain"
-    }
-  ],
+  "differential_diagnoses_considered": [],
   "uncertainty_factors": ["Serial ECG pending"],
-  "confidence_rationale": "Typical presentation with one important pending test",
+  "confidence_rationale": "POSSIBLE because observations are compatible but the discriminating test remains pending; no calibrated probability is claimed",
   "planned_tests": [
     {
       "name": "Serial ECG",
@@ -343,21 +445,87 @@ The legacy `evidence_supporting` and `evidence_contradicting` fields are depreca
 context-only proposal inputs. They do not persist evidence associations or perform a
 Bayesian update; use `rc_link_evidence_to_hypothesis` for every actual link.
 
+### `rc_audit_differential_breadth`
+
+Persists a typed record that a host Agent actually reviewed a systematic search space.
+This is a coverage audit, not evidence that the DDx is clinically correct. The
+condensed equivalent is `rc_hypothesis(action="audit_breadth", audit={...})`.
+
+Top-level `audit` fields are `audit_id` (server-generated if omitted), `framework`,
+`framework_name` (`CUSTOM` only), `framework_rationale`, `role` (`PRIMARY` or
+`SUPPLEMENTAL`), `cells`, `stop_rationale`, `recorded_by`, and timezone-aware
+`recorded_at` (server-generated if omitted). Built-in frameworks require exactly these
+canonical cell IDs:
+
+| Framework | Canonical cells |
+| --- | --- |
+| `VINDICATE` | `VASCULAR`, `INFECTIOUS`, `INFLAMMATORY_IMMUNE`, `NEOPLASTIC`, `DRUG_TOXIN_IATROGENIC`, `METABOLIC_ENDOCRINE`, `TRAUMATIC_MECHANICAL`, `CONGENITAL_GENETIC`, `DEGENERATIVE`, `FUNCTIONAL_PHYSIOLOGIC` |
+| `FIVE_H_FIVE_T` | `HYPOVOLEMIA`, `HYPOXIA`, `HYDROGEN_ION_ACIDOSIS`, `HYPOKALEMIA_HYPERKALEMIA`, `HYPOTHERMIA`, `TENSION_PNEUMOTHORAX`, `CARDIAC_TAMPONADE`, `TOXINS`, `PULMONARY_THROMBOSIS`, `CORONARY_THROMBOSIS` |
+| `ANATOMIC_SYSTEM` | `CARDIOVASCULAR`, `RESPIRATORY`, `NEUROLOGIC`, `GASTROINTESTINAL_HEPATOBILIARY`, `RENAL_GENITOURINARY`, `ENDOCRINE_METABOLIC`, `HEMATOLOGIC`, `INFECTIOUS_IMMUNE`, `MUSCULOSKELETAL`, `DERMATOLOGIC`, `PSYCHIATRIC_FUNCTIONAL` |
+| `MEDICATION_DEVICE_EXPOSURE` | `MEDICATION_THERAPEUTIC_EFFECT`, `ADVERSE_DRUG_REACTION`, `OVERDOSE_TOXICITY`, `WITHDRAWAL_OMISSION`, `DRUG_DRUG_INTERACTION`, `DEVICE_MALFUNCTION`, `DEVICE_MISUSE_CONFIGURATION`, `PROCEDURE_IATROGENIC` |
+| `CUSTOM` | At least two unique uppercase cell IDs plus a non-empty `framework_name` |
+
+Each cell requires `cell_id`, one status, and a non-trivial `rationale`:
+
+- `CANDIDATES_PRESENT` requires non-empty `hypothesis_ids` and non-`UNKNOWN`
+  `mechanism_categories`; both are checked against the live hypothesis ledger.
+- `REVIEWED_NO_PLAUSIBLE_CANDIDATE` records a completed review with no plausible
+  candidate. It cannot carry hypothesis IDs.
+- `REVIEWED_INSUFFICIENT_DATA` requires non-empty `unknowns` and
+  `planned_discriminators`. Each discriminator includes `name`, `kind`
+  (`DATA_RETRIEVAL`, `DIAGNOSTIC_TEST`, `SPECIALIST_REVIEW`, or `MONITORING`), expected
+  supporting/refuting results, and `PLANNED` or `ORDERED` status.
+- `NOT_ASSESSED` means review has not occurred and blocks a complete PRIMARY audit.
+
+Use the live tool schema rather than copying a partial cell list into a request. A
+complete final artifact needs at least one PRIMARY audit with every built-in canonical
+cell (or every explicitly defined CUSTOM cell) reviewed. `REVIEWED_INSUFFICIENT_DATA`
+counts as reviewed coverage but keeps the clinical question open.
+
 ### `rc_link_evidence_to_hypothesis`
 
-`likelihood_ratio` must be between 0.01 and 100 and is applied directly. Supporting
-evidence normally uses LR > 1; contradicting/refuting evidence uses LR < 1; neutral
-or quantitatively unknown evidence uses 1.0. The server never takes a reciprocal.
-`rationale` should cite the calibration source or clinical basis.
+`likelihood_ratio` must be finite, between 0.01 and 100, direction-consistent, and is
+applied directly. Supporting evidence uses LR > 1; contradicting/refuting evidence
+uses LR < 1; quantitatively unknown evidence uses 1.0. The server never takes a
+reciprocal.
+
+Every link requires `calibration_status`. A non-neutral value requires
+`SOURCE_CALIBRATED` plus `calibration_source_ref`, which must identify a separate,
+verified `LITERATURE` evidence record in this case ledger. That calibration record
+must retain the exact quantitative excerpt, location, extraction method, and content
+hash; a citation-looking caller string is insufficient. The patient/case observation
+being linked must be verified, non-literature evidence and cannot be the calibration
+record itself. When no admissible quantitative source exists, use
+`QUANTITATIVELY_UNKNOWN` with LR 1.0. Neutral LR does not satisfy support/refutation.
+
+```python
+await rc_link_evidence_to_hypothesis(
+    session_id="case-001",
+    evidence_id="EVD-12345678",
+    hypothesis_id="HYP-12345678",
+    likelihood_ratio=validated_direct_lr,
+    supports=validated_direct_lr > 1,
+    rationale="Direct value transcribed from the linked literature source.",
+    calibration_status="SOURCE_CALIBRATED",
+    calibration_source_ref="EVD-calibration-source",
+)
+```
+
+### `rc_select_leading_hypothesis`
+
+Select the working lead explicitly after comparing the active differential. The
+selected hypothesis must be active or confirmed. Every change appends a typed record
+containing the prior selection, new hypothesis ID, reason, actor, and server time.
+Preliminary reports may have no lead; final reports require one ledger-valid
+`leading_hypothesis_id`. Array order and uncalibrated compatibility values never
+choose the lead.
 
 ```json
 {
   "session_id": "case-001",
-  "evidence_id": "EVD-12345678",
   "hypothesis_id": "HYP-12345678",
-  "likelihood_ratio": 5.0,
-  "supports": true,
-  "rationale": "Marked troponin elevation strongly supports myocardial injury."
+  "reason": "Best current explanatory fit after explicit comparison with alternatives.",
+  "changed_by": "review-agent"
 }
 ```
 
@@ -377,15 +545,24 @@ These tools store agent-authored rationales. They do not expose hidden model sta
 
 | Category | Tools |
 | --- | --- |
-| Session | `rc_start_session`, `rc_get_session`, `rc_list_sessions`, `rc_archive_session` |
+| Session/source review | `rc_start_session`, `rc_get_session`, `rc_list_sessions`, `rc_archive_session`, `rc_adjudicate_source` |
 | Fishbone | `rc_init_fishbone`, `rc_add_cause`, `rc_get_fishbone`, `rc_export_fishbone` |
 | Why Tree | `rc_ask_why`, `rc_get_why_tree`, `rc_mark_root_cause`, `rc_add_causal_link`, `rc_export_why_tree`, `rc_build_teaching_case` |
 | HFACS-MES | `rc_suggest_hfacs`, `rc_confirm_classification`, `rc_get_hfacs_framework`, `rc_get_6m_hfacs_mapping`, `rc_list_learned_rules`, `rc_reload_rules` |
 | Verification | `rc_verify_causation` |
 
+An `hfacs_code` passed while adding a Fishbone cause remains an `UNREVIEWED`
+candidate. `rc_confirm_classification` must bind one persisted `session_id + cause_id`
+to an allowlisted reviewer, server time, and reason. `CONFIRMED` requires a recognized
+HFACS code; `NOT_APPLICABLE` forbids one. Final conformance compares the review's
+cause ID, exact description, Fishbone category, evidence IDs, code, and reviewer
+metadata against the persisted Fishbone ledger.
+
 `rc_verify_causation` is a conservative proof-obligation audit, not a clinical
-causality prover. Missing or reversed chronology fails temporality rather than being
-assumed safe. Every persisted record declares
+causality prover. Only evidence-linked, source-aware instants can satisfy temporality;
+date, range, relative, unknown, naive, or forged timestamps cannot. Missing chronology
+remains insufficient and verified reverse chronology supports rejection rather than
+being assumed safe. Every persisted record declares
 `audit_scope="CONSERVATIVE_CAUSATION_AUDIT"` and
 `clinical_causality_established=false`. Compatibility results such as `VERIFIED`
 mean only that the implemented audit obligations passed; they must not be rendered
