@@ -97,7 +97,10 @@ def get_static_resources() -> list[Resource]:
                 Resource(
                     uri=f"clinical://domains/{slug}",
                     name=f"Domain Playbook: {p.stem.replace('_', ' ').title()}",
-                    description=f"Specialized clinical crisis criteria, discriminators, and rescue guidelines for {p.stem}",
+                    description=(
+                        "Non-normative retrospective DDx prompts for "
+                        f"{p.stem}; no patient-specific management"
+                    ),
                     mime_type="application/yaml",
                     size=p.stat().st_size if p.is_file() else None,
                 )
@@ -162,6 +165,8 @@ async def _read_unified_report_preview(
             "session_id": session_id,
             "format": "markdown",
             "detail_level": "standard",
+            "locale": "zh-TW",
+            "audience": "clinician",
             "finalize": False,
         },
         persist_export=False,
@@ -356,29 +361,43 @@ async def read_clinical_resource(
                     )
                     from rootcause_mcp.interface.mermaid import build_evidence_graph
 
-                    ranked_hypotheses = sorted(
-                        orch.hypothesis_store.values(),
-                        key=lambda h: h.current_probability,
-                        reverse=True,
-                    )
+                    working_hypotheses = list(orch.hypothesis_store.values())
                     rep = ContractReport.model_validate(
                         {
-                            "report_id": f"RPT-{session_id[:8]}",
+                            "report_id": f"RPT-{session_id}",
                             "session_id": session_id,
                             "generated_by": "resource_reader",
+                            "leading_hypothesis_id": (orch.get_leading_hypothesis_id()),
                             "hypotheses": [
-                                h.model_dump(mode="json") for h in ranked_hypotheses
+                                {
+                                    **h.model_dump(mode="json"),
+                                    "probability_semantics": (
+                                        "UNCALIBRATED_COMPATIBILITY_ONLY"
+                                    ),
+                                    "clinical_probability_established": False,
+                                }
+                                for h in working_hypotheses
                             ],
                             "evidence": [
                                 e.model_dump(mode="json")
                                 for e in orch.evidence_store.values()
                             ],
                             "reasoning_chain": [
-                                s.model_dump(mode="json")
+                                {
+                                    **s.model_dump(mode="json"),
+                                    "confidence_semantics": (
+                                        "UNCALIBRATED_LEGACY_NOT_PRESENTED"
+                                    ),
+                                }
                                 for s in orch.reasoning_chain.steps
                             ],
                             "thinking_chain": [
-                                s.model_dump(mode="json")
+                                {
+                                    **s.model_dump(mode="json"),
+                                    "confidence_semantics": (
+                                        "UNCALIBRATED_LEGACY_NOT_PRESENTED"
+                                    ),
+                                }
                                 for s in orch.thinking_chain.steps
                             ],
                             "evidence_graph": build_evidence_graph(
@@ -388,11 +407,14 @@ async def read_clinical_resource(
                         }
                     )
                     md_text = render_contract_report_markdown(
-                        rep, detail_level="standard"
+                        rep,
+                        detail_level="standard",
+                        locale="zh-TW",
+                        audience="clinician",
                     )
                     md_text = (
-                        "> Limited clinical-only fallback: ContractHandlers was not "
-                        "supplied, so source-manifest and RCA artifacts are omitted.\n\n"
+                        "> 此為 limited clinical-only fallback：目前未提供 "
+                        "ContractHandlers，因此省略 source manifest 與 RCA artifacts。\n\n"
                         f"{md_text}"
                     )
                     return ReadResourceResult(

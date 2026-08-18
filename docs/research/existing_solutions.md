@@ -1,267 +1,88 @@
-# 現有解決方案研究：醫學推理與鑑別診斷開源專案調查
+# 現有方案研究：醫學推理、臨床 RCA 與 Agent 基礎設施
 
-> **調查時間**：2026-08-09  
-> **調查者**：GitHub Copilot Agent (Kimi K3)  
-> **目的**：避免重造輪子，確立 RootCause MCP 獨特定位
+> **查核日期**：2026-08-18
+> **方法**：公開 GitHub repository／topic／code 搜尋，再核對高相關專案的 README、tree、schema、tests、LICENSE 與 citation metadata。
+> **完整資料**：[26 份逐 repo 學習與引用報告](github_landscape/README.md)
 
----
+## Executive summary
 
-## 📊 Executive Summary
+RootCause MCP 確實與既有專案重疊，但重疊主要發生在可重用的基礎能力：DDx workflow、FHIR/EHR access、raw document extraction、Fishbone／5-Why templates、Agent runtime、trace、benchmark 與統計因果推論。
 
-**核心發現**：RootCause MCP 是目前**唯一**同時整合以下五項的開源專案：
+本次沒有找到單一公開 repo 同時具備下列完整組合：
 
-1. ✅ Medical Differential Diagnosis (DDx)
-2. ✅ Root Cause Analysis (RCA)
-3. ✅ Bayesian 機率推理
-4. ✅ Evidence Provenance 追蹤
-5. ✅ HFACS-MES 醫療分類系統
+1. 多來源 exact snippet、source location、whole-file/span hash lineage。
+2. DDx、must-not-miss、direct applied LR 與 planned-test disposition。
+3. Fishbone、Why、HFACS 與 root/audit/evidence exact lineage。
+4. 明示不等於臨床因果證明的 conservative causation audit。
+5. Server-side recomputed typed conformance checks。
+6. Named qualified reviewer、final timestamp、recomputable hash 與 deep immutable snapshot。
 
----
+這個搜尋結果不能證明絕對唯一，也不構成專利新穎性或臨床效度證明。私人、未索引或未公開專案不在搜尋範圍內。
 
-## 🗺️ 開源生態系全景圖
+## 產品定位
 
-```mermaid
-graph TB
-    subgraph DDx["鑑別診斷 (DDx)"]
-        MEDDx["MEDDxAgent<br/>DDxDriver 架構"]
-        ClinClaw["ClinClaw<br/>Harness Pattern"]
-        CPS["cps-skills<br/>Bayesian LR"]
-    end
+> RootCause MCP 不是另一個自行診斷的 medical Agent，也不是 EHR、FHIR gateway 或 raw-record parser；它是位於 extractor／EHR tools 與 reasoning Agent 之後的 evidence-grounded clinical reasoning + medical RCA assurance layer。
 
-    subgraph RCA["根因分析 (RCA)"]
-        HFACS["llm-hfacs<br/>航空 HFACS"]
-        OpenRCA["OpenRCA<br/>軟體故障"]
-        FiveWhys["5-whys-skill<br/>通用方法"]
-    end
+應保留的核心是病例層 ledger、跨 DDx/RCA 的 exact lineage、保守因果語意、不可偽造的 final conformance 與 qualified-human handoff。
 
-    subgraph EBM["實證醫學 (EBM)"]
-        GRADE["GRADE 評級<br/>(Prompt only)"]
-        PICO["PICO_Parser<br/>BERT-based"]
-    end
+不應繼續自行擴張的部分包括：
 
-    subgraph MCP["MCP 基礎設施"]
-        FastMCP["fastmcp<br/>Server 框架"]
-        PubMed["pubmed-search-mcp<br/>文獻搜尋"]
-    end
+- PDF/image/OCR extraction；
+- FHIR transport、SMART auth 與通用 CRUD；
+- 通用 Agent container／parallel runner；
+- 通用 trace interchange 與 trajectory viewer；
+- population-level causal inference 演算法；
+- 已有正式資料治理的外部 clinical benchmark。
 
-    RC["🎯 RootCause MCP<br/>DDx + RCA + Bayesian<br/>+ Provenance + HFACS-MES"]
+## 最接近的方案
 
-    MEDDx -.->|"DDxDriver 參考"| RC
-    ClinClaw -.->|"Harness 參考"| RC
-    CPS -.->|"LR 數學參考"| RC
-    HFACS -.->|"HFACS 邏輯參考"| RC
-    FastMCP ==>|"直接採用"| RC
-    PubMed ==>|"直接整合"| RC
+| 類別 | 代表方案 | 判定 |
+|---|---|---|
+| 多來源臨床推理 | [`jonio87/mastra-asklepios`](github_landscape/repositories/jonio87__mastra-asklepios.md) | 最接近整體架構；已有 MCP、W3C PROV、DDx、HITL 與 report hash，但缺 direct LR、clinical RCA、保守因果與 hard final conformance |
+| 臨床安全 Agent | [`Francis1998/medagent-core`](github_landscape/repositories/francis1998__medagent-core.md) | 有 FHIR intake、FOR/AGAINST evidence、audit/hash、安全 gate；不是 MCP，且沒有 RCA/root lineage |
+| 可稽核 DDx Skill | [`makidav/clinical-assistant`](github_landscape/repositories/makidav__clinical-assistant.md) | 可借鑑 anti-anchoring、evidence appraisal 與 planned tests；不是 deterministic runtime ledger |
+| 直接 MCP DDx | [`bshepp/clinical-decision-support-agent`](github_landscape/repositories/bshepp__clinical-decision-support-agent.md) | 能跑完整 DDx/RAG pipeline，但沒有 source manifest、持久 lineage 與 final gate |
+| Healthcare RCA | [`RCA-Assistant-for-Healthcare-Events`](github_landscape/repositories/akhilapugazhendhi98__rca-assistant-for-healthcare-events.md) | 可學 5-Why facilitation 與 actionability rubric；沒有 DDx/provenance/MCP assurance |
+| Generic RCA MCP | [`SahajSethi7/agentic-rca-mcp`](github_landscape/repositories/sahajsethi7__agentic-rca-mcp.md) | 可學 bounded workflow、deterministic critique 與 artifact export；缺 clinical ledger，且授權需先確認 |
+| Iterative DDx research | [`nec-research/meddxagent`](github_landscape/repositories/nec-research__meddxagent.md) | 可學 modular iterative DDx 與 benchmark；非商業研究授權，不可視為 Apache 元件 |
 
-    style RC fill:#ffd700,stroke:#333,stroke-width:4px
-```
+## 優先整合而非重寫
 
----
+| 能力 | 建議 upstream | RootCause 邊界 |
+|---|---|---|
+| Raw document extraction | [`DIGIT-X-Lab/MOSAICX`](github_landscape/repositories/digit-x-lab__mosaicx.md) | Sidecar/adapter；只有 exact physical match 可升格 verified，fuzzy match 保持 unverified |
+| Typed FHIR | [`healthchainai/HealthChain`](github_landscape/repositories/healthchainai__healthchain.md) | Optional adapter；不把 FHIR transport 與病例推理混成同一 aggregate |
+| FHIR MCP upstream | [`langcare/langcare-mcp-fhir`](github_landscape/repositories/langcare__langcare-mcp-fhir.md)、[`wso2/fhir-mcp-server`](github_landscape/repositories/wso2__fhir-mcp-server.md) | 臨床分析預設 read-only scope；EHR write 不屬於 RCA workflow |
+| Formal Agent eval | [`harbor-framework/harbor`](github_landscape/repositories/harbor-framework__harbor.md) | 讓 Harbor 負責 runtime/container/parallel lifecycle，RootCause 保留 clinical scorer、private gold、artifact hash 與 reviewer adjudication |
+| OTel trace evaluation | [`agentevals-dev/agentevals`](github_landscape/repositories/agentevals-dev__agentevals.md) | 獨立 optional pilot；不得把 Agent 自報 trace 當 trusted server trace |
+| Statistical causality | [`py-why/dowhy`](github_landscape/repositories/py-why__dowhy.md)、[`StatsPAI`](github_landscape/repositories/brycewang-stanford__statspai.md) | 只附加具研究設計與假設限制的 population-level analysis；不取代單病例 conservative audit |
+| Verification envelope | [`QWED-AI/qwed-verification`](github_landscape/repositories/qwed-ai__qwed-verification.md) | 可借 proof/evidence/admission 分層；RootCause cross-object clinical invariants 仍由 domain evaluator 重算 |
 
-## 🔬 重點專案分析
+## 外部效度與 Agent evaluation
 
-### 1. MEDDxAgent (NEC Research)
+現有六案例與 scripted smoke 只能建立 engineering regression，不足以建立跨 Agent 臨床效度。可用的外部參考包括：
 
-**連結**: https://github.com/nec-research/meddxagent  
-**License**: Apache-2.0  
-**語言**: Python
+- [`microsoft/HealthAgentBench`](github_landscape/repositories/microsoft__healthagentbench.md)：多 runtime、task-specific verifier 與 Harbor lifecycle。
+- [`stanfordmlgroup/MedAgentBench`](github_landscape/repositories/stanfordmlgroup__medagentbench.md)：FHIR EHR retrieval/action tasks。
+- [`HealthRex/PhysicianBench`](github_landscape/repositories/healthrex__physicianbench.md)：long-horizon、fresh-container physician tasks。
+- [`IVUL-KAUST/MedCTA`](github_landscape/repositories/ivul-kaust__medcta.md)：tool choice、argument validity、evidence faithfulness。
+- [`som-shahlab/medalign`](github_landscape/repositories/som-shahlab__medalign.md)：longitudinal multi-document synthesis；受 DUA 與資料外送規則限制。
+- [`MAGIC-AI4Med/MedSP1000`](github_landscape/repositories/magic-ai4med__medsp1000.md)：frozen rubric、interactive trajectory 與 clinician scoring。
 
-#### 核心架構
+這些 benchmark 不會替 RootCause 驗證 Fishbone/Why/HFACS/root lineage；需經 adapter 加入 RootCause 自己的 gold DDx、must-not-miss、critical evidence、allowed RCA、forbidden claims 與 blinded reviewer adjudication。
 
-```
-DDxDriver (Orchestrator)
-├── History Taking Module      # 病史採集
-├── Differential Diagnosis     # 鑑別診斷生成
-├── Workup Planning            # 檢查規劃
-└── Diagnostic Strategy Agent  # RAG 輔助策略
-```
+## 授權與引用更正
 
-#### ✅ 我們學什麼
+舊版研究文件把 `nec-research/meddxagent` 誤寫為 Apache-2.0。其上游 LICENSE 是 academic/non-profit noncommercial research-only；應只依授權作研究評估，不直接併入可商業散布的 Apache-2.0 程式碼。
 
-1. **Orchestrator Pattern**：多模組協調架構
-2. **迭代式推理**：每輪更新鑑別診斷
-3. **Benchmark 整合**：DDxPlus, ICraftMD, RareBench
+本研究庫採以下規則：
 
-#### ❌ 無法直接用
+1. GitHub 公開可讀不等於可複製；無 LICENSE 時只學概念，不搬 code/content。
+2. 軟體、論文、資料集、模型／權重分開引用。
+3. 基礎套件優先以 optional dependency、protocol adapter 或 sidecar 使用。
+4. Release/tag、commit、artifact digest 與 lockfile用於重現；NOTICE/SBOM 記錄名稱、版本、URL 與 license。
+5. 個別專案的依賴與 citation 範例，以[逐 repo 報告索引](github_landscape/README.md)為準。
 
-- 不做 RCA
-- 無 Bayesian 機率更新
-- 無 Evidence provenance
+## 維護
 
----
-
-### 2. ClinClaw (rbr7)
-
-**連結**: https://github.com/rbr7/ClinClaw  
-**License**: MIT
-
-#### 核心架構：Harness Pattern
-
-```python
-Pipeline:
-1. Checkpoint  → 儲存狀態
-2. Context     → 載入病史
-3. Tool Chain  → 執行工具鏈
-4. Validate    → 驗證品質
-5. Recover     → 錯誤恢復
-```
-
-#### ✅ 我們學什麼
-
-1. **Harness Pattern**：Checkpoint/Recovery 機制
-2. **Clinical NER**：ICD-10/藥物實體辨識
-3. **Pydantic Schema**：資料驗證設計
-
-#### ❌ 無法直接用
-
-- 0 stars（品質未驗證）
-- 無 Bayesian 推理
-- 不做 RCA
-
----
-
-### 3. cps-skills (htlin222)
-
-**連結**: https://github.com/htlin222/cps-skills  
-**Type**: Claude Code Skill (Prompt)
-
-#### 核心功能
-
-- NEJM 格式 Bayesian 診斷
-- Likelihood Ratio 計算
-- EBM 整合
-
-#### ✅ 我們學什麼
-
-**Bayesian LR 數學實作**：
-
-```python
-Posterior Odds = Prior Odds × LR
-Posterior P = Odds / (1 + Odds)
-```
-
-已實作於我們的 `Hypothesis.bayesian_update()`
-
----
-
-### 4. llm-hfacs (iHuman-Lab)
-
-**連結**: https://github.com/iHuman-Lab/llm-hfacs  
-**領域**: **航空**（非醫療！）
-
-#### ✅ 我們學什麼
-
-- LLM + HFACS 分類邏輯
-- Prompt 設計模式
-
-#### ❌ 無法直接用
-
-- 航空領域，需改寫為醫療 HFACS-MES
-
----
-
-### 5. OpenRCA (Microsoft)
-
-**連結**: https://github.com/microsoft/OpenRCA  
-**領域**: **軟體工程**（微服務故障）
-
-#### ❌ 完全不相關
-
-- 軟體故障定位
-- 不做醫學推理
-
----
-
-## 📚 EBM 工具現況
-
-### 關鍵發現：無結構化套件
-
-現有 EBM 工具都是：
-- ❌ Prompt-based（無程式碼）
-- ❌ 無 Pydantic schema
-- ❌ 無 Evidence provenance
-
-**我們的機會**：建立第一個 Oxford CEBM / GRADE Pydantic schema
-
----
-
-## 🎯 功能對比總表
-
-| 功能 | MEDDx | ClinClaw | OpenRCA | **RootCause MCP** |
-|------|:-----:|:--------:|:-------:|:-----------------:|
-| Medical DDx | ✅ | ✅ | ❌ | ✅ |
-| RCA | ❌ | ❌ | ✅ | ✅ |
-| Bayesian | ❌ | ❌ | ❌ | ✅ |
-| Evidence Provenance | ❌ | △ | ❌ | ✅ |
-| HFACS-MES | ❌ | ❌ | ❌ | ✅ |
-| MCP Protocol | ❌ | ✅ | ❌ | ✅ |
-| Agent-Agnostic | ❌ | △ | ❌ | ✅ |
-
----
-
-## 📦 可直接使用的套件
-
-| 套件 | 用途 | License | 優先級 |
-|------|------|---------|--------|
-| **fastmcp** | MCP framework | Apache-2.0 | P0 |
-| **fhir.resources** | FHIR R4 models | Apache-2.0 | P2 |
-| **pubmed-search-mcp** | 文獻搜尋 | Unknown | P1 |
-
----
-
-## 🔨 仍需自建的核心
-
-### 1. 醫療 HFACS-MES 引擎
-- **空缺原因**：現有都是航空版
-- **我們的優勢**：已有 YAML 配置 + 測試案例
-
-### 2. GRADE/Oxford CEBM Schema
-- **空缺原因**：無 Python 套件
-- **我們的優勢**：已實作 `EvidenceQuality` VO
-
-### 3. Evidence Provenance 追蹤
-- **空缺原因**：無醫療專用
-- **我們的優勢**：已實作 `Evidence` entity
-
-### 4. Bayesian DDx + RCA 整合 ⭐
-- **空缺原因**：**從未被整合過**
-- **我們的優勢**：已實作 `Hypothesis.bayesian_update()`
-- **這是核心創新！**
-
----
-
-## 📖 參考文獻 (GB/T 7714)
-
-1. NEC Research. MEDDxAgent: Modular Explainable Differential Diagnosis Agent[EB/OL]. (2025-06)[2026-08-09]. https://github.com/nec-research/meddxagent.
-
-2. rbr7. ClinClaw: Clinical AI Agent Framework[EB/OL]. (2026-06)[2026-08-09]. https://github.com/rbr7/ClinClaw.
-
-3. htlin222. cps-skills: Clinical Problem Solving Skills[EB/OL]. (2026-03)[2026-08-09]. https://github.com/htlin222/cps-skills.
-
-4. iHuman-Lab. llm-hfacs: LLM-based HFACS Classification[EB/OL]. (2025-06)[2026-08-09]. https://github.com/iHuman-Lab/llm-hfacs.
-
-5. Microsoft. OpenRCA: Benchmarking LLM-based RCA[EB/OL]. (2026-07)[2026-08-09]. https://github.com/microsoft/OpenRCA.
-
-6. PrefectHQ. fastmcp: Fast Pythonic MCP Framework[EB/OL]. (2026-08)[2026-08-09]. https://github.com/PrefectHQ/fastmcp.
-
-7. u9401066. pubmed-search-mcp: Biomedical Literature Search[EB/OL]. (2026-08)[2026-08-09]. https://github.com/u9401066/pubmed-search-mcp.
-
----
-
-## 🎓 總結
-
-### 我們的獨特價值
-
-**RootCause MCP = 唯一同時整合 DDx + RCA + Bayesian + Provenance + HFACS-MES 的開源專案**
-
-### 設計原則
-
-1. **參考但不複製**：學習架構，不抄程式碼
-2. **整合現有輪子**：fastmcp, fhir.resources
-3. **專注核心創新**：Bayesian DDx + RCA 整合
-
----
-
-**版本**: v1.0  
-**更新**: 2026-08-09  
-**維護**: RootCause MCP Team
+這是一份有日期的 landscape snapshot。重新查核時應更新個別報告的 commit 與 upstream 條款，而不是保留「唯一」、「production-ready」或「已驗證」等無法由目前證據支持的絕對宣稱。

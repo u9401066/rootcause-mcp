@@ -37,7 +37,7 @@ async def test_evidence_rejects_date_only_and_naive_canonical_timestamp(
     assert mcp_result.is_error is True
     assert "containing 'T'" in response["message"]
     assert "timezone offset" in response["message"]
-    assert "omit the canonical timestamp" in response["message"]
+    assert "use temporal.kind" in response["message"]
 
 
 @pytest.mark.parametrize(
@@ -88,6 +88,9 @@ def test_discrete_and_condensed_schemas_describe_strict_temporality() -> None:
     causation_schema = next(
         tool for tool in get_verification_tools() if tool.name == "rc_verify_causation"
     ).input_schema
+    timeline_schema = next(
+        tool for tool in get_verification_tools() if tool.name == "rc_render_timeline"
+    ).input_schema
     condensed = {tool.name: tool for tool in get_condensed_tools()}
 
     descriptions = [
@@ -107,3 +110,30 @@ def test_discrete_and_condensed_schemas_describe_strict_temporality() -> None:
 
     assert all("'T'" in description for description in descriptions)
     assert all("timezone offset" in description for description in descriptions)
+
+    for tool_schema in (
+        evidence_schema,
+        condensed["rc_evidence"].input_schema,
+    ):
+        temporal = tool_schema["properties"]["temporal"]
+        assert temporal["additionalProperties"] is False
+        assert temporal["properties"]["kind"]["enum"] == [
+            "instant",
+            "date",
+            "range",
+            "relative",
+            "unknown",
+        ]
+
+    for event_schema in (
+        timeline_schema["properties"]["events"]["items"],
+        condensed["rc_diagram"].input_schema["properties"]["events"]["items"],
+    ):
+        assert event_schema["additionalProperties"] is False
+        assert event_schema["properties"]["temporal"]["properties"]["kind"]["enum"] == [
+            "instant",
+            "date",
+            "range",
+            "relative",
+            "unknown",
+        ]

@@ -7,14 +7,17 @@ Handles all evidence-related MCP tool calls.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime
 from typing import TYPE_CHECKING, Any
+
+from pydantic import ValidationError
 
 from rootcause_mcp.domain.services.provenance_verifier import (
     ProvenanceMatch,
     ProvenanceVerifier,
 )
-from rootcause_mcp.interface.temporal_validation import parse_offset_datetime
+from rootcause_mcp.domain.value_objects.clinical_temporal import (
+    resolve_clinical_temporal,
+)
 
 if TYPE_CHECKING:
     from rootcause_mcp.application.server_state import ServerState
@@ -70,19 +73,16 @@ class EvidenceHandlers:
         """Handle rc_add_evidence tool call (delegates to Orchestrator)."""
         session_id = args["session_id"]
 
-        event_timestamp: datetime | None = None
-        raw_timestamp = args.get("event_timestamp")
-        if raw_timestamp is not None:
-            try:
-                event_timestamp = parse_offset_datetime(
-                    raw_timestamp,
-                    field_name="event_timestamp",
-                )
-            except ValueError as exc:
-                return {
-                    "status": "error",
-                    "message": str(exc),
-                }
+        try:
+            temporal = resolve_clinical_temporal(
+                args.get("temporal"),
+                args.get("event_timestamp"),
+            )
+        except (ValidationError, ValueError) as exc:
+            return {
+                "status": "error",
+                "message": str(exc),
+            }
 
         # Get or create orchestrator
         orch = await self._state.get_or_create_orchestrator(session_id)
@@ -103,7 +103,8 @@ class EvidenceHandlers:
             clinical_strength=args.get("clinical_strength", "MODERATE"),
             source_reliability=args.get("source_reliability", "GRADE_B"),
             clinical_context=args.get("clinical_context"),
-            event_timestamp=event_timestamp,
+            temporal=temporal,
+            event_timestamp=temporal.source_aware_instant,
             auto_verify=False,
         )
         provenance_match: ProvenanceMatch | None = None
@@ -147,6 +148,7 @@ class EvidenceHandlers:
             ),
             "matched_lines": evidence.matched_lines,
             "content_hash": evidence.source.content_hash,
+            "temporal": evidence.temporal.model_dump(mode="json"),
             "event_timestamp": (
                 evidence.event_timestamp.isoformat()
                 if evidence.event_timestamp is not None

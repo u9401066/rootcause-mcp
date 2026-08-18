@@ -1,50 +1,44 @@
 # Clinical Domain Playbook: Cannot Intubate, Cannot Oxygenate (CICO) & Difficult Airway Crisis
 # 麻醉科專科知識庫：不能插管不能通氣 (CICO) 危機與緊急外科氣道
 
-domain: "Anesthesiology, Airway Management & Resuscitation"
-scenario: "Failed Intubation with Inability to Maintain Oxygenation Post-Induction"
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings are prompts for source review, never pathognomonic conclusions."
+  - "Do not emit patient-specific treatment, dose, contraindication, or rescue instructions."
+  - "Use current local protocols and qualified-clinician judgment for active care."
 
-pathophysiology:
-  primary_mechanism: "Loss of upper airway patency combined with inability to pass endotracheal tube or achieve supraglottic seal, leading to catastrophic hypoxemic cardiac arrest within 3-5 minutes"
-  contributing_factors:
+domain: "Anesthesiology, Airway Management & Resuscitation"
+scenario: "Retrospective review of difficult airway, ventilation, or oxygenation deterioration"
+
+mechanisms_to_review:
+  candidate: "Loss of airway patency, ineffective ventilation, device-position problem, pulmonary mechanism, or gas-delivery failure"
+  possible_contexts_requiring_confirmation:
     - "Unanticipated anatomical variations (Cormack-Lehane Grade 4, morbid obesity, retrognathia)"
     - "Multiple failed rigid laryngoscopy attempts causing progressive airway bleeding, edema, and false passages"
     - "Complete neuromuscular block without baseline mask ventilation verification"
 
-pathognomonic_findings:
+candidate_findings_requiring_confirmation:
   - marker: "SpO2 rapidly falling (< 80%) with no chest rise on bag-valve-mask or supraglottic airway"
     modality: "Pulse Oximetry & Physical Inspection"
-    significance: "Critical hypoxic crisis (CICO pathway activated)"
+    significance: "Critical source observation requiring reconciliation with device position, capnography, airway exam, and local event record"
   - marker: "Flat-line EtCO2 trace with zero tidal volume return on ventilator"
     modality: "Capnography"
-    significance: "Absence of pulmonary gas exchange"
+    significance: "May reflect absent/low exhaled CO2, but equipment, perfusion, position, and sampling explanations must be reviewed"
   - marker: "Severe bradycardia following hypoxia in adult or pediatric patient"
     modality: "ECG Monitor"
-    significance: "Impending hypoxic asystolic cardiac arrest"
+    significance: "Potential deterioration marker with multiple etiologies; it does not independently establish an airway mechanism"
 
-diagnostic_rules_to_rule_out:
+differential_questions:
   - diagnosis: "Laryngospasm during Light Anesthesia"
-    discriminator: "Laryngospasm breaks with deep sedation/propofol or full dose muscle relaxant (succinylcholine/rocuronium)"
+    discriminator: "Review source-linked airway examination, capnography, laryngoscopy, timing, and recorded response; a medication response is non-specific and this resource does not prescribe a dose"
   - diagnosis: "Bronchospasm / Asthma Exacerbation"
-    discriminator: "Bronchospasm presents with high PIP and expiratory wheeze; CICO has complete mechanical obstruction to ventilation"
+    discriminator: "Compare inspiratory/expiratory flow, airway pressure, auscultation, capnography, tube/device position, and data quality; absent documentation remains unknown"
   - diagnosis: "Esophageal Intubation"
-    discriminator: "Esophageal placement produces transient <3-breath decaying CO2 then zero; direct video laryngoscopy clarifies position"
+    discriminator: "Review sustained capnography, ventilation, device depth/position evidence, and visualization quality; no single undocumented sign is treated as exclusion"
 
-treatment_protocol:
-  strictly_contraindicated:
-    - "Persistent repeated failed intubation attempts (>3 attempts increases trauma and eliminates supraglottic rescue)"
-    - "Delaying Front-of-Neck Access (eFONA) when SpO2 continues to decline in CICO"
-    - "Allowing hypoxia to progress to bradycardic cardiac arrest before declaring emergency"
-  recommended_rescue:
-    - "DECLARE EMERGENCY AIRWAY CRISIS ('This is a CICO emergency - call for help')"
-    - "Plan A: Maximum 3 attempts at endotracheal intubation (optimize head position, BURP, videolaryngoscope + bougie)"
-    - "Plan B: Insert 2nd-generation Supraglottic Airway Device (SAD: i-gel, LMA Supreme) - max 2 attempts"
-    - "Plan C: Final attempt at 2-person mask ventilation with oropharyngeal airway (OPA)"
-    - "If Rocuronium was used: Give Sugammadex 16 mg/kg STAT for immediate reversal"
-    - "Plan D: Emergency Front-of-Neck Access (eFONA / Scalpel-Bougie-Tube Cricothyroidotomy)"
-    - "eFONA step: Extend neck (laryngeal handshake to identify cricothyroid membrane)"
-    - "eFONA step: Transverse stab incision with #10 scalpel"
-    - "eFONA step: Rotate scalpel 90 degrees caudally"
-    - "eFONA step: Slide gum elastic bougie along blade into trachea"
-    - "eFONA step: Railroad 6.0 mm cuffed ETT over bougie into trachea and inflate cuff"
-    - "eFONA step: Confirm ventilation with continuous capnography (EtCO2)"
+management_boundary:
+  omitted: true
+  reason: >-
+    Patient-specific airway management steps and doses are intentionally excluded
+    from this retrospective DDx resource. Consult the current local difficult-airway
+    and CICO protocol.

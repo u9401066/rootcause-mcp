@@ -19,7 +19,8 @@ def get_hfacs_tools() -> list[Tool]:
             name="rc_suggest_hfacs",
             description=(
                 "Suggest HFACS-MES classification codes for a cause description. "
-                "Returns ranked suggestions with confidence scores. "
+                "Returns heuristic keyword-rule matches; their internal compatibility "
+                "values are not calibrated confidence or clinical probability. "
                 "HFACS-MES has 5 levels: External Factors, Organizational Influences, "
                 "Unsafe Supervision, Preconditions, Unsafe Acts."
             ),
@@ -52,42 +53,72 @@ def get_hfacs_tools() -> list[Tool]:
         Tool(
             name="rc_confirm_classification",
             description=(
-                "Confirm an HFACS classification as correct. "
-                "This helps the system learn from expert decisions and improve future suggestions. "
-                "Confirmed classifications are stored as learned rules."
+                "Persist an operator-authorized HFACS review for exactly one Fishbone "
+                "cause in one session. CONFIRMED requires a recognized HFACS code; "
+                "NOT_APPLICABLE forbids a code. A code supplied to rc_add_cause remains "
+                "UNREVIEWED and cannot satisfy final conformance."
             ),
             input_schema={
                 "type": "object",
                 "properties": {
+                    "session_id": {
+                        "type": "string",
+                        "description": "Session owning the persisted Fishbone",
+                    },
+                    "cause_id": {
+                        "type": "string",
+                        "description": "Exact persisted Fishbone cause ID",
+                    },
                     "description": {
                         "type": "string",
-                        "description": "The original cause description",
+                        "description": (
+                            "Optional exact cause description for an additional stale-data check"
+                        ),
                     },
                     "hfacs_code": {
                         "type": "string",
                         "description": (
-                            "The confirmed HFACS code "
-                            "(e.g., 'UA-S', 'PC-C-PMC', 'EF-RE')"
+                            "Recognized HFACS-MES code; required only for CONFIRMED"
+                        ),
+                    },
+                    "review_status": {
+                        "type": "string",
+                        "enum": ["CONFIRMED", "NOT_APPLICABLE"],
+                    },
+                    "reviewed_by": {
+                        "type": "string",
+                        "description": (
+                            "Named reviewer in ROOTCAUSE_AUTHORIZED_REVIEWERS"
                         ),
                     },
                     "reason": {
                         "type": "string",
-                        "description": "Brief explanation of why this classification is correct",
-                    },
-                    "session_id": {
-                        "type": "string",
-                        "description": "Optional session ID for tracking",
-                        "default": None,
+                        "description": "Auditable reason for the review disposition",
                     },
                     "confidence": {
                         "type": "number",
-                        "description": "Confidence level (0.0-1.0)",
-                        "default": 0.8,
+                        "description": (
+                            "Optional caller-supplied heuristic compatibility metadata; "
+                            "not clinical probability or calibrated confidence"
+                        ),
                         "minimum": 0.0,
                         "maximum": 1.0,
                     },
                 },
-                "required": ["description", "hfacs_code", "reason"],
+                "required": [
+                    "session_id",
+                    "cause_id",
+                    "review_status",
+                    "reviewed_by",
+                    "reason",
+                ],
+                "allOf": [
+                    {
+                        "if": {"properties": {"review_status": {"const": "CONFIRMED"}}},
+                        "then": {"required": ["hfacs_code"]},
+                        "else": {"properties": {"hfacs_code": {"type": "null"}}},
+                    }
+                ],
             },
         ),
         Tool(
@@ -128,7 +159,10 @@ def get_hfacs_tools() -> list[Tool]:
                     },
                     "min_confidence": {
                         "type": "number",
-                        "description": "Minimum confidence threshold",
+                        "description": (
+                            "Legacy heuristic-rule compatibility threshold; not "
+                            "calibrated confidence or clinical probability"
+                        ),
                         "default": 0.0,
                         "minimum": 0.0,
                         "maximum": 1.0,

@@ -256,13 +256,35 @@ async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -
         evidence_type="LAB_RESULT",
         clinical_strength="STRONG",
         source_reliability="GRADE_A",
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
     )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    calibration = orchestrator.add_evidence(
+        content="Published validation table reports direct LR 5.0.",
+        evidence_type="LITERATURE",
+        source_document="calibration.txt",
+        source_location="Table 1",
+        raw_snippet="Troponin pattern direct LR 5.0",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="sha256:" + "a" * 64,
+    )
+    orchestrator.evidence_store[calibration.id.value] = calibration
     hypothesis = orchestrator.propose_hypothesis(
         diagnosis="Acute myocardial infarction",
         icd10_code="I21.9",
         prior_probability=0.3,
         rationale="Chest pain with elevated troponin supports acute MI.",
         must_not_miss=True,
+        mechanism_category="VASCULAR",
+        diagnostic_role="ETIOLOGIC",
+        certainty="PROBABLE",
+        reasoning_basis="MECHANISM_INFERENCE",
         alternatives_considered=[
             {"diagnosis": "Pulmonary embolism", "reason_rejected": "No RV strain"}
         ],
@@ -273,7 +295,54 @@ async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -
         evidence_id=evidence.id.value,
         hypothesis_id=hypothesis.id.value,
         likelihood_ratio=5.0,
+        supports=True,
         rationale="Marked troponin elevation strongly supports myocardial injury.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration.id.value,
+    )
+    orchestrator.record_differential_breadth_audit(
+        {
+            "audit_id": "DBA-persistence",
+            "framework": "CUSTOM",
+            "framework_name": "Acute chest pain mechanism review",
+            "framework_rationale": (
+                "The presenting syndrome requires explicit vascular and mimic review."
+            ),
+            "role": "PRIMARY",
+            "cells": [
+                {
+                    "cell_id": "VASCULAR",
+                    "status": "CANDIDATES_PRESENT",
+                    "hypothesis_ids": [hypothesis.id.value],
+                    "mechanism_categories": ["VASCULAR"],
+                    "rationale": "The retained infarction candidate is vascular.",
+                    "unknowns": [],
+                    "planned_discriminators": [],
+                },
+                {
+                    "cell_id": "RESPIRATORY_MIMICS",
+                    "status": "REVIEWED_NO_PLAUSIBLE_CANDIDATE",
+                    "hypothesis_ids": [],
+                    "mechanism_categories": ["FUNCTIONAL_PHYSIOLOGIC"],
+                    "rationale": "No respiratory mimic is plausible in this fixture.",
+                    "unknowns": [],
+                    "planned_discriminators": [],
+                },
+                {
+                    "cell_id": "INFECTIOUS_MIMICS",
+                    "status": "REVIEWED_NO_PLAUSIBLE_CANDIDATE",
+                    "hypothesis_ids": [],
+                    "mechanism_categories": ["INFECTIOUS"],
+                    "rationale": "No infectious mimic is plausible in this fixture.",
+                    "unknowns": [],
+                    "planned_discriminators": [],
+                },
+            ],
+            "stop_rationale": (
+                "All custom framework cells were reviewed before stopping expansion."
+            ),
+            "recorded_by": "test-agent",
+        }
     )
     orchestrator.thinking_chain.add_step(
         ThinkingStep(
@@ -282,6 +351,11 @@ async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -
             internal_reasoning="The temporal pattern and biomarker result align with MI.",
             confidence=0.8,
         )
+    )
+    orchestrator.select_leading_hypothesis(
+        hypothesis.id.value,
+        reason="The verified biomarker pattern makes this the current working lead.",
+        changed_by="test-agent",
     )
     await state.persist_orchestrator("case-001")
     database.close()
@@ -297,13 +371,24 @@ async def test_server_state_rehydrates_complete_reasoning_case(tmp_path: Path) -
 
     restored = await restored_state.get_orchestrator("case-001")
     assert restored is not None
-    assert list(restored.evidence_store) == [evidence.id.value]
+    assert list(restored.evidence_store) == [evidence.id.value, calibration.id.value]
     assert list(restored.hypothesis_store) == [hypothesis.id.value]
     assert restored.hypothesis_store[hypothesis.id.value].current_probability > 0.3
     restored_hypothesis = restored.hypothesis_store[hypothesis.id.value]
     assert restored_hypothesis.must_not_miss is True
+    assert restored_hypothesis.mechanism_category.value == "VASCULAR"
+    assert restored_hypothesis.diagnostic_role.value == "ETIOLOGIC"
+    assert restored_hypothesis.certainty.value == "PROBABLE"
+    assert restored_hypothesis.reasoning_basis.value == "MECHANISM_INFERENCE"
     assert restored_hypothesis.uncertainty_factors == ["Serial ECG pending"]
     assert restored_hypothesis.confidence_rationale.startswith("Clinical prevalence")
-    assert len(restored.reasoning_chain.steps) == 3
-    assert len(restored.thinking_chain.steps) == 1
+    assert len(restored.reasoning_chain.steps) == 4
+    restored_audits = restored.get_differential_breadth_audits()
+    assert [audit.audit_id for audit in restored_audits] == ["DBA-persistence"]
+    assert restored_audits[0].cells[0].hypothesis_ids == [hypothesis.id.value]
+    assert len(restored.thinking_chain.steps) == 3
+    assert restored.get_leading_hypothesis_id() == hypothesis.id.value
+    assert restored.get_leading_hypothesis_selection_history()[0].changed_by == (
+        "test-agent"
+    )
     reopened_database.close()

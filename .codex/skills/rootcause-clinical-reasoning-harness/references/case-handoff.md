@@ -14,12 +14,12 @@ The live resources override examples in this file if the server contract evolves
 | Gate | Minimum evidence to proceed |
 | --- | --- |
 | Case | One de-identified `case_id`/`session_id`, purpose, scope, timezone, and active tool profile |
-| Sources | A schema-version `1.0` manifest is pinned to the session; every supplied record appears once with identity, whole-file hash, type, extraction status, and limitations; final release requires every source to be `reviewed` |
+| Sources | A schema-version `1.0` manifest is pinned to the session; every supplied record appears once with identity, whole-file hash, type, extraction status, and limitations; after extraction, append one authorized review/independence event per source without changing manifest identity or digest |
 | Evidence | Each asserted finding has an atomic observation, source ID, exact snippet/location, canonical time state, and verification state |
-| DDx | At least three normalized, non-duplicate plausible hypotheses, including applicable must-not-miss diagnoses; every active item has an evidence/test disposition |
-| Bayesian | The leading and every must-not-miss diagnosis have genuine support plus contradiction or a typed pending `DISCONFIRM`/`RULE_OUT` test; every numeric LR is the direct applied LR with rationale/source |
+| DDx | Maximum reasonable mechanism-based breadth for the phenotype/time course; one syndrome-appropriate PRIMARY framework audit has every required cell reviewed and no `NOT_ASSESSED`; at finalization, at least three normalized diagnoses across two non-`UNKNOWN` mechanisms plus one applicable must-not-miss entry; every active item has why considered, candidate-specific unknowns, qualitative certainty, and an evidence/test disposition |
+| Evidence testing | The explicitly selected leading and every must-not-miss diagnosis have genuine support plus contradiction or a typed pending `DISCONFIRM`/`RULE_OUT` test; every non-neutral direct LR cross-links both patient evidence and distinct verified `LITERATURE` calibration evidence; `LR=1.0` is neutral and does not satisfy support/refutation |
 | Cognitive | Missing data, uncertainty, alternative explanations, and relevant bias risks are recorded |
-| RCA | Fishbone, Why, and HFACS are addressed; each Why/root/audit uses the same stable ID, exact description, and evidence set; every proposed root has a persisted conservative causation audit |
+| RCA | Fishbone and Why are persisted; every Fishbone cause has an authorized HFACS `CONFIRMED` or `NOT_APPLICABLE` review; each Why/root/audit uses the same stable ID, exact description, and evidence set; every proposed root has a persisted conservative causation audit |
 | Review | Conflicts/readiness checked; a named independently qualified human has reviewed any final clinical or causal claim and is present in the operator allowlist |
 | Output | Unified package contains typed nested sections, source-to-claim lineage, limitations, machine-readable `conformance_checks[]`, review/finalization metadata, schema/config versions, and artifact hashes |
 
@@ -41,12 +41,12 @@ RootCause MCP may verify accessible plain-text extracts under configured source 
 
 ## Canonical time rules
 
-- Store `event_time_raw` exactly as shown and `event_time_canonical` as ISO 8601 only when normalization is defensible.
-- Include timezone or UTC offset. If unknown, retain `timezone: unknown`; do not assume local time.
-- Record precision as `instant`, `minute`, `hour`, `date`, `range`, `relative`, or `unknown`.
+- Store the source expression in `temporal.raw_value` and select `temporal.kind` as `instant`, `date`, `range`, `relative`, or `unknown`.
+- Only `kind: instant` may carry a canonical absolute time, and only when the source itself contains `Z` or an explicit numeric UTC offset. If the timezone is unknown, do not assume local time and do not make the event sortable.
+- Preserve the derived precision and `timezone_provenance`; do not accept caller-supplied normalized fields as authoritative.
 - Resolve relative labels such as POD 1 only against an explicitly sourced anchor. Otherwise leave canonical time unresolved.
 - Preserve conflicting timestamps as separate claims and flag the conflict; do not average or silently select one.
-- Pass a defensible canonical ISO 8601 value through `rc_add_evidence.event_timestamp` or `rc_evidence(action="add").event_timestamp`; RootCause persists it separately from ingestion time. Retain the raw time text, precision, timezone assumptions, and unresolved conflicts in the handoff ledger.
+- Prefer the typed `temporal` object on `rc_add_evidence` or `rc_evidence(action="add")`. The legacy `event_timestamp` alias is only for a source-aware offset-bearing instant. Date-only, range, relative, and unknown time are valid final states but remain unpositioned and cannot satisfy causation temporality.
 
 ## Manual confirmation rules
 
@@ -60,7 +60,9 @@ RootCause MCP may verify accessible plain-text extracts under configured source 
 
 - Pass the applied `likelihood_ratio` directly: `>1` supports, `<1` contradicts, `1.0` is neutral.
 - Pass the matching support/contradiction flag. Never rely on a weight-to-LR heuristic or invert an LR inside the agent.
-- Cite a guideline/study or explain a defensible case-specific rationale. If no quantitative LR is justified, use `1.0` and record a qualitative relationship.
+- For every non-neutral LR, set `calibration_status: SOURCE_CALIBRATED` and make `calibration_source_ref` the `EVD-*` ID of a distinct verified `LITERATURE` evidence item with exact quantitative snippet, location, and source hash. A citation-looking string alone is not a calibration record.
+- If no quantitative LR is justified, use `1.0`, `calibration_status: QUANTITATIVELY_UNKNOWN`, and record a qualitative relationship.
+- Never fabricate a probability or LR. Do not display an uncalibrated compatibility prior/posterior as clinical probability, rank, or certainty.
 - Test the leading diagnosis against at least one genuinely disconfirming finding or planned test.
 - Keep must-not-miss hypotheses visible until evidence-based exclusion; low probability alone is not exclusion.
 - For every active hypothesis, persist a typed `planned_tests` entry when refuting evidence is pending. It must include `name`, `purpose`, `expected_supporting_result`, `expected_refuting_result`, and `status`.
@@ -84,6 +86,13 @@ causality prover. Every persisted audit must retain
   implemented audit obligations passed; use `disposition: AUDIT_OBLIGATIONS_PASSED`
   and never state that clinical causality was proved.
 
+## Source and HFACS adjudication
+
+- The source manifest identity/digest is immutable. Use `rc_adjudicate_source` after extraction to append status, de-identification, independence/group lineage, reviewer, server time, and rationale for an already registered `document_id`.
+- Final source inventory is derived from the latest authorized event; a manifest field that merely says `reviewed` is not a substitute. Identical source bytes do not become independent evidence by assigning different group IDs.
+- A Fishbone `hfacs_code` is only an unreviewed candidate until `rc_confirm_classification` binds `session_id + cause_id` to an authorized reviewer event.
+- `CONFIRMED` requires a recognized HFACS code. `NOT_APPLICABLE` forbids a code. Every Fishbone cause needs exactly one ledger-consistent final review record.
+
 ## Final report conformance
 
 Preview first and inspect every machine-readable check. Caller-authored `PASS`
@@ -91,16 +100,19 @@ records are not authoritative; the finalization boundary recomputes all hard che
 Final release requires:
 
 - typed nested report sections and every mandatory final section;
-- reviewed multi-source manifest and declared evidence lineage;
-- at least three unique diagnoses, active DDx dispositions, and challenged leading
-  and must-not-miss diagnoses;
-- Fishbone/Why presence plus exact root/evidence/audit lineage and safe dispositions;
+- reviewed, de-identified, independence-adjudicated multi-source inventory with authorized append-only source-review lineage;
+- a complete PRIMARY breadth audit, the DDx finalization floors, typed
+  candidate/evidence/test dispositions, and challenged leading and must-not-miss
+  diagnoses;
+- Fishbone/Why presence, authorized per-cause HFACS review, exact root/evidence/audit lineage, and safe dispositions;
 - no unresolved high/critical safety conflict;
 - an operator-authorized reviewer, timezone-aware `finalized_at`, and recomputable
   SHA-256 `content_hash`.
 
 The finalized domain snapshot recursively rejects mutation. The hash is integrity
-metadata; durable WORM retention and signature policy remain deployment concerns.
+metadata, not an authenticity signature. Reloading finalized JSON requires an
+operator-controlled authorized-reviewer validation context; durable WORM retention
+and signature policy remain deployment concerns.
 
 ## Discrete and condensed mapping
 
@@ -108,9 +120,10 @@ Use only actions advertised by the connected server.
 
 | Purpose | Discrete tool | Condensed facade |
 | --- | --- | --- |
-| Start/get/list/archive case; pin manifest on start | `rc_start_session(source_manifest=...)`, `rc_get_session`, `rc_list_sessions`, `rc_archive_session` | `rc_rca`: `session_start`, `session_get`, `session_list`, `session_archive` |
+| Start/get/list/archive case; pin manifest on start; append source review | `rc_start_session(source_manifest=...)`, `rc_get_session`, `rc_list_sessions`, `rc_archive_session`, `rc_adjudicate_source` | `rc_rca`: `session_start`, `session_get`, `session_list`, `session_archive`, `session_adjudicate_source` |
 | Add/get/verify evidence | `rc_add_evidence`, `rc_get_evidence`, `rc_verify_evidence` | `rc_evidence`: `add`, `get`, `verify` |
-| Propose/link/rank/exclude DDx | `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`, `rc_get_differential_diagnosis`, `rc_exclude_hypothesis` | `rc_hypothesis`: `propose`, `link`, `rank`, `exclude` |
+| Propose/link/list/select lead/exclude DDx | `rc_propose_hypothesis`, `rc_link_evidence_to_hypothesis`, `rc_get_differential_diagnosis`, `rc_select_leading_hypothesis`, `rc_exclude_hypothesis` | `rc_hypothesis`: `propose`, `link`, `rank`, `select_leading`, `exclude` |
+| Audit DDx framework coverage | `rc_audit_differential_breadth` | `rc_hypothesis`: `audit_breadth` |
 | Think/reflect/gap/challenge/get chain | `rc_think_aloud`, `rc_reflect`, `rc_identify_gaps`, `rc_challenge_assumption`, `rc_get_thinking_chain` | `rc_thinking`: `think`, `reflect`, `gap`, `challenge`, `get_chain` |
 | Stage audit/conflicts/causation | `rc_audit_reasoning_state`, `rc_detect_conflicts`, `rc_verify_causation` | `rc_audit`: `stage_guidance`, `detect_conflicts`, `verify_causation` |
 | Report preview/generate | `rc_generate_contract_report` | `rc_report`: `preview`, `generate` |
@@ -163,6 +176,16 @@ source_limitations:
   - document_id: SRC-001
     limitations: []
 
+source_review_ledger:
+  - document_id: SRC-001
+    source_status: reviewed
+    de_identified: true
+    independence_status: independent
+    source_group_id: SRC-GROUP-001
+    reviewed_by: authorized-reviewer
+    reviewed_at: "2026-08-17T09:00:00+08:00"
+    reason: Source extraction, de-identification, and independence reviewed
+
 evidence_ledger:
   - local_key: EV-001
     mcp_evidence_id: unknown
@@ -170,28 +193,52 @@ evidence_ledger:
     observation: "Atomic, non-interpretive finding"
     raw_snippet: "Exact source text or cell value"
     source_location: "row 42, columns time/BP"
-    event_time_raw: "08:18"
-    event_timestamp: "2026-08-17T08:18:00+08:00"
-    timezone: Asia/Taipei
-    precision: minute
+    temporal:
+      kind: instant
+      raw_value: "2026-08-17T08:18+08:00"
+      precision: minute
+      normalized_start: "2026-08-17T00:18:00+00:00"
+      normalized_end: "2026-08-17T00:18:00+00:00"
+      timezone_provenance: source_explicit_offset
     verification_status: UNVERIFIED
     verification_method: none
     content_hash: unknown
 
 hypotheses:
   - hypothesis_id: unknown
-    diagnosis: candidate diagnosis
+    diagnosis: English canonical diagnosis name
+    mechanism_category: UNKNOWN
+    diagnostic_role: UNKNOWN
+    reasoning_basis: UNKNOWN
+    certainty: UNKNOWN
     must_not_miss: false
-    prior_probability: 0.1
+    clinical_rationale: phenotype/mechanism rationale or unknown
+    uncertainty_factors:
+      - "not documented: decision-relevant datum; mechanism remains open"
+    confidence_rationale: UNKNOWN certainty until genuine evidence or a discriminator is available
     evidence_links:
       - evidence_key: EV-001
-        direction: supports
+        direction: neutral
         applied_lr: 1.0
+        calibration_status: QUANTITATIVELY_UNKNOWN
         lr_source_or_rationale: quantitative LR unavailable
-    planned_tests: []
+    planned_tests:
+      - name: discriminating test name
+        purpose: DISCRIMINATE
+        expected_supporting_result: unknown
+        expected_refuting_result: unknown
+        status: PLANNED
     disconfirming_test: unknown
     posterior_probability: unknown
     status: active
+
+differential_breadth_audits: []  # Populate from the live exact-cell schema before finalization.
+
+leading_hypothesis:
+  hypothesis_id: unknown
+  reason: unknown until explicitly selected
+  changed_by: agent-or-reviewer
+  changed_at: unknown
 
 cognitive_audit:
   uncertainties: []
@@ -240,7 +287,7 @@ Produce one package with these sections:
 2. Source manifest and extraction limitations.
 3. Canonical timeline with source links and unresolved conflicts.
 4. Evidence ledger separating observed, inferred, and unverified content.
-5. Ranked DDx, must-not-miss list, direct LR updates, disconfirming evidence, and exclusions.
+5. Ranked mechanism-based DDx with each candidate's why considered, diagnostic role, certainty, source-linked support/refutation/neutral evidence, unknowns, discriminating test, must-not-miss state, and exclusions.
 6. Uncertainty, missing data, cognitive-bias audit, and contradictions.
 7. Fishbone, Why Tree, confirmed HFACS factors, and conservative causation audit outcomes with explicit non-proof scope.
 8. Root causes versus contributing factors; omit `REJECTED`, keep `INSUFFICIENT_DATA` proposed, and label audit passes `AUDIT_OBLIGATIONS_PASSED`.
@@ -248,6 +295,8 @@ Produce one package with these sections:
 10. Machine-readable handoff record, `conformance_checks[]`, schema/config versions, reviewer/finalization metadata, artifact hashes, and audit trail validated against `clinical://contracts/case-analysis-report`.
 
 Treat the native report schema as the canonical typed envelope. A final report still fails readiness when required workflow content is absent, even if optional schema fields allow a preliminary payload. Finalized state requires authorized reviewer, timezone-aware time, recomputable hash, and an unchanged nested snapshot. Label host-only supplements explicitly and preserve their hashes.
+
+For clinician-facing output, write explanatory prose in Traditional Chinese while keeping canonical diagnosis, test, drug, and procedure names in English. The built-in Markdown renderer uses `locale="zh-TW"` with `audience="clinician"`; custom templates keep their authored language, and JSON/FHIR values are not translated. Follow [clinician-ddx-discussion-zh-tw.md](clinician-ddx-discussion-zh-tw.md).
 
 ## Evaluation handoff boundary
 

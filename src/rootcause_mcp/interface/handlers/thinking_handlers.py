@@ -71,7 +71,7 @@ class ThinkingHandlers:
             content=args["content"],
             internal_reasoning=args.get("internal_reasoning", args["content"]),
             alternatives=alternatives,
-            confidence=args.get("confidence", 0.8),
+            confidence=args.get("confidence"),
             uncertainty_factors=args.get("uncertainty_factors", []),
             related_evidence_ids=args.get("related_evidence_ids", []),
             related_hypothesis_ids=args.get("related_hypothesis_ids", []),
@@ -103,7 +103,7 @@ class ThinkingHandlers:
             thinking_type=ThinkingType.UNCERTAINTY_ACKNOWLEDGED,  # Use as proxy for reflection
             content=args["reflection_content"],
             internal_reasoning=f"Meta-cognitive reflection: {args['reflection_content']}",
-            confidence=0.8,  # Reflections are usually high confidence
+            confidence=None,
             uncertainty_factors=args.get("identified_gaps", []),
             assumptions_made=[],
             potential_biases=args.get("identified_biases", []),
@@ -135,7 +135,7 @@ class ThinkingHandlers:
             thinking_type=ThinkingType.EVIDENCE_GAP_IDENTIFIED,
             content=args["gap_description"],
             internal_reasoning=f"Gap type: {gap_type}. Impact: {args.get('impact_on_diagnosis', 'Unknown')}",
-            confidence=0.9,  # Gap identification is usually high confidence
+            confidence=None,
             uncertainty_factors=[args["gap_description"]],
         )
 
@@ -167,7 +167,7 @@ class ThinkingHandlers:
             thinking_type=ThinkingType.ASSUMPTION_QUESTIONED,
             content=f"Challenging assumption: {args['assumption']}",
             internal_reasoning=challenge_reasoning,
-            confidence=0.7,  # Challenges are usually moderate confidence
+            confidence=None,
             assumptions_made=[args["assumption"]],
         )
 

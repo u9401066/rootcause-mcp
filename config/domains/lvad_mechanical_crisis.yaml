@@ -1,42 +1,45 @@
 # Clinical Domain Playbook: LVAD Suction Event vs Pump Thrombosis
 # 供臨床工程、心臟外科、麻醉科與加護病房使用之醫療器材危機鑑別手冊
 
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings are prompts for source review, never pathognomonic conclusions."
+  - "Do not emit patient-specific treatment, dose, contraindication, or rescue instructions."
+  - "Use current local protocols and qualified-clinician judgment for active care."
+
 domain: "Mechanical Circulatory Support & Cardiac Intensive Care"
 scenario: "HeartMate 3 / LVAD Low Flow Alarm, Power Spikes & Hemolysis"
 
-pathophysiology:
-  primary_mechanism: "Right Ventricular (RV) Failure leading to reduced LV preload, left ventricular chamber collapse, and suction of ventricular septum against inflow cannula (Wall Strike)"
-  diagnostic_trap_level_1: "誤判 Low Flow 為純缺水 (Hypovolemia) 而盲目灌注大量晶體輸液 (加重 RV 負荷)"
-  diagnostic_trap_level_2: "看到 Power Spike + LDH 升高溶血，誤判為血栓 (Pump Thrombosis) 而盲目加速或溶栓"
-  expert_level_truth: "極低搏動指數 (PI < 1.5) + 心室中膈凸向左心室 (IVS bowing into LV) + 右心擴大衰竭 = Suction Event"
+mechanisms_to_review:
+  candidates:
+    - "Reduced LV preload with suction physiology"
+    - "RV dysfunction or altered septal geometry"
+    - "Pump thrombosis or other mechanical obstruction"
+    - "Hypovolemia, inflow/outflow obstruction, rhythm, or measurement artifact"
+  interpretation_guardrail: "PI, power, hemolysis, and echocardiography must be interpreted together with device model, trend, acquisition quality, and loading conditions; no listed combination is independently diagnostic"
 
-pathognomonic_findings:
+candidate_findings_requiring_confirmation:
   - marker: "Pulsatility Index (PI) 驟降至 1.0"
     modality: "LVAD Controller Log"
-    significance: "左心室無血液充盈，搏動幅度喪失，壁撞擊 (Wall Strike) 發生"
+    significance: "May be compatible with reduced pulsatility; review trend, signal quality, loading conditions, and competing device mechanisms"
   - marker: "Power 呈間歇性鋸齒狀突波 (Intermittent Power Spikes)"
     modality: "LVAD Power Log"
-    significance: "葉輪瞬時吸住心室壁阻力驟升後脫開，非血栓之持續高功耗"
+    significance: "Intermittency may help distinguish mechanisms but does not by itself exclude thrombosis or artifact"
   - marker: "Echocardiography: Small Collapsed LV + IVS Bowing INTO LV + Dilated RV"
     modality: "Bedside TTE / TEE"
-    significance: "右心室高壓擴大、左心室空虛塌陷，吸附事件確診"
+    significance: "May support suction physiology when image quality, timing, septal position, and device data are concordant"
   - marker: "Cola-colored Urine & Elevated Plasma Free Hemoglobin / LDH"
     modality: "Laboratory"
     significance: "機械性紅血球剪切破裂溶血 (Mechanical Hemolysis)"
 
-diagnostic_rules_to_rule_out:
+differential_questions:
   - diagnosis: "Pump Thrombosis (幫浦血栓)"
-    discriminator: "血栓時 Power 呈現持續性升高、PI 正常或輕度下降、超音波 LV 擴大或正常，而非間歇性突波與 LV 塌陷"
+    discriminator: "Compare power/flow trends, hemolysis markers, imaging, ramp-study context, and device interrogation; preserve discordant or missing findings as unknown"
   - diagnosis: "Isolated Hypovolemia (單純低血容)"
-    discriminator: "單純缺水時超音波 RV 亦會塌陷且 IVC 變細；若超音波 RV 擴大伴隨 IVC 充盈無呼吸變異，則為 RV 衰竭誘發之 Suction"
+    discriminator: "Compare RV/IVC/LV findings, ventilation, loading conditions, device trends, and image quality; recorded morphology is supportive rather than definitive"
 
-treatment_protocol:
-  strictly_contraindicated:
-    - "盲目增加幫浦轉速 (↑ Pump Speed 會加劇吸附與溶血)"
-    - "盲目大量靜脈輸液 (會使衰竭的 RV 更加過載擴張)"
-    - "給予溶栓藥物 (Thrombolysis) - 增加顱內大出血致命風險"
-  recommended_rescue:
-    - "立即暫時降低幫浦轉速 (Decrease Pump Speed to break suction)"
-    - "積極右心強心支持 (Inotropes: Milrinone / Dobutamine)"
-    - "吸入性肺血管擴張劑 (Inhaled Nitric Oxide iNO / Sildenafil) 減輕右心後負荷"
-    - "評估急診臨時右心輔助器 (Temporary RVAD) 置放"
+management_boundary:
+  omitted: true
+  reason: >-
+    Patient-specific pump settings, medication, and procedural management are
+    intentionally excluded. Consult the current device-specific and local LVAD protocol.

@@ -195,6 +195,7 @@ class FishboneHandlers:
 
         result = (
             "✅ **Cause Added**\n\n"
+            f"- **Cause ID:** `{cause.cause_id}`\n"
             f"- **Category:** {category.value}\n"
             f"- **Description:** {description}\n"
         )
@@ -202,7 +203,10 @@ class FishboneHandlers:
         if sub_causes:
             result += f"- **Sub-causes:** {', '.join(sub_causes)}\n"
         if hfacs_code:
-            result += f"- **HFACS Code:** {hfacs_code}\n"
+            result += (
+                f"- **HFACS candidate:** {hfacs_code}\n"
+                "- **HFACS review status:** UNREVIEWED\n"
+            )
         if evidence:
             result += f"- **Evidence:** {', '.join(evidence)}\n"
 
@@ -216,8 +220,6 @@ class FishboneHandlers:
         # Update progress and add guided response
         if self._progress is not None:
             progress = self._progress.update_from_fishbone(session_id, fishbone)
-            if hfacs_code:
-                self._progress.update_hfacs_added(session_id)
             result = format_guided_response(result, progress, "rc_add_cause")
 
         return [TextContent(type="text", text=result)]
@@ -260,9 +262,16 @@ class FishboneHandlers:
             if category.has_causes:
                 lines.append(f"\n## {cat_type.value} ({category.cause_count} causes)")
                 for cause in category.causes:
-                    lines.append(f"\n### {cause.description}")
+                    lines.append(f"\n### {cause.description} (`{cause.cause_id}`)")
                     if cause.hfacs_code:
                         lines.append(f"- **HFACS:** {cause.hfacs_code}")
+                    lines.append(
+                        f"- **HFACS review:** {cause.hfacs_review_status.value}"
+                    )
+                    if cause.hfacs_reviewed_by:
+                        lines.append(
+                            f"- **HFACS reviewed by:** {cause.hfacs_reviewed_by}"
+                        )
                     if cause.sub_causes:
                         lines.append(f"- **Sub-causes:** {', '.join(cause.sub_causes)}")
                     if cause.evidence:

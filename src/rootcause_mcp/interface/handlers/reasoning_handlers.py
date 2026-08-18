@@ -215,8 +215,6 @@ class ReasoningHandlers:
                 content += f"## Step {i}: {step.step_type.value}\n\n"
                 content += f"**Content**: {step.content}\n\n"
                 content += f"**Rationale**: {step.rationale}\n\n"
-                if step.confidence is not None:
-                    content += f"**Confidence**: {step.confidence:.0%}\n\n"
 
         # Write to file
         write_export_text(output_path, content)

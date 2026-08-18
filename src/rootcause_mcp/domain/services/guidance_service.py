@@ -10,9 +10,12 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import TYPE_CHECKING, Any
 
-from rootcause_mcp.domain.entities.hypothesis import HypothesisStatus
+from rootcause_mcp.domain.entities.hypothesis import HypothesisStatus, MechanismCategory
 from rootcause_mcp.domain.services.final_report_conformance import (
+    diagnostic_certainty_is_supported,
+    evaluate_differential_breadth_audits,
     evaluate_hypothesis_disposition,
+    has_pending_discriminating_test,
     normalize_diagnosis,
 )
 from rootcause_mcp.domain.value_objects.reasoning_guidance import (
@@ -43,39 +46,29 @@ class ClinicalGuidanceService:
         hypothesis_store: dict[str, Hypothesis],
         thinking_chain: ThinkingChain,
         reasoning_chain: ReasoningChain,
+        leading_hypothesis_id: str | None = None,
     ) -> ReasoningGuidance:
         """Evaluate current clinical reasoning state and build guidance."""
-        evidence_count = len(evidence_store)
-        verified_evidence_count = sum(1 for e in evidence_store.values() if e.verified)
+        case_evidence = {
+            evidence_id: evidence
+            for evidence_id, evidence in evidence_store.items()
+            if evidence.evidence_type.value != "LITERATURE"
+        }
+        evidence_count = len(case_evidence)
+        verified_evidence_count = sum(1 for e in case_evidence.values() if e.verified)
         evidence_with_sources = sum(
-            1 for e in evidence_store.values() if e.source.document_id
+            1 for e in case_evidence.values() if e.source.document_id
         )
 
-        hypotheses_count = len(hypothesis_store)
-        normalized_diagnoses = [
-            normalize_diagnosis(hypothesis.model_dump(mode="json"))
-            for hypothesis in hypothesis_store.values()
-        ]
-        unique_hypotheses_count = len(set(normalized_diagnoses))
-        duplicate_diagnoses = sorted(
-            {
-                name
-                for name in normalized_diagnoses
-                if name and normalized_diagnoses.count(name) > 1
-            }
-        )
-        differential_is_unique = (
-            hypotheses_count >= 3
-            and unique_hypotheses_count >= 3
-            and bool(normalized_diagnoses)
-            and all(normalized_diagnoses)
-            and not duplicate_diagnoses
-        )
-        readiness_hypothesis_count = (
-            unique_hypotheses_count
-            if not duplicate_diagnoses
-            else min(unique_hypotheses_count, 2)
-        )
+        (
+            hypotheses_count,
+            unique_hypotheses_count,
+            duplicate_diagnoses,
+            differential_is_unique,
+            mechanism_categories,
+            mechanism_breadth_met,
+            readiness_hypothesis_count,
+        ) = cls._evaluate_differential_shape(hypothesis_store)
         must_not_miss_count = sum(
             1 for hypothesis in hypothesis_store.values() if hypothesis.must_not_miss
         )
@@ -87,10 +80,13 @@ class ClinicalGuidanceService:
         for h in hypothesis_store.values():
             linked_evidence_ids.update(h.supporting_evidence_ids)
             linked_evidence_ids.update(h.contradicting_evidence_ids)
+            linked_evidence_ids.update(
+                relationship.evidence_id for relationship in h.likelihood_ratios
+            )
 
         unlinked_evidence = [
             e.id.value
-            for e in evidence_store.values()
+            for e in case_evidence.values()
             if e.id.value not in linked_evidence_ids
         ]
 
@@ -105,23 +101,33 @@ class ClinicalGuidanceService:
             )
             for hypothesis in hypothesis_store.values()
         }
+        breadth_audit_failures, breadth_audit_details = cls._evaluate_breadth_audit(
+            thinking_chain,
+            hypothesis_store,
+        )
+        breadth_audit_complete = not breadth_audit_failures
         active_disposition_failures = [
             hypothesis.id.value
             for hypothesis in active_hypotheses
             if not cls._active_disposition_complete(
-                disposition_by_id[hypothesis.id.value]
+                hypothesis, disposition_by_id[hypothesis.id.value]
             )
         ]
-        eligible_hypotheses = [
-            hypothesis
+        certainty_failures = [
+            hypothesis.id.value
             for hypothesis in hypothesis_store.values()
-            if hypothesis.status
-            not in {HypothesisStatus.EXCLUDED, HypothesisStatus.ON_HOLD}
+            if not diagnostic_certainty_is_supported(
+                hypothesis.model_dump(mode="json"),
+                evidence_payloads,
+            )
         ]
-        leading_hypothesis = max(
-            eligible_hypotheses,
-            key=lambda hypothesis: hypothesis.current_probability,
-            default=None,
+        selected_hypothesis = hypothesis_store.get(leading_hypothesis_id or "")
+        leading_hypothesis = (
+            selected_hypothesis
+            if selected_hypothesis is not None
+            and selected_hypothesis.status
+            not in {HypothesisStatus.EXCLUDED, HypothesisStatus.ON_HOLD}
+            else None
         )
         leading_diagnosis_challenged = (
             leading_hypothesis is not None
@@ -159,7 +165,11 @@ class ClinicalGuidanceService:
             evidence_count=evidence_count,
             evidence_with_sources=evidence_with_sources,
             verified_evidence_count=verified_evidence_count,
-            hypotheses_count=readiness_hypothesis_count,
+            hypotheses_count=(
+                readiness_hypothesis_count
+                if mechanism_breadth_met and breadth_audit_complete
+                else min(readiness_hypothesis_count, 2)
+            ),
             unlinked_evidence_count=len(unlinked_evidence),
             has_disconfirming_check=differential_disposition_complete,
             has_uncertainties=bool(uncertainty_factors),
@@ -183,10 +193,28 @@ class ClinicalGuidanceService:
                 "Duplicate normalized differential diagnosis entries: "
                 + ", ".join(duplicate_diagnoses),
             )
+        if not mechanism_breadth_met:
+            missing.insert(
+                0,
+                "Differential mechanism breadth needed: at least 2 non-UNKNOWN "
+                "etiologic categories are required for final synthesis",
+            )
+        if breadth_audit_failures:
+            missing.insert(
+                0,
+                "Systematic differential breadth audit is incomplete: "
+                + ", ".join(breadth_audit_failures),
+            )
         if active_disposition_failures:
             missing.append(
-                "Active diagnoses missing genuine evidence plus contradiction or a "
-                "typed pending rule-out test: " + ", ".join(active_disposition_failures)
+                "Active diagnoses missing clinical rationale, per-diagnosis "
+                "uncertainty, or genuine evidence/typed discriminating test: "
+                + ", ".join(active_disposition_failures)
+            )
+        if leading_hypothesis is None:
+            missing.append(
+                "No eligible explicit leading diagnosis has been selected; use the "
+                "audited leading-hypothesis mutation before final synthesis"
             )
         if leading_hypothesis is not None and not leading_diagnosis_challenged:
             missing.append(
@@ -199,6 +227,12 @@ class ClinicalGuidanceService:
                 "a typed pending rule-out test: "
                 + ", ".join(must_not_miss_disposition_failures)
             )
+        if certainty_failures:
+            missing.append(
+                "Diagnostic certainty labels lack genuine evidence/completed-test "
+                "support or conflict with lifecycle status: "
+                + ", ".join(certainty_failures)
+            )
 
         stage, stage_display, next_actions, push_questions = (
             cls._determine_stage_and_actions(
@@ -206,6 +240,8 @@ class ClinicalGuidanceService:
                 verified_evidence_count=verified_evidence_count,
                 hypotheses_count=readiness_hypothesis_count,
                 must_not_miss_count=must_not_miss_count,
+                mechanism_breadth_met=mechanism_breadth_met,
+                breadth_audit_complete=breadth_audit_complete,
                 unlinked_evidence=unlinked_evidence,
                 has_disconfirming_check=differential_disposition_complete,
                 has_uncertainties=bool(uncertainty_factors),
@@ -222,6 +258,11 @@ class ClinicalGuidanceService:
             "duplicate_normalized_diagnoses": duplicate_diagnoses,
             "active_hypotheses_count": len(active_hypotheses),
             "min_hypotheses_met": differential_is_unique,
+            "mechanism_categories": sorted(mechanism_categories),
+            "mechanism_categories_count": len(mechanism_categories),
+            "mechanism_breadth_met": mechanism_breadth_met,
+            "differential_breadth_audit_complete": breadth_audit_complete,
+            "differential_breadth_audit_details": breadth_audit_details,
             "must_not_miss_hypotheses_count": must_not_miss_count,
             "must_not_miss_reviewed": (
                 must_not_miss_count > 0 and not must_not_miss_disposition_failures
@@ -230,6 +271,10 @@ class ClinicalGuidanceService:
             "disconfirming_evidence_tested": differential_disposition_complete,
             "genuine_disconfirming_evidence_present": has_genuine_contradiction,
             "active_differential_disposition_complete": not active_disposition_failures,
+            "diagnostic_certainty_supported": not certainty_failures,
+            "leading_hypothesis_id": leading_hypothesis_id,
+            "explicit_leading_hypothesis_selected": bool(leading_hypothesis_id),
+            "leading_selection_eligible": leading_hypothesis is not None,
             "leading_diagnosis_challenged": leading_diagnosis_challenged,
             "must_not_miss_disposition_complete": (
                 must_not_miss_count > 0 and not must_not_miss_disposition_failures
@@ -244,9 +289,12 @@ class ClinicalGuidanceService:
             and verified_evidence_count == evidence_count
             and evidence_with_sources == evidence_count
             and differential_is_unique
+            and mechanism_breadth_met
+            and breadth_audit_complete
             and must_not_miss_count > 0
             and len(unlinked_evidence) == 0
             and differential_disposition_complete
+            and not certainty_failures
             and bool(uncertainty_factors)
             and bool(bias_reports)
         )
@@ -265,12 +313,82 @@ class ClinicalGuidanceService:
 
     @staticmethod
     def _active_disposition_complete(
+        hypothesis: Hypothesis,
         disposition: tuple[bool, bool, bool],
     ) -> bool:
-        """Match the final gate for one active differential diagnosis."""
-        has_support, has_contradiction, has_disconfirming_plan = disposition
-        return (has_support or has_contradiction) and (
-            has_contradiction or has_disconfirming_plan
+        """Require auditable rationale/uncertainty plus evidence or a test plan."""
+        has_support, has_contradiction, _ = disposition
+        return (
+            len(hypothesis.clinical_rationale.strip()) >= 10
+            and any(item.strip() for item in hypothesis.uncertainty_factors)
+            and (
+                has_support
+                or has_contradiction
+                or has_pending_discriminating_test(hypothesis.model_dump(mode="json"))
+            )
+        )
+
+    @staticmethod
+    def _evaluate_differential_shape(
+        hypothesis_store: Mapping[str, Hypothesis],
+    ) -> tuple[int, int, list[str], bool, set[str], bool, int]:
+        """Return normalized uniqueness and mechanism-breadth facts."""
+        normalized = [
+            normalize_diagnosis(hypothesis.model_dump(mode="json"))
+            for hypothesis in hypothesis_store.values()
+        ]
+        unique_count = len(set(normalized))
+        duplicates = sorted(
+            {name for name in normalized if name and normalized.count(name) > 1}
+        )
+        hypothesis_count = len(hypothesis_store)
+        is_unique = (
+            hypothesis_count >= 3
+            and unique_count >= 3
+            and bool(normalized)
+            and all(normalized)
+            and not duplicates
+        )
+        mechanisms = {
+            hypothesis.mechanism_category.value
+            for hypothesis in hypothesis_store.values()
+            if hypothesis.mechanism_category is not MechanismCategory.UNKNOWN
+        }
+        readiness_count = unique_count if not duplicates else min(unique_count, 2)
+        return (
+            hypothesis_count,
+            unique_count,
+            duplicates,
+            is_unique,
+            mechanisms,
+            len(mechanisms) >= 2,
+            readiness_count,
+        )
+
+    @staticmethod
+    def _evaluate_breadth_audit(
+        thinking_chain: ThinkingChain,
+        hypothesis_store: Mapping[str, Hypothesis],
+    ) -> tuple[list[str], dict[str, Any]]:
+        """Project the latest persisted audits and run the shared final rules."""
+        payloads_by_id: dict[str, Mapping[str, Any]] = {}
+        for step in thinking_chain.steps:
+            if step.structured_data.get("record_type") != (
+                "DIFFERENTIAL_BREADTH_AUDIT"
+            ):
+                continue
+            payload = step.structured_data.get("audit")
+            if not isinstance(payload, Mapping):
+                continue
+            audit_id = str(payload.get("audit_id") or "").strip()
+            if audit_id:
+                payloads_by_id[audit_id] = payload
+        return evaluate_differential_breadth_audits(
+            list(payloads_by_id.values()),
+            [
+                hypothesis.model_dump(mode="json")
+                for hypothesis in hypothesis_store.values()
+            ],
         )
 
     @staticmethod
@@ -366,6 +484,8 @@ class ClinicalGuidanceService:
         verified_evidence_count: int,
         hypotheses_count: int,
         must_not_miss_count: int,
+        mechanism_breadth_met: bool,
+        breadth_audit_complete: bool,
         unlinked_evidence: list[str],
         has_disconfirming_check: bool,
         has_uncertainties: bool,
@@ -389,14 +509,28 @@ class ClinicalGuidanceService:
                 ],
             )
 
-        if hypotheses_count < 3 or must_not_miss_count == 0:
+        if (
+            hypotheses_count < 3
+            or must_not_miss_count == 0
+            or not mechanism_breadth_met
+            or not breadth_audit_complete
+        ):
+            expansion_actions = [
+                f"Propose {max(0, 3 - hypotheses_count)} more competing differential diagnosis hypothesis/hypotheses using rc_propose_hypothesis",
+                "Mark at least one applicable high-risk diagnosis with must_not_miss=true",
+            ]
+            if not mechanism_breadth_met:
+                expansion_actions.append(
+                    "Classify and expand candidates until at least two plausible non-UNKNOWN mechanism_category values are represented"
+                )
+            if not breadth_audit_complete:
+                expansion_actions.append(
+                    "Call rc_audit_differential_breadth with a syndrome-appropriate complete PRIMARY framework audit and explicit stop_rationale"
+                )
             return (
                 ReasoningStage.DIFFERENTIAL_EXPANSION,
                 "2. Differential Expansion (≥3 Hypotheses)",
-                [
-                    f"Propose {max(0, 3 - hypotheses_count)} more competing differential diagnosis hypothesis/hypotheses using rc_propose_hypothesis",
-                    "Mark at least one applicable high-risk diagnosis with must_not_miss=true",
-                ],
+                expansion_actions,
                 [
                     "What competing diagnoses could explain these findings if your primary hypothesis is incorrect?",
                     "What rare or critical 'can't miss' emergencies must be actively ruled out?",

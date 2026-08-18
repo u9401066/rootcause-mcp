@@ -149,6 +149,26 @@ deterministic harness 取代。Batch ingest 必須先具備 aliases、idempotenc
 
 **限制**：RootCause MCP 專注於推理契約與血緣比對，不重疊 Asset-Aware MCP 的 PDF OCR/表格分割角色。
 
+### ADR-008: Typed Final Conformance 與 Append-only Clinical Review Ledgers
+
+**日期**：2026-08-18
+
+**背景**：Top-level schema、caller-authored readiness、numeric compatibility、自由文字
+citation 與未綁定的 HFACS suggestion 都可能讓形式完整但語意不一致的報告通過。
+
+**決定**：
+- Finalization 由 Domain 重新計算固定 hard checks，並要求 operator 提供 reviewer allowlist。
+- Source review、leading diagnosis selection 與 HFACS cause review 使用 append-only persisted events。
+- Evidence time 採 source-faithful typed temporal record；非中性 LR 必須 cross-link verified
+  patient evidence 與 distinct verified literature calibration evidence。
+- Final snapshot 使用完整 canonical payload hash（只排除 hash 欄本身）並遞迴凍結。
+
+**理由**：讓 final artifact 的來源、DDx、時間、RCA、review 與呈現內容都能從同一 ledger
+重算，避免 Agent 敘事或 transport order 取代臨床語意。
+
+**限制**：Allowlist 是 deployment authorization input，不是完整 IAM/RBAC 或臨床資格
+證明；content hash 也不是 digital signature 或 WORM records system。
+
 ## 📦 元件圖
 
 ```

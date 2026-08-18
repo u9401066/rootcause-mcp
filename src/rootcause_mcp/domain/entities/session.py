@@ -10,7 +10,11 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from typing import Any
 
-from rootcause_mcp.domain.value_objects.case_manifest import CaseInputManifest
+from rootcause_mcp.domain.value_objects.case_manifest import (
+    CaseInputManifest,
+    SourceReviewAdjudication,
+    SourceReviewStatus,
+)
 from rootcause_mcp.domain.value_objects.enums import (
     CaseType,
     SessionStatus,
@@ -172,6 +176,69 @@ class RCASession:
         if not payload:
             return None
         return CaseInputManifest.model_validate(payload)
+
+    def record_source_review(self, adjudication: SourceReviewAdjudication) -> None:
+        """Append a human-adjudicated processing state without mutating the manifest."""
+        if not self.is_active:
+            raise ValueError("source review requires an active session")
+        manifest = self.get_source_manifest()
+        if manifest is None:
+            raise ValueError("source review requires a pinned source manifest")
+        if adjudication.manifest_digest != manifest.digest:
+            raise ValueError("source review manifest_digest does not match the session")
+        document_ids = {document.document_id for document in manifest.documents}
+        if adjudication.document_id not in document_ids:
+            raise ValueError("source review document_id is not in the pinned manifest")
+        if (
+            adjudication.parent_document_id is not None
+            and adjudication.parent_document_id not in document_ids
+        ):
+            raise ValueError("derived source parent_document_id is not in the manifest")
+
+        ledger = list(self.get_source_review_ledger())
+        if any(item.adjudication_id == adjudication.adjudication_id for item in ledger):
+            raise ValueError("source review adjudication_id must be unique")
+        manifest_document = next(
+            document
+            for document in manifest.documents
+            if document.document_id == adjudication.document_id
+        )
+        previous = next(
+            (
+                item
+                for item in reversed(ledger)
+                if item.document_id == adjudication.document_id
+            ),
+            None,
+        )
+        if previous is not None and adjudication.reviewed_at < previous.reviewed_at:
+            raise ValueError("source review timestamps must be append-only")
+        if (
+            (previous is not None and previous.status is SourceReviewStatus.REVIEWED)
+            or (
+                previous is None
+                and manifest_document.status is SourceReviewStatus.REVIEWED
+            )
+        ) and adjudication.status is not SourceReviewStatus.REVIEWED:
+            raise ValueError("a reviewed source cannot regress to a non-reviewed state")
+
+        ledger.append(adjudication)
+        self.update_stage_data(
+            Stage.GATHER,
+            {"source_review_ledger": [item.model_dump(mode="json") for item in ledger]},
+        )
+
+    def get_source_review_ledger(self) -> tuple[SourceReviewAdjudication, ...]:
+        """Return the validated append-only source-review transition history."""
+        payloads = self.get_stage_data(Stage.GATHER).get("source_review_ledger", [])
+        return tuple(SourceReviewAdjudication.model_validate(item) for item in payloads)
+
+    def get_latest_source_reviews(self) -> dict[str, SourceReviewAdjudication]:
+        """Return the latest review transition for each manifest document."""
+        latest: dict[str, SourceReviewAdjudication] = {}
+        for item in self.get_source_review_ledger():
+            latest[item.document_id] = item
+        return latest
 
     # === Problem Statement ===
 

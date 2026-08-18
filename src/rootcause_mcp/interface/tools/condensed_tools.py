@@ -1,7 +1,7 @@
 """
 Condensed Facade Tool Definitions for RootCause MCP (SDK 2.0).
 
-Reduces 43 discrete tools into 8 high-cohesion, action-based unified facade tools,
+Reduces 46 discrete tools into 8 high-cohesion, action-based unified facade tools,
 reducing tool schema context window overhead by >80% for AI Agents.
 """
 
@@ -11,7 +11,12 @@ from mcp.types import Tool
 
 from rootcause_mcp.interface.tools.schema_fragments import (
     case_input_manifest_schema,
+    clinical_temporal_input_schema,
+    differential_breadth_audit_input_schema,
+    hypothesis_classification_input_properties,
+    likelihood_ratio_calibration_input_properties,
     planned_diagnostic_test_input_schema,
+    timeline_event_input_schema,
 )
 
 
@@ -61,11 +66,12 @@ def get_condensed_tools() -> list[Tool]:
                         "type": "string",
                         "format": "date-time",
                         "description": (
-                            "Canonical ISO 8601/RFC3339 event datetime containing 'T' "
-                            "and required Z or numeric timezone offset; omit for "
-                            "date-only or unknown/local time (for action='add')"
+                            "Legacy alias for temporal.kind='instant' only; requires "
+                            "'T' plus Z or a numeric timezone offset. Use temporal for date, "
+                            "range, relative, or unknown time (action='add')."
                         ),
                     },
+                    "temporal": clinical_temporal_input_schema(),
                     "raw_snippet": {
                         "type": "string",
                         "description": "Exact literal quote from the raw document for deterministic lineage",
@@ -117,15 +123,25 @@ def get_condensed_tools() -> list[Tool]:
             name="rc_hypothesis",
             description=(
                 "Unified Differential Diagnosis (DDx): Propose, link evidence (Bayesian update), rank, or exclude hypotheses. "
-                "Actions: 'propose' (create hypothesis with prior & reasoning), 'link' (apply LR to update probability), "
-                "'rank' (get ranked differential diagnoses), 'exclude' (rule out hypothesis with reason)."
+                "Actions: 'propose' (create hypothesis with prior & reasoning), "
+                "'audit_breadth' (persist systematic framework coverage), "
+                "'link' (apply LR to update probability), "
+                "'select_leading' (explicitly select the current lead with history), "
+                "'rank' (get ledger-order differential diagnoses), 'exclude' (rule out hypothesis with reason)."
             ),
             input_schema={
                 "type": "object",
                 "properties": {
                     "action": {
                         "type": "string",
-                        "enum": ["propose", "link", "rank", "exclude"],
+                        "enum": [
+                            "propose",
+                            "audit_breadth",
+                            "link",
+                            "select_leading",
+                            "rank",
+                            "exclude",
+                        ],
                         "description": "Hypothesis operation to perform",
                         "default": "propose",
                     },
@@ -143,18 +159,27 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "prior_probability": {
                         "type": "number",
-                        "description": "Prior probability P(H) between 0.0 and 1.0 (default: 0.1)",
-                        "default": 0.1,
+                        "description": (
+                            "Numeric Bayesian starting value. Omission uses a neutral "
+                            "0.5 UNCALIBRATED implementation baseline, not a clinical "
+                            "probability or certainty label."
+                        ),
+                        "default": 0.5,
                     },
                     "must_not_miss": {
                         "type": "boolean",
                         "description": "Explicit high-harm rule-out marker (for action='propose')",
                         "default": False,
                     },
+                    **hypothesis_classification_input_properties(),
                     "differential_diagnoses_considered": {
                         "type": "array",
                         "items": {"type": "object"},
-                        "description": "Competing diagnoses and disposition rationale",
+                        "description": (
+                            "DEPRECATED context-only notes. Propose every plausible "
+                            "candidate separately; this cannot replace audit_breadth "
+                            "or justify exclusion."
+                        ),
                     },
                     "uncertainty_factors": {
                         "type": "array",
@@ -163,7 +188,10 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "confidence_rationale": {
                         "type": "string",
-                        "description": "Why the prior probability was selected",
+                        "description": (
+                            "Why the candidate is considered and the calibration/source "
+                            "limitations of any numeric prior"
+                        ),
                     },
                     "planned_tests": {
                         "type": "array",
@@ -171,6 +199,13 @@ def get_condensed_tools() -> list[Tool]:
                         "description": (
                             "Typed pending diagnostic tests for action='propose'; "
                             "the server binds each target to the new hypothesis"
+                        ),
+                    },
+                    "breadth_audit": {
+                        **differential_breadth_audit_input_schema(),
+                        "description": (
+                            "Typed systematic DDx coverage artifact for "
+                            "action='audit_breadth'"
                         ),
                     },
                     "clinical_reasoning": {
@@ -187,28 +222,78 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "direction": {
                         "type": "string",
-                        "enum": ["SUPPORTS", "REFUTES", "CONTRADICTS"],
-                        "description": "Direction of evidence effect (for action='link')",
-                        "default": "SUPPORTS",
-                    },
-                    "weight": {
-                        "type": "number",
-                        "minimum": 0.0,
-                        "maximum": 1.0,
-                        "description": "Strength weight (0.0 to 1.0) or exact likelihood ratio (for action='link')",
+                        "enum": [
+                            "SUPPORTS",
+                            "REFUTES",
+                            "CONTRADICTS",
+                            "NEUTRAL",
+                        ],
+                        "description": (
+                            "Direction for action='link': SUPPORTS only with LR>1, "
+                            "REFUTES/CONTRADICTS only with LR<1, and NEUTRAL only "
+                            "with LR=1. Omit to derive from the direct LR."
+                        ),
                     },
                     "likelihood_ratio": {
                         "type": "number",
                         "minimum": 0.01,
                         "maximum": 100.0,
-                        "description": "Applied Bayesian LR: normally >1 for SUPPORTS and <1 for REFUTES/CONTRADICTS; never inverted by the server",
+                        "description": (
+                            "Direct applied likelihood ratio for action='link': >1 "
+                            "supports, <1 refutes, and 1.0 is neutral. The server "
+                            "never invents, converts, or inverts an LR."
+                        ),
                     },
+                    **likelihood_ratio_calibration_input_properties(),
                     "reason": {
                         "type": "string",
-                        "description": "Reason for exclusion (for action='exclude')",
+                        "minLength": 10,
+                        "description": (
+                            "Reason for selection (action='select_leading') or "
+                            "exclusion (action='exclude')"
+                        ),
+                    },
+                    "changed_by": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 128,
+                        "description": (
+                            "Auditable identity for action='select_leading'"
+                        ),
                     },
                 },
                 "required": ["session_id"],
+                "allOf": [
+                    {
+                        "if": {
+                            "properties": {"action": {"const": "link"}},
+                            "required": ["action"],
+                        },
+                        "then": {"required": ["calibration_status"]},
+                    },
+                    {
+                        "if": {
+                            "properties": {"action": {"const": "select_leading"}},
+                            "required": ["action"],
+                        },
+                        "then": {
+                            "required": [
+                                "hypothesis_id",
+                                "reason",
+                                "changed_by",
+                            ]
+                        },
+                    },
+                    {
+                        "if": {
+                            "properties": {
+                                "calibration_status": {"const": "SOURCE_CALIBRATED"}
+                            },
+                            "required": ["calibration_status"],
+                        },
+                        "then": {"required": ["calibration_source_ref"]},
+                    },
+                ],
             },
         ),
         Tool(
@@ -255,8 +340,12 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "confidence": {
                         "type": "number",
-                        "description": "Confidence level between 0.0 and 1.0",
-                        "default": 0.8,
+                        "minimum": 0,
+                        "maximum": 1,
+                        "description": (
+                            "Optional caller-supplied compatibility metadata; not "
+                            "clinical probability or calibrated confidence"
+                        ),
                     },
                     "reflection_content": {
                         "type": "string",
@@ -403,6 +492,23 @@ def get_condensed_tools() -> list[Tool]:
                         "description": "Markdown detail level (default: standard)",
                         "default": "standard",
                     },
+                    "locale": {
+                        "type": "string",
+                        "enum": ["en", "zh-TW"],
+                        "description": (
+                            "Built-in Markdown renderer locale; default: en"
+                        ),
+                        "default": "en",
+                    },
+                    "audience": {
+                        "type": "string",
+                        "enum": ["general", "clinician"],
+                        "description": (
+                            "Markdown audience; clinician expands evidence-grounded "
+                            "DDx discussion while preserving English medical terms"
+                        ),
+                        "default": "general",
+                    },
                     "template_file": {
                         "type": "string",
                         "description": "Optional path to custom Markdown template file",
@@ -463,6 +569,19 @@ def get_condensed_tools() -> list[Tool]:
                     "title": {
                         "type": "string",
                         "description": "Custom diagram title (for action='timeline')",
+                    },
+                    "events": {
+                        "type": "array",
+                        "items": timeline_event_input_schema(),
+                        "description": (
+                            "Optional custom timeline events with typed temporal "
+                            "semantics (for action='timeline')."
+                        ),
+                    },
+                    "include_table": {
+                        "type": "boolean",
+                        "description": "Include Markdown event table (for action='timeline')",
+                        "default": True,
                     },
                     "mermaid_source": {
                         "type": "string",
@@ -533,6 +652,7 @@ def get_condensed_tools() -> list[Tool]:
                             "session_get",
                             "session_list",
                             "session_archive",
+                            "session_adjudicate_source",
                             "fishbone_init",
                             "fishbone_add_cause",
                             "fishbone_get",
@@ -570,6 +690,30 @@ def get_condensed_tools() -> list[Tool]:
                         **case_input_manifest_schema(),
                         "description": "Versioned raw-source manifest (for session_start)",
                     },
+                    "document_id": {
+                        "type": "string",
+                        "description": "Manifest document_id (for session_adjudicate_source)",
+                    },
+                    "source_status": {
+                        "type": "string",
+                        "enum": ["extracted", "reviewed", "failed"],
+                    },
+                    "de_identified": {"type": "boolean"},
+                    "independence_status": {
+                        "type": "string",
+                        "enum": ["unknown", "independent", "derived"],
+                    },
+                    "source_group_id": {"type": "string"},
+                    "parent_document_id": {"type": "string"},
+                    "derivation_method": {"type": "string"},
+                    "reviewed_by": {
+                        "type": "string",
+                        "description": "Allowlisted reviewer for source adjudication",
+                    },
+                    "reason": {
+                        "type": "string",
+                        "description": "Auditable source-review rationale",
+                    },
                     "problem_statement": {
                         "type": "string",
                         "description": "Initial problem (for fishbone_init, why_ask)",
@@ -581,6 +725,10 @@ def get_condensed_tools() -> list[Tool]:
                     "description": {
                         "type": "string",
                         "description": "Description of cause or finding",
+                    },
+                    "cause_id": {
+                        "type": "string",
+                        "description": "Persisted Fishbone cause ID (for hfacs_confirm)",
                     },
                     "answer": {
                         "type": "string",
@@ -600,7 +748,12 @@ def get_condensed_tools() -> list[Tool]:
                     },
                     "hfacs_code": {
                         "type": "string",
-                        "description": "HFACS classification code (e.g. UA-S, PC-C)",
+                        "description": "Recognized HFACS classification code",
+                    },
+                    "review_status": {
+                        "type": "string",
+                        "enum": ["CONFIRMED", "NOT_APPLICABLE"],
+                        "description": "Persisted HFACS review disposition",
                     },
                 },
             },

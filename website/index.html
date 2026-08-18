@@ -34,7 +34,7 @@
         "description": "Evidence-grounded infrastructure for multi-source clinical reasoning and systems root-cause analysis.",
         "codeRepository": "https://github.com/u9401066/rootcause-mcp",
         "programmingLanguage": "Python",
-        "softwareVersion": "2.0.0a1",
+        "softwareVersion": "2.0.0a2",
         "license": "https://github.com/u9401066/rootcause-mcp/blob/master/LICENSE"
       }
     </script>
@@ -148,7 +148,7 @@
             <article class="stage">
               <span class="stage-number">03</span>
               <strong>鑑別推理</strong>
-              <p>至少三個候選假說、支持與反證、直接 LR。</p>
+              <p>依 syndrome framework 逐格審查，建立最大合理 DDx；三項只是 finalization floor。</p>
             </article>
             <article class="stage">
               <span class="stage-number">04</span>
@@ -195,12 +195,12 @@
             <article class="responsibility">
               <span class="responsibility-index">02 · REASON</span>
               <h3>Reasoning Agent</h3>
-              <p>提出 DDx、直接 LR、替代解釋、不確定性、反證與系統原因假說。</p>
+              <p>依 phenotype／time course 展開機轉，逐格稽核 DDx，並提出 source-linked 支持、反證、unknown 與 discriminator。</p>
             </article>
             <article class="responsibility">
               <span class="responsibility-index">03 · GOVERN</span>
               <h3>RootCause MCP</h3>
-              <p>檢查 schema、來源血緣、機率更新、狀態轉移、readiness gates 與標準化輸出。</p>
+              <p>檢查 schema、來源血緣、evidence relation、狀態轉移、readiness gates 與標準化輸出。</p>
             </article>
             <article class="responsibility">
               <span class="responsibility-index">04 · APPROVE</span>
@@ -212,11 +212,11 @@
           <div class="nine-stage" aria-label="九階段推理流程">
             <div><span>01</span><strong>建立 session</strong></div>
             <div><span>02</span><strong>登錄 manifest</strong></div>
-            <div><span>03</span><strong>加入證據</strong></div>
-            <div><span>04</span><strong>建立 DDx</strong></div>
+            <div><span>03</span><strong>審閱來源／證據</strong></div>
+            <div><span>04</span><strong>DDx／選定 lead</strong></div>
             <div><span>05</span><strong>雙向檢驗</strong></div>
             <div><span>06</span><strong>偏誤／缺口</strong></div>
-            <div><span>07</span><strong>系統 RCA</strong></div>
+            <div><span>07</span><strong>RCA／HFACS review</strong></div>
             <div><span>08</span><strong>預覽報告</strong></div>
             <div><span>09</span><strong>人類核准</strong></div>
           </div>
@@ -238,20 +238,24 @@
           <div>
             <div class="section-intro">
               <h2 id="output-title">標準產物不是一段結論，而是一組可查核關係。</h2>
-              <p>同一份案例可輸出 JSON、Markdown 與 FHIR DiagnosticReport 表示；canonical JSON 是交接基準。</p>
+              <p>
+                同一份案例可輸出 JSON、Markdown 與 FHIR DiagnosticReport；canonical JSON 是交接基準。
+                Built-in Markdown 使用 <code>locale=zh-TW</code>、<code>audience=clinician</code> 時，
+                說明文字為繁中，diagnosis／test／drug／procedure 名稱保留 English。
+              </p>
             </div>
             <div class="output-list">
               <article class="output-item">
                 <h3>來源與時間軸</h3>
-                <p>manifest 覆蓋、文件 hash、事件時間、precision 與跨來源衝突。</p>
+                <p>append-only source review／independence、文件 hash、typed time、precision 與跨來源衝突；unknown time 不會被假排序。</p>
               </article>
               <article class="output-item">
                 <h3>證據與鑑別診斷</h3>
-                <p>逐筆 provenance、支持／反證、直接 LR、機率歷程與 must-not-miss disposition。</p>
+                <p>逐筆 provenance、framework breadth audit、明確選定 leading、source-calibrated LR、支持／反證／neutral、unknown、discriminating test、certainty 與 must-not-miss disposition。</p>
               </article>
               <article class="output-item">
                 <h3>系統 RCA</h3>
-                <p>Fishbone、5-Why、HFACS 與 causation audit；稽核狀態不等於因果證明。</p>
+                <p>Fishbone、5-Why、逐 cause authorized HFACS review 與 causation audit；稽核狀態不等於因果證明。</p>
               </article>
               <article class="output-item">
                 <h3>限制、readiness 與審查</h3>
@@ -262,7 +266,7 @@
 
           <div class="code-window" aria-label="標準報告 JSON 範例">
             <div class="code-header">
-              <span>case-analysis-report.json · abridged</span>
+              <span>case-analysis-report.json · illustrative abridged shape</span>
               <button
                 class="copy-button"
                 type="button"
@@ -278,14 +282,24 @@
       <span class="code-key">"sha256"</span>: <span class="code-string">"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"</span>,
       <span class="code-key">"evidence_count"</span>: 3,
       <span class="code-key">"verified_count"</span>: 3,
-      <span class="code-key">"coverage_status"</span>: <span class="code-string">"reviewed"</span>
+      <span class="code-key">"coverage_status"</span>: <span class="code-string">"reviewed"</span>,
+      <span class="code-key">"de_identified"</span>: true,
+      <span class="code-key">"independence_status"</span>: <span class="code-string">"independent"</span>,
+      <span class="code-key">"source_group_id"</span>: <span class="code-string">"SRC-GROUP-001"</span>,
+      <span class="code-key">"source_review_adjudication_id"</span>: <span class="code-string">"SRV-001"</span>,
+      <span class="code-key">"source_reviewed_by"</span>: <span class="code-string">"authorized-reviewer"</span>,
+      <span class="code-key">"source_reviewed_at"</span>: <span class="code-string">"2026-08-18T09:00:00Z"</span>,
+      <span class="code-key">"source_review_reason"</span>: <span class="code-string">"Source lineage reviewed"</span>
     }
   ],
   <span class="code-key">"hypotheses"</span>: [
     {
       <span class="code-key">"id"</span>: <span class="code-string">"HYP-001"</span>,
       <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate A"</span>},
-      <span class="code-key">"current_probability"</span>: 0.55,
+      <span class="code-key">"mechanism_category"</span>: <span class="code-string">"VASCULAR"</span>,
+      <span class="code-key">"diagnostic_role"</span>: <span class="code-string">"ETIOLOGIC"</span>,
+      <span class="code-key">"certainty"</span>: <span class="code-string">"POSSIBLE"</span>,
+      <span class="code-key">"reasoning_basis"</span>: <span class="code-string">"MECHANISM_INFERENCE"</span>,
       <span class="code-key">"must_not_miss"</span>: false,
       <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-001"</span>],
       <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-004"</span>],
@@ -296,7 +310,10 @@
     {
       <span class="code-key">"id"</span>: <span class="code-string">"HYP-002"</span>,
       <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate B"</span>},
-      <span class="code-key">"current_probability"</span>: 0.30,
+      <span class="code-key">"mechanism_category"</span>: <span class="code-string">"DRUG_TOXIN_IATROGENIC"</span>,
+      <span class="code-key">"diagnostic_role"</span>: <span class="code-string">"MIMIC"</span>,
+      <span class="code-key">"certainty"</span>: <span class="code-string">"POSSIBLE"</span>,
+      <span class="code-key">"reasoning_basis"</span>: <span class="code-string">"MECHANISM_INFERENCE"</span>,
       <span class="code-key">"must_not_miss"</span>: false,
       <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-002"</span>],
       <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-005"</span>],
@@ -307,7 +324,10 @@
     {
       <span class="code-key">"id"</span>: <span class="code-string">"HYP-003"</span>,
       <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Must-not-miss C"</span>},
-      <span class="code-key">"current_probability"</span>: 0.15,
+      <span class="code-key">"mechanism_category"</span>: <span class="code-string">"VASCULAR"</span>,
+      <span class="code-key">"diagnostic_role"</span>: <span class="code-string">"ETIOLOGIC"</span>,
+      <span class="code-key">"certainty"</span>: <span class="code-string">"UNKNOWN"</span>,
+      <span class="code-key">"reasoning_basis"</span>: <span class="code-string">"MECHANISM_INFERENCE"</span>,
       <span class="code-key">"must_not_miss"</span>: true,
       <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-003"</span>],
       <span class="code-key">"contradicting_evidence_ids"</span>: [],
@@ -324,6 +344,7 @@
       <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Must-not-miss until ruled out"</span>
     }
   ],
+  <span class="code-key">"leading_hypothesis_id"</span>: <span class="code-string">"HYP-001"</span>,
   <span class="code-key">"root_causes"</span>: [{
     <span class="code-key">"id"</span>: <span class="code-string">"WHY-003"</span>,
     <span class="code-key">"answer"</span>: <span class="code-string">"Escalation trigger absent"</span>,
@@ -413,21 +434,26 @@
             <article class="technical-column">
               <h3>依情境選 tool profile</h3>
               <div class="profile-row"><strong>condensed</strong><strong>8</strong></div>
-              <div class="profile-row"><strong>clinical</strong><strong>23</strong></div>
-              <div class="profile-row"><strong>rca</strong><strong>23</strong></div>
-              <div class="profile-row"><strong>all</strong><strong>43</strong></div>
-              <p>數字為 2.0.0a1 的發布快照；runtime 的 <code>tools/list</code> 優先。</p>
+              <div class="profile-row"><strong>clinical</strong><strong>25</strong></div>
+              <div class="profile-row"><strong>rca</strong><strong>24</strong></div>
+              <div class="profile-row"><strong>all</strong><strong>46</strong></div>
+              <p>數字為 2.0.0a2 的發布快照；runtime 的 <code>tools/list</code> 優先。</p>
             </article>
             <article class="technical-column">
               <h3>P0 deterministic conformance</h3>
               <ul class="technical-list">
                 <li><code>typed nested schema</code> 驗證穩定 section；報告附 <code>conformance_checks[]</code></li>
+                <li>來源必須有 allowlisted append-only review、de-identification 與 independence lineage；相同 bytes 不算兩份獨立來源</li>
+                <li>只有 source-aware <code>instant</code> 可排序／支持 temporality；<code>date</code>／<code>range</code>／<code>relative</code>／<code>unknown</code> 保留為 unpositioned</li>
                 <li>Root audit 的 ID、description、evidence 必須與 Why／evidence ledger 完全一致</li>
                 <li><code>REJECTED</code> 不得留在 root-cause bucket；<code>INSUFFICIENT_DATA</code> 只能標為 <code>PROPOSED</code></li>
-                <li>至少三個不重複 DDx；每個 active DDx 都要有 evidence 或 typed test disposition</li>
-                <li>Leading 與每個 must-not-miss 都要有真正支持，以及反證或 typed planned test</li>
+                <li>選 syndrome-appropriate framework；PRIMARY breadth audit 每一格都須 reviewed，不得留下 <code>NOT_ASSESSED</code></li>
+                <li><code>REVIEWED_INSUFFICIENT_DATA</code> 保留 unknowns 與 typed discriminators，不得當作排除</li>
+                <li>至少三個不重複 DDx、兩種非 <code>UNKNOWN</code> mechanism 與適用的 must-not-miss 只是 finalization floors；每個 active DDx 都要有 rationale、uncertainty 與 genuine evidence 或 typed test disposition</li>
+                <li>Leading 必須明確選定；Leading 與每個 must-not-miss 都要有真正支持，以及反證或 typed planned test</li>
+                <li>非中性 LR 必須連到另一筆 verified <code>LITERATURE</code> calibration evidence；每個 Fishbone cause 需要 authorized HFACS review</li>
                 <li>final 必須有 authorized reviewer、時間與可重算 hash；完成後是 immutable final snapshot</li>
-                <li>23／23 targeted hard-mutation regressions 均阻擋 unsafe finalization</li>
+                <li>76／76 targeted hard-mutation regressions 均阻擋 unsafe finalization</li>
               </ul>
             </article>
           </div>
@@ -437,8 +463,9 @@
               <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <p>
-              <strong>目前限制：</strong>protocol 與 pattern YAML 主要供 Agent 閱讀；多數 runtime readiness／finalization
-              gates 仍由 Python 實作。修改 YAML 不代表執行行為已同步改變。
+              <strong>目前限制：</strong>domain playbook 與 pattern YAML 是 non-normative retrospective DDx prompts，
+              只協助回溯性 mechanism review，不提供 active-care management、treatment／rescue instruction 或 patient-specific dose。
+              多數 runtime readiness／finalization gates 仍由 Python 實作；修改 YAML 不代表執行行為已同步改變。
             </p>
           </aside>
         </div>
@@ -456,7 +483,7 @@
 
           <div class="validation-table-wrap">
             <table class="validation-table">
-              <caption>RootCause MCP 2.0.0a1 驗證成熟度</caption>
+              <caption>RootCause MCP 2.0.0a2 驗證成熟度（2026-08-18）</caption>
               <thead>
                 <tr><th scope="col">驗證層</th><th scope="col">目前狀態</th><th scope="col">能證明什麼</th></tr>
               </thead>
@@ -464,7 +491,7 @@
                 <tr>
                   <td>Engineering-alpha deterministic P0</td>
                   <td class="status-passed">已通過</td>
-                  <td>Typed nested report schema、machine-readable <code>conformance_checks[]</code> 與 23／23 targeted hard-mutation regressions。</td>
+                  <td>Typed nested report schema、machine-readable <code>conformance_checks[]</code> 與 76／76 targeted hard-mutation regressions。</td>
                 </tr>
                 <tr>
                   <td>Native multi-source MCP flow</td>
@@ -499,13 +526,15 @@
             <p class="validation-statement">
               Finalized 代表「通過 deterministic gates、由 authorized reviewer 核准、附時間與可重算 hash 的 immutable final snapshot」，
               不代表診斷已獲臨床證實，也不代表因果關係成立。
+              重新載入 final JSON 時仍須由 operator 提供 reviewer allowlist；SHA-256 可偵測內容變更，但不是 digital signature。
             </p>
             <div>
               <h3>Engineering alpha 現在可以宣稱</h3>
               <ul class="validation-list">
                 <li>typed nested contract 與 fail-closed finalization</li>
+                <li>完整 source-review ledger 與由 ledger 重算的 final inventory projection</li>
                 <li>root／Why／evidence／audit lineage 與安全 disposition</li>
-                <li>至少三個 DDx、active／leading／must-not-miss disposition</li>
+                <li>syndrome framework 逐格 breadth audit 與 typed DDx disposition；三項只是 finalization floor</li>
                 <li>公開 6-case corpus／rubric／runner 可作工程 reference</li>
               </ul>
             </div>
@@ -618,7 +647,7 @@ clinical://contracts/case-analysis-report</code></pre>
           </nav>
         </div>
         <p class="meta-line">
-          v2.0.0a1 · Engineering alpha · 文件驗證日期 2026-08-17 ·
+          v2.0.0a2 · Engineering alpha · 尚未完成臨床驗證 · 文件驗證日期 2026-08-18 ·
           網站不接收病歷資料 ·
           <a href="https://github.com/u9401066/rootcause-mcp/commits/master">檢視版本紀錄</a>
         </p>

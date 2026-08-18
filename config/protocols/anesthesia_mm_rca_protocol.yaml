@@ -12,6 +12,11 @@ version: "2.0.0"
 protocol_name: "Anesthesia Perioperative M&M 4-Tier Backward Causal Protocol"
 specialty: "Anesthesiology, Perioperative Medicine & Critical Care"
 last_updated: "2026-08-14"
+status: "non_normative_retrospective_framework"
+safety_contract:
+  - "This catalog supplies review cells, not patient facts, diagnoses, omissions, or causal conclusions."
+  - "Each cell requires case-specific evidence, an explicit unknown, or a planned retrospective discriminator."
+  - "Do not infer absence from missing documentation or emit active-care treatment instructions."
 
 # ----------------------------------------------------------------------------
 # 1. 四層倒推因果階層 (4-Tier Backward Reasoning Framework)
@@ -28,7 +33,7 @@ tiers:
 
   - tier: 1
     name: "Tier 1: ACLS 5H5T 急性可逆生理機轉 (Acute Reversible Mechanisms)"
-    focus: "在 CPR 階段必須系統性鑑別並主動排除的 5H5T 項目"
+    focus: "系統性檢視每個 5H5T cell；只有來源充分的反證才能 disposition，missing data 必須標 unknown"
     five_h:
       - code: "H1_Hypovolemia"
         name: "低血容 (Hypovolemia)"
@@ -64,53 +69,51 @@ tiers:
 
   - tier: 2
     name: "Tier 2: 術中觸發點與三方交互作用 (Intraoperative Trigger Streams)"
-    focus: "向上追查究竟是「病人體質」、「外科處置」還是「麻醉給藥/通氣」引爆了 5H5T"
+    focus: "平行檢視 patient、procedure 與 anesthesia streams 的時間關聯和可替代解釋，不預設任一 stream 為 trigger"
     streams:
       patient_stream:
-        name: "A. 病人初始體質與術前漏網之魚 (Patient Baseline & Pre-op Misses)"
+        name: "A. Patient Baseline & Pre-op Information"
         sub_categories:
-          - "未被診斷的肥厚性心肌病變 (HOCM / Borderline Septal Hypertrophy / SAM substrate)"
-          - "重度主動脈瓣狹窄 (AS) 或嚴重舒張功能不全 (Diastolic Dysfunction)"
-          - "隱匿性心血管疾病、心律不整病史 (Brugada, Long QT, WPW)"
-          - "困難氣道 (Difficult Airway) 解剖特徵未預警"
-          - "長期藥物交互作用 (ACEI/ARB 引發誘導後難治低血壓、抗凝血劑停藥時程問題)"
+          - "Documented or unknown structural/functional cardiac substrate"
+          - "Documented or unknown rhythm/electrophysiology history"
+          - "Airway assessment, limitations, and interval change"
+          - "Medication/exposure reconciliation and uncertainty"
+          - "Baseline physiology, frailty, organ function, and source conflicts"
       surgical_stream:
-        name: "B. 外科處置與術中意外 (Surgical Events & Mechanical Insults)"
+        name: "B. Procedure and Mechanical Event Stream"
         sub_categories:
-          - "隱匿性大出血 (Occult Hemorrhage, 骨盆骨折、後腹腔、血管撕裂)"
-          - "骨水泥反應 (BCIS, Bone Cement Implantation Syndrome - 骨髓/脂肪栓塞)"
-          - "氣腹壓過高或下腔靜脈 (IVC) 受壓導致回心血驟降"
-          - "迷走神經強烈反射 (Vagal Reflex, 牽拉腹膜、眼心反射、頸動脈竇刺激)"
-          - "氣體栓塞 (Air/CO2 Embolism, 腹腔鏡開腹靜脈破損、神經外科坐姿手術)"
+          - "Bleeding/volume, embolic, pressure, traction, positioning, and device-related possibilities"
+          - "Procedure-event timing and direct observations"
+          - "Alternative non-procedural explanations and missing measurements"
       anesthesia_stream:
-        name: "C. 麻醉管理與藥理/通氣失誤 (Anesthesia Management & Pharmacodynamics)"
+        name: "C. Anesthesia, Pharmacology, Airway, and Ventilation Stream"
         sub_categories:
-          - "麻醉誘導藥物相對過量 (Propofol / Opioid 擴張血管 + 抑制心肌)"
-          - "給藥錯誤 (Medication Error / Syringe Swap / 濃度標示混淆)"
-          - "血管活性藥物選擇錯誤 (如 SAM/HOCM 給予 Epinephrine 導致動態阻塞加劇)"
-          - "高位脊髓麻醉 (High Spinal / Total Spinal Block - 全身交感神經阻斷)"
-          - "通氣設定不當 (PEEP 過高壓迫回心血流、呼吸管扭折/滑脫、未察覺之低容積缺氧)"
+          - "Drug identity, concentration, dose record, timing, expected effects, and reconciliation limits"
+          - "Airway/device position, ventilation, gas exchange, and monitoring quality"
+          - "Neuraxial/regional block extent and documented physiology"
+          - "Hemodynamic intervention timing with non-specific response"
+          - "Competing patient/procedure mechanisms and unknown data"
 
   - tier: 3
     name: "Tier 3: 潛在系統性漏洞與組織根因 (Latent System Factors & HFACS-MES)"
     focus: "檢討為何防護網沒有攔截到危險（人機界面、溝通、指引、疲勞）"
     hfacs_alignment:
       - level: "UA (Unsafe Acts)"
-        examples: "未先查看動脈波形特徵、未在第一時間使用 POCUS/TEE、過早放棄鑑別診斷"
+        examples: "Decision, perception, execution, or documentation factors only when supported by source-linked review"
       - level: "PC (Preconditions for Unsafe Acts)"
-        examples: "外科與麻醉溝通斷層（互推責任）、警報疲勞 (Alarm Fatigue)、值班疲勞、跨科交接不完整"
+        examples: "Communication, workload, interface, environment, or team factors requiring case-specific evidence"
       - level: "US (Unsafe Supervision)"
-        examples: "資淺人員未受即時督導、緊急處置未呼叫資深支援 (Early Help Calling)"
+        examples: "Supervision, escalation, staffing, or competency-system factors requiring case-specific evidence"
       - level: "OI / EF (Organizational & Environmental Factors)"
-        examples: "急救推車缺少特殊解毒劑/專用藥物、缺少危機處理 Checklists、ICU 缺乏高危藥物超量自動警報"
+        examples: "Policy, equipment, training, governance, and organizational factors requiring case-specific evidence"
 
 # ----------------------------------------------------------------------------
 # 2. 麻醉 M&M 倒推分析執行規則 (Execution Constraints for Agents)
 # ----------------------------------------------------------------------------
 rules:
   - id: "RULE_MANDATORY_5H5T_CHECK"
-    description: "任何術中心跳停止/休克案例，Agent 必須至少對 5H5T 中最可能的三項進行明確支持/排除論證。"
+    description: "對每個 5H5T cell記錄 candidate、reviewed no plausible candidate、insufficient data或 not assessed；不得以三項作為展開上限。"
   - id: "RULE_TRI_STREAM_INVESTIGATION"
     description: "禁止將責任單一歸咎於單一方面，必須同時橫向檢視 (A)病人基線 (B)外科手術 (C)麻醉處置 三大維度。"
   - id: "RULE_PARADOXICAL_REACTION_AUDIT"
-    description: "若給予強心劑 (Inotropes) 或輸液後病情反常惡化，強制啟動 Dynamic LVOT Obstruction (SAM) 或 LAST 毒性評估。"
+    description: "若任何 intervention 後出現時間相鄰的反常變化，擴展相關 hemodynamic、drug/toxin、mechanical、measurement 與 baseline mechanisms；response本身不證明 SAM、LAST或因果。"

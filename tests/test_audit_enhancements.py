@@ -93,8 +93,8 @@ def test_sqlite_why_tree_repository_persistence_and_rehydration(tmp_path: Path) 
     db_reopened.close()
 
 
-def test_clinical_gap_analyzer_detects_contradictions_and_guideline_gaps() -> None:
-    """ClinicalGapAnalyzer should surface diagnostic contradictions, paradoxical responses, and gaps."""
+def test_clinical_gap_analyzer_keeps_missing_monitoring_sources_as_data_gaps() -> None:
+    """A missing mention is unknown, not proof that monitoring was omitted."""
     orch = ClinicalReasoningOrchestrator("gap-test-session")
 
     # 1. Add paradoxical inotrope collapse evidence
@@ -119,12 +119,8 @@ def test_clinical_gap_analyzer_detects_contradictions_and_guideline_gaps() -> No
         prior_probability=0.80,
         rationale="Low BP assumed to be hypovolemia",
     )
-    orch.link_evidence_to_hypothesis(
-        evidence_id=ev1.id.value,
-        hypothesis_id=hyp1.id.value,
-        likelihood_ratio=0.10,
-        supports=False,
-        rationale="Hypovolemia does not crash further with inotropes",
+    orch.hypothesis_store[hyp1.id.value] = hyp1.model_copy(
+        update={"contradicting_evidence_ids": [ev1.id.value]}
     )
 
     report = ClinicalGapAnalyzer.analyze(
@@ -136,17 +132,23 @@ def test_clinical_gap_analyzer_detects_contradictions_and_guideline_gaps() -> No
     )
 
     assert report.total_conflicts >= 2
-    assert report.safety_invariants_met is False
+    assert report.safety_invariants_met is True
 
     categories = [c.category for c in report.conflicts]
     assert "DIAGNOSTIC_CONTRADICTION" not in categories
-    assert "PARADOXICAL_RESPONSE" in categories
-    assert "GUIDELINE_GAP" in categories
+    assert "DIAGNOSTIC_BREADTH_GAP" in categories
+    assert "DATA_GAP" in categories
+    assert "GUIDELINE_GAP" not in categories
 
-    # Verify specific alerts
     alert_text = " ".join(report.guideline_alerts)
-    assert "MTP Safety Alert" in alert_text
-    assert "PRIS Safety Alert" in alert_text
+    assert "MTP monitoring status is unknown" in alert_text
+    assert "Propofol lipid-monitoring status is unknown" in alert_text
+    rendered_conflicts = " ".join(
+        f"{conflict.description} {conflict.actionable_remedy}"
+        for conflict in report.conflicts
+    )
+    assert "classic hallmark" not in rendered_conflicts
+    assert "Order STAT" not in rendered_conflicts
 
 
 @pytest.mark.asyncio
@@ -187,10 +189,24 @@ async def test_case_checkpoint_service_and_handlers(
             "session_id": session_id,
             "hypothesis_id": res_h["hypothesis_id"],
             "evidence_id": res_ev["evidence_id"],
-            "likelihood_ratio": 15.0,
-            "supports": True,
+            "likelihood_ratio": 1.0,
+            "supports": None,
+            "rationale": (
+                "No verified calibration record is loaded in this checkpoint fixture."
+            ),
+            "calibration_status": "QUANTITATIVELY_UNKNOWN",
         },
     )
+    select_res = await dd_handler.handle(
+        "rc_select_leading_hypothesis",
+        {
+            "session_id": session_id,
+            "hypothesis_id": res_h["hypothesis_id"],
+            "reason": "Checkpoint fixture records an explicit audited working lead.",
+            "changed_by": "test-agent",
+        },
+    )
+    assert select_res["status"] == "success"
 
     # 2. Create checkpoint
     cp_res = await reason_handler.handle(
@@ -206,6 +222,8 @@ async def test_case_checkpoint_service_and_handlers(
     assert "after_tee_confirmation" in checkpoint_id
     assert cp_res["evidence_count"] == 1
     assert cp_res["hypothesis_count"] == 1
+    assert cp_res["leading_hypothesis_id"] == res_h["hypothesis_id"]
+    assert cp_res["leading_selection_eligible"] is True
     assert "sha256:" in cp_res["content_hash"]
 
     # 3. List checkpoints
@@ -240,7 +258,13 @@ async def test_case_checkpoint_service_and_handlers(
     )
     assert restore_res["status"] == "success"
     assert restore_res["restored_hypothesis_count"] == 1
-    assert restore_res["top_diagnosis"] == "Dynamic LVOT Obstruction (SAM)"
+    assert restore_res["leading_diagnosis"] == "Dynamic LVOT Obstruction (SAM)"
+    assert restore_res["leading_selection_eligible"] is True
+    assert restore_res["ordering_semantics"] == (
+        "EXPLICIT_LEAD_SELECTION_SEPARATE_FROM_LEDGER_ORDER"
+    )
+    assert restore_res["probability_semantics"] == "UNCALIBRATED_NOT_PRESENTED"
+    assert "top_probability" not in restore_res
 
     # Verify orchestrator in state is restored
     restored_orch = await state.get_orchestrator(session_id)

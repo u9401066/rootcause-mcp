@@ -8,6 +8,10 @@ from __future__ import annotations
 
 from mcp.types import Tool
 
+from rootcause_mcp.interface.tools.schema_fragments import (
+    clinical_temporal_input_schema,
+)
+
 
 def get_evidence_tools() -> list[Tool]:
     """Get all evidence management tools."""
@@ -95,14 +99,15 @@ def get_evidence_tools() -> list[Tool]:
                         "type": "string",
                         "description": "Clinical context (e.g., 'Post-op Day 1 hypotension')",
                     },
+                    "temporal": clinical_temporal_input_schema(),
                     "event_timestamp": {
                         "type": "string",
                         "format": "date-time",
                         "description": (
-                            "Canonical ISO 8601/RFC3339 clinical event datetime containing "
-                            "'T' and required Z or numeric timezone offset; omit for "
-                            "date-only or unknown/local time. Kept separate from "
-                            "extraction/ingestion time"
+                            "Legacy compatibility alias for temporal.kind='instant' "
+                            "only. It must contain 'T' and an explicit Z or numeric "
+                            "timezone offset. Use temporal for date-only, range, "
+                            "relative, or unknown time."
                         ),
                     },
                     "auto_verify": {

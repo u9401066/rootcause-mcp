@@ -15,6 +15,7 @@ from rootcause_mcp.domain.entities.evidence import (
     EvidenceSource,
     EvidenceType,
 )
+from rootcause_mcp.domain.value_objects.clinical_temporal import ClinicalTemporal
 from rootcause_mcp.domain.value_objects.evidence_quality import EvidenceQuality
 from rootcause_mcp.domain.value_objects.identifiers import EvidenceId
 from rootcause_mcp.infrastructure.persistence.models import EvidenceModel
@@ -37,6 +38,10 @@ class SQLiteEvidenceRepository:
         # databases retain it without requiring an in-place table alteration.
         source_data["_verification_method"] = evidence.verification_method
         source_data["_matched_lines"] = evidence.matched_lines
+        # SQLite alpha compatibility: retain typed temporal semantics in the
+        # existing JSON column. SQLite DateTime commonly drops offsets, so the
+        # legacy column is only a convenience mirror for genuine instants.
+        source_data["_clinical_temporal_v1"] = evidence.temporal.model_dump(mode="json")
         model = EvidenceModel(
             id=evidence.id.value,
             session_id=session_id,
@@ -104,6 +109,22 @@ class SQLiteEvidenceRepository:
         source_data = dict(model.source_data)
         verification_method = source_data.pop("_verification_method", None)
         matched_lines = source_data.pop("_matched_lines", [])
+        temporal_data = source_data.pop("_clinical_temporal_v1", None)
+        if temporal_data is not None:
+            temporal = ClinicalTemporal.model_validate(temporal_data)
+        elif model.event_timestamp is None:
+            temporal = ClinicalTemporal.unknown()
+        elif (
+            model.event_timestamp.tzinfo is not None
+            and model.event_timestamp.utcoffset() is not None
+        ):
+            temporal = ClinicalTemporal.from_legacy_event_timestamp(
+                model.event_timestamp
+            )
+        else:
+            # An old SQLite row may have lost its offset. Preserve the literal
+            # local value, but never promote it to a sortable instant.
+            temporal = ClinicalTemporal.from_lost_local_timestamp(model.event_timestamp)
         return Evidence(
             id=EvidenceId(model.id),
             content=model.content,
@@ -111,7 +132,8 @@ class SQLiteEvidenceRepository:
             clinical_context=model.clinical_context,
             quality=EvidenceQuality(**model.quality_data),
             source=EvidenceSource(**source_data),
-            event_timestamp=model.event_timestamp,
+            temporal=temporal,
+            event_timestamp=temporal.source_aware_instant,
             supports_cause_ids=model.supports_cause_ids,
             supports_hypothesis_ids=model.supports_hypothesis_ids,
             contradicts_hypothesis_ids=model.contradicts_hypothesis_ids,

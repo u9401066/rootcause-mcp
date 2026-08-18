@@ -34,7 +34,7 @@
         "description": "Evidence-grounded infrastructure for multi-source clinical reasoning and systems root-cause analysis.",
         "codeRepository": "https://github.com/u9401066/rootcause-mcp",
         "programmingLanguage": "Python",
-        "softwareVersion": "2.0.0a1",
+        "softwareVersion": "2.0.0a2",
         "license": "https://github.com/u9401066/rootcause-mcp/blob/master/LICENSE"
       }
     </script>
@@ -152,7 +152,7 @@
             <article class="stage">
               <span class="stage-number">03</span>
               <strong>Differential reasoning</strong>
-              <p>At least three candidate hypotheses, supporting and disconfirming evidence, and direct LRs.</p>
+              <p>Review every cell in a syndrome framework and build maximum reasonable breadth; three is only a finalization floor.</p>
             </article>
             <article class="stage">
               <span class="stage-number">04</span>
@@ -200,12 +200,12 @@
             <article class="responsibility">
               <span class="responsibility-index">02 · REASON</span>
               <h3>Reasoning Agent</h3>
-              <p>Proposes DDx, direct LRs, alternative explanations, uncertainty, disconfirming evidence, and systems-cause hypotheses.</p>
+              <p>Expands mechanisms from phenotype and time course, audits every DDx cell, and supplies source-linked support, refutation, unknowns, and discriminators.</p>
             </article>
             <article class="responsibility">
               <span class="responsibility-index">03 · GOVERN</span>
               <h3>RootCause MCP</h3>
-              <p>Checks schemas, source lineage, probability updates, state transitions, readiness gates, and standardized output.</p>
+              <p>Checks schemas, source lineage, evidence relations, state transitions, readiness gates, and standardized output.</p>
             </article>
             <article class="responsibility">
               <span class="responsibility-index">04 · APPROVE</span>
@@ -217,11 +217,11 @@
           <div class="nine-stage" aria-label="Nine-stage reasoning workflow">
             <div><span>01</span><strong>Create session</strong></div>
             <div><span>02</span><strong>Register manifest</strong></div>
-            <div><span>03</span><strong>Add evidence</strong></div>
-            <div><span>04</span><strong>Build DDx</strong></div>
+            <div><span>03</span><strong>Review sources / evidence</strong></div>
+            <div><span>04</span><strong>DDx / select lead</strong></div>
             <div><span>05</span><strong>Test both ways</strong></div>
             <div><span>06</span><strong>Biases / gaps</strong></div>
-            <div><span>07</span><strong>Systems RCA</strong></div>
+            <div><span>07</span><strong>RCA / HFACS review</strong></div>
             <div><span>08</span><strong>Preview report</strong></div>
             <div><span>09</span><strong>Human approval</strong></div>
           </div>
@@ -244,20 +244,23 @@
           <div>
             <div class="section-intro">
               <h2 id="output-title">The standard output is not a conclusion. It is a set of inspectable relationships.</h2>
-              <p>The same case can be represented as JSON, Markdown, or a FHIR DiagnosticReport; canonical JSON is the handoff baseline.</p>
+              <p>
+                The same case can be represented as JSON, Markdown, or a FHIR DiagnosticReport; canonical JSON is the handoff baseline.
+                With <code>locale=zh-TW</code> and <code>audience=clinician</code>, built-in Markdown uses Traditional Chinese explanatory copy while preserving English diagnosis, test, drug, and procedure names.
+              </p>
             </div>
             <div class="output-list">
               <article class="output-item">
                 <h3>Sources and timeline</h3>
-                <p>Manifest coverage, document hashes, event times, precision, and cross-source conflicts.</p>
+                <p>Append-only source review and independence, document hashes, typed time, precision, and cross-source conflicts; unknown time is never falsely ordered.</p>
               </article>
               <article class="output-item">
                 <h3>Evidence and differential diagnosis</h3>
-                <p>Item-level provenance, support and contradiction, direct LRs, probability history, and must-not-miss disposition.</p>
+                <p>Item-level provenance, framework breadth audit, explicit leading selection, source-calibrated LR, support/refutation/neutral evidence, unknowns, discriminating tests, certainty, and must-not-miss disposition.</p>
               </article>
               <article class="output-item">
                 <h3>Systems RCA</h3>
-                <p>Fishbone, 5-Why, HFACS, and causation audit; an audit status is not proof of causation.</p>
+                <p>Fishbone, 5-Why, authorized per-cause HFACS review, and causation audit; an audit status is not proof of causation.</p>
               </article>
               <article class="output-item">
                 <h3>Limits, readiness, and review</h3>
@@ -268,7 +271,7 @@
 
           <div class="code-window" aria-label="Example standard report JSON">
             <div class="code-header">
-              <span>case-analysis-report.json · abridged</span>
+              <span>case-analysis-report.json · illustrative abridged shape</span>
               <button
                 class="copy-button"
                 type="button"
@@ -284,14 +287,24 @@
       <span class="code-key">"sha256"</span>: <span class="code-string">"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"</span>,
       <span class="code-key">"evidence_count"</span>: 3,
       <span class="code-key">"verified_count"</span>: 3,
-      <span class="code-key">"coverage_status"</span>: <span class="code-string">"reviewed"</span>
+      <span class="code-key">"coverage_status"</span>: <span class="code-string">"reviewed"</span>,
+      <span class="code-key">"de_identified"</span>: true,
+      <span class="code-key">"independence_status"</span>: <span class="code-string">"independent"</span>,
+      <span class="code-key">"source_group_id"</span>: <span class="code-string">"SRC-GROUP-001"</span>,
+      <span class="code-key">"source_review_adjudication_id"</span>: <span class="code-string">"SRV-001"</span>,
+      <span class="code-key">"source_reviewed_by"</span>: <span class="code-string">"authorized-reviewer"</span>,
+      <span class="code-key">"source_reviewed_at"</span>: <span class="code-string">"2026-08-18T09:00:00Z"</span>,
+      <span class="code-key">"source_review_reason"</span>: <span class="code-string">"Source lineage reviewed"</span>
     }
   ],
   <span class="code-key">"hypotheses"</span>: [
     {
       <span class="code-key">"id"</span>: <span class="code-string">"HYP-001"</span>,
       <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate A"</span>},
-      <span class="code-key">"current_probability"</span>: 0.55,
+      <span class="code-key">"mechanism_category"</span>: <span class="code-string">"VASCULAR"</span>,
+      <span class="code-key">"diagnostic_role"</span>: <span class="code-string">"ETIOLOGIC"</span>,
+      <span class="code-key">"certainty"</span>: <span class="code-string">"POSSIBLE"</span>,
+      <span class="code-key">"reasoning_basis"</span>: <span class="code-string">"MECHANISM_INFERENCE"</span>,
       <span class="code-key">"must_not_miss"</span>: false,
       <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-001"</span>],
       <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-004"</span>],
@@ -302,7 +315,10 @@
     {
       <span class="code-key">"id"</span>: <span class="code-string">"HYP-002"</span>,
       <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Candidate B"</span>},
-      <span class="code-key">"current_probability"</span>: 0.30,
+      <span class="code-key">"mechanism_category"</span>: <span class="code-string">"DRUG_TOXIN_IATROGENIC"</span>,
+      <span class="code-key">"diagnostic_role"</span>: <span class="code-string">"MIMIC"</span>,
+      <span class="code-key">"certainty"</span>: <span class="code-string">"POSSIBLE"</span>,
+      <span class="code-key">"reasoning_basis"</span>: <span class="code-string">"MECHANISM_INFERENCE"</span>,
       <span class="code-key">"must_not_miss"</span>: false,
       <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-002"</span>],
       <span class="code-key">"contradicting_evidence_ids"</span>: [<span class="code-string">"EVD-005"</span>],
@@ -313,7 +329,10 @@
     {
       <span class="code-key">"id"</span>: <span class="code-string">"HYP-003"</span>,
       <span class="code-key">"diagnosis"</span>: {<span class="code-key">"display"</span>: <span class="code-string">"Must-not-miss C"</span>},
-      <span class="code-key">"current_probability"</span>: 0.15,
+      <span class="code-key">"mechanism_category"</span>: <span class="code-string">"VASCULAR"</span>,
+      <span class="code-key">"diagnostic_role"</span>: <span class="code-string">"ETIOLOGIC"</span>,
+      <span class="code-key">"certainty"</span>: <span class="code-string">"UNKNOWN"</span>,
+      <span class="code-key">"reasoning_basis"</span>: <span class="code-string">"MECHANISM_INFERENCE"</span>,
       <span class="code-key">"must_not_miss"</span>: true,
       <span class="code-key">"supporting_evidence_ids"</span>: [<span class="code-string">"EVD-003"</span>],
       <span class="code-key">"contradicting_evidence_ids"</span>: [],
@@ -330,6 +349,7 @@
       <span class="code-key">"clinical_rationale"</span>: <span class="code-string">"Must-not-miss until ruled out"</span>
     }
   ],
+  <span class="code-key">"leading_hypothesis_id"</span>: <span class="code-string">"HYP-001"</span>,
   <span class="code-key">"root_causes"</span>: [{
     <span class="code-key">"id"</span>: <span class="code-string">"WHY-003"</span>,
     <span class="code-key">"answer"</span>: <span class="code-string">"Escalation trigger absent"</span>,
@@ -419,21 +439,26 @@
             <article class="technical-column">
               <h3>Choose the tool profile for the task</h3>
               <div class="profile-row"><strong>condensed</strong><strong>8</strong></div>
-              <div class="profile-row"><strong>clinical</strong><strong>23</strong></div>
-              <div class="profile-row"><strong>rca</strong><strong>23</strong></div>
-              <div class="profile-row"><strong>all</strong><strong>43</strong></div>
-              <p>Counts are the 2.0.0a1 release snapshot; runtime <code>tools/list</code> takes precedence.</p>
+              <div class="profile-row"><strong>clinical</strong><strong>25</strong></div>
+              <div class="profile-row"><strong>rca</strong><strong>24</strong></div>
+              <div class="profile-row"><strong>all</strong><strong>46</strong></div>
+              <p>Counts are the 2.0.0a2 release snapshot; runtime <code>tools/list</code> takes precedence.</p>
             </article>
             <article class="technical-column">
               <h3>P0 deterministic conformance</h3>
               <ul class="technical-list">
                 <li>A <code>typed nested schema</code> validates stable sections; the report carries <code>conformance_checks[]</code></li>
+                <li>Sources require allowlisted append-only review, de-identification, and independence lineage; identical bytes are not two independent sources</li>
+                <li>Only a source-aware <code>instant</code> can be ordered or support temporality; <code>date</code>, <code>range</code>, <code>relative</code>, and <code>unknown</code> stay unpositioned</li>
                 <li>Root-audit ID, description, and evidence must exactly match the Why and evidence ledger</li>
                 <li><code>REJECTED</code> entries cannot remain in the root-cause bucket; <code>INSUFFICIENT_DATA</code> is only <code>PROPOSED</code></li>
-                <li>At least three unique DDx entries; every active DDx needs evidence or a typed test disposition</li>
-                <li>The leading and every must-not-miss diagnosis need genuine support plus contradiction or a typed planned test</li>
+                <li>Choose a syndrome-appropriate framework; every cell in the PRIMARY breadth audit must be reviewed, with no <code>NOT_ASSESSED</code></li>
+                <li><code>REVIEWED_INSUFFICIENT_DATA</code> retains unknowns and typed discriminators and is not exclusion</li>
+                <li>Three unique DDx entries, two non-<code>UNKNOWN</code> mechanisms, and an applicable must-not-miss are finalization floors; every active DDx needs rationale, uncertainty, and genuine evidence or a typed test disposition</li>
+                <li>The lead must be explicitly selected; the leading and every must-not-miss diagnosis need genuine support plus contradiction or a typed planned test</li>
+                <li>A non-neutral LR must cross-link distinct verified <code>LITERATURE</code> calibration evidence; every Fishbone cause needs authorized HFACS review</li>
                 <li>Final requires an authorized reviewer, time, and recomputable hash, then becomes an immutable final snapshot</li>
-                <li>23/23 targeted hard-mutation regressions block unsafe finalization</li>
+                <li>76/76 targeted hard-mutation regressions block unsafe finalization</li>
               </ul>
             </article>
           </div>
@@ -443,9 +468,10 @@
               <path d="M12 3 22 21H2Zm0 5v6m0 3.5v.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
             </svg>
             <p>
-              <strong>Current limitation:</strong> Protocol and pattern YAML files are primarily read by the Agent;
-              most runtime readiness and finalization gates are still implemented in Python. Editing YAML does not
-              mean runtime behavior changed with it.
+              <strong>Current limitation:</strong> Domain playbooks and pattern YAML files are non-normative retrospective DDx prompts.
+              They support retrospective mechanism review and do not provide active-care management, treatment or rescue instructions,
+              or patient-specific dosing. Most runtime readiness and finalization gates are still implemented in Python;
+              editing YAML does not mean runtime behavior changed with it.
             </p>
           </aside>
         </div>
@@ -463,7 +489,7 @@
 
           <div class="validation-table-wrap">
             <table class="validation-table">
-              <caption>RootCause MCP 2.0.0a1 validation maturity</caption>
+              <caption>RootCause MCP 2.0.0a2 validation maturity (2026-08-18)</caption>
               <thead>
                 <tr><th scope="col">Validation layer</th><th scope="col">Current status</th><th scope="col">What it demonstrates</th></tr>
               </thead>
@@ -471,7 +497,7 @@
                 <tr>
                   <td>Engineering-alpha deterministic P0</td>
                   <td class="status-passed">Passed</td>
-                  <td>Typed nested report schema, machine-readable <code>conformance_checks[]</code>, and 23/23 targeted hard-mutation regressions.</td>
+                  <td>Typed nested report schema, machine-readable <code>conformance_checks[]</code>, and 76/76 targeted hard-mutation regressions.</td>
                 </tr>
                 <tr>
                   <td>Native multi-source MCP flow</td>
@@ -506,13 +532,15 @@
             <p class="validation-statement">
               Finalized means “an immutable final snapshot that passed deterministic gates and carries an authorized reviewer,
               time, and recomputable hash.” It does not mean the diagnosis is clinically confirmed or causation is established.
+              Reloading final JSON requires an operator-controlled reviewer allowlist; SHA-256 detects content changes but is not a digital signature.
             </p>
             <div>
               <h3>What the engineering alpha establishes</h3>
               <ul class="validation-list">
                 <li>typed nested contracts and fail-closed finalization</li>
+                <li>complete source-review ledger with a recomputed final inventory projection</li>
                 <li>root, Why, evidence, and audit lineage with safe dispositions</li>
-                <li>at least three DDx entries plus active, leading, and must-not-miss dispositions</li>
+                <li>cell-complete syndrome-framework breadth audits and typed DDx dispositions; three entries are only a finalization floor</li>
                 <li>the public six-case corpus, rubric, and runner as engineering references</li>
               </ul>
             </div>
@@ -626,7 +654,7 @@ clinical://contracts/case-analysis-report</code></pre>
           </nav>
         </div>
         <p class="meta-line">
-          v2.0.0a1 · Engineering alpha · Documentation verified 2026-08-17 ·
+          v2.0.0a2 · Engineering alpha · Not clinically validated · Documentation verified 2026-08-18 ·
           This site does not accept clinical records ·
           <a href="https://github.com/u9401066/rootcause-mcp/commits/master">View version history</a>
         </p>

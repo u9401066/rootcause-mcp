@@ -12,10 +12,14 @@ from sqlmodel import select
 
 from rootcause_mcp.domain.entities.hypothesis import (
     BayesianUpdate,
+    DiagnosticCertainty,
+    DiagnosticReasoningBasis,
+    DiagnosticRole,
     Hypothesis,
     HypothesisStatus,
     HypothesisStatusChange,
     LikelihoodRatio,
+    MechanismCategory,
     PlannedDiagnosticTest,
 )
 from rootcause_mcp.domain.value_objects.clinical_concept import ClinicalConcept
@@ -38,6 +42,10 @@ class SQLiteHypothesisRepository:
         diagnosis_data = hypothesis.diagnosis.model_dump(mode="json")
         diagnosis_data["_hypothesis_context"] = {
             "must_not_miss": hypothesis.must_not_miss,
+            "mechanism_category": hypothesis.mechanism_category.value,
+            "diagnostic_role": hypothesis.diagnostic_role.value,
+            "certainty": hypothesis.certainty.value,
+            "reasoning_basis": hypothesis.reasoning_basis.value,
             "alternatives_considered": hypothesis.alternatives_considered,
             "uncertainty_factors": hypothesis.uncertainty_factors,
             "confidence_rationale": hypothesis.confidence_rationale,
@@ -119,6 +127,14 @@ class SQLiteHypothesisRepository:
             inclusion_criteria=model.inclusion_criteria,
             exclusion_criteria=model.exclusion_criteria,
             must_not_miss=bool(context.get("must_not_miss", False)),
+            mechanism_category=MechanismCategory(
+                context.get("mechanism_category", "UNKNOWN")
+            ),
+            diagnostic_role=DiagnosticRole(context.get("diagnostic_role", "UNKNOWN")),
+            certainty=DiagnosticCertainty(context.get("certainty", "UNKNOWN")),
+            reasoning_basis=DiagnosticReasoningBasis(
+                context.get("reasoning_basis", "UNKNOWN")
+            ),
             alternatives_considered=list(context.get("alternatives_considered", [])),
             uncertainty_factors=list(context.get("uncertainty_factors", [])),
             confidence_rationale=str(context.get("confidence_rationale", "")),

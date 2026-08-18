@@ -68,14 +68,26 @@ code set，任何 hard `FAIL` 都會阻擋。
 - `NO_UNRESOLVED_SAFETY_CONFLICTS`
 - `MULTI_SOURCE_MANIFEST`
 - `MANIFEST_DOCUMENTS_REVIEWED`
+- `SOURCE_INDEPENDENCE_LINEAGE`
+- `SOURCE_REVIEW_ADJUDICATION_AUTHORIZED`
 - `EVIDENCE_SOURCES_DECLARED`
+- `EVIDENCE_VERIFICATION_COMPLETE`
+- `SOURCE_INVENTORY_COUNTS_RECOMPUTABLE`
+- `TIMELINE_EVIDENCE_LINEAGE`
+- `CAUSATION_TEMPORAL_LINEAGE`
 - `FINAL_REPORT_SECTIONS_INCLUDED`
 - `FISHBONE_PRESENT`
 - `WHY_ROOT_PRESENT`
 
-Final report 必須有至少兩份 reviewed manifest sources；所有 evidence 必須指回該
-manifest。Timeline、reasoning/thinking chain、evidence graph 與 metrics 不得在 final
-輸出中省略。
+Final report 必須有至少兩份經 append-only event 裁決為 reviewed、de-identified 的
+獨立 source roots；相同 SHA-256 bytes 或 derived copies 不得被灌水成多來源。每個 source
+review event 都要有 allowlisted reviewer、server time 與 reason，所有 evidence 必須指回
+manifest 且完成驗證，inventory counts 必須由 ledger 重算。Timeline、reasoning/thinking
+chain、evidence graph 與 metrics 不得在 final 輸出中省略。
+
+時間使用 typed `instant | date | range | relative | unknown`。只有 source 自帶 offset、
+且與 Evidence ledger 完全一致的 `instant` 可排序或支持 causation temporality；其他合法
+時間狀態保留為 unpositioned，不會被迫補成假的 timestamp。
 
 ### Root lineage 與 disposition
 
@@ -105,13 +117,21 @@ Audit record 必須帶有：
 ### Differential diagnosis safety
 
 - `DIFFERENTIAL_MINIMUM_UNIQUE`
+- `DIFFERENTIAL_TYPED_CLASSIFICATION`
+- `DIFFERENTIAL_MECHANISM_BREADTH`
+- `DIFFERENTIAL_BREADTH_AUDIT_COMPLETE`
+- `LIKELIHOOD_RATIO_CALIBRATION_VALID`
 - `ACTIVE_DIFFERENTIAL_DISPOSITION`
+- `DIAGNOSTIC_CERTAINTY_SUPPORTED`
 - `LEADING_DIAGNOSIS_CHALLENGED`
 - `MUST_NOT_MISS_CHALLENGED`
 
-Final report 至少包含三個經正規化後不重複的 diagnoses。每個 active diagnosis
+Final report 至少包含三個經正規化後不重複的 diagnoses、兩個非 `UNKNOWN` mechanism，
+並完成 syndrome-appropriate PRIMARY breadth audit。每個 active diagnosis
 必須有真正的 ledger evidence disposition，並有 contradiction 或 typed pending
-disconfirm/rule-out test。Leading diagnosis 與每個 must-not-miss diagnosis 必須同時
+disconfirm/rule-out test。Leading diagnosis 必須由 persisted selection event 明確指定，
+不能由 array order 或 uncalibrated numeric compatibility 決定。Leading 與每個
+must-not-miss diagnosis 必須同時
 有 genuine supporting evidence，以及 genuine contradiction 或符合下列契約的 planned
 test：
 
@@ -128,6 +148,21 @@ test：
 Server 會產生 `test_id` 並綁定 `target_hypothesis_id`。自由文字的「待檢查」或沒有
 support/refute 判讀規則的 test 不算通過。
 
+非中性 applied LR 必須 finite、方向一致，並同時 cross-link patient evidence 與另一筆
+verified `LITERATURE` calibration Evidence。該 calibration record 需保留 exact quantitative
+snippet、location、hash 與 verification；citation-looking 字串不算。沒有這種來源時只能
+使用 `LR=1.0`／`QUANTITATIVELY_UNKNOWN`，且不計為支持或反證。
+
+### Fishbone 與 HFACS review lineage
+
+- `HFACS_REVIEW_LINEAGE`
+
+每個 Fishbone cause 都需要 allowlisted reviewer 保存的 `CONFIRMED` 或
+`NOT_APPLICABLE` disposition。`CONFIRMED` 必須是 recognized HFACS code；
+`NOT_APPLICABLE` 不得帶 code。Final evaluator 會比對 cause ID、exact description、
+Fishbone category、evidence set、code、reviewer、time 與 reason；suggestion 或
+`rc_add_cause` 時附的任意 code 仍是 `UNREVIEWED`。
+
 ### Reviewer、hash 與 immutability
 
 - `REVIEWER_AUTHORIZED`
@@ -142,10 +177,13 @@ MCP finalization 需要非空、operator-controlled
 
 Final snapshot 同時保存 `approved_by`、`reviewed_by`、timezone-aware
 `finalized_at`、完整 `conformance_checks[]` 與 lowercase SHA-256 `content_hash`。
-Hash 由 canonical JSON 重算，排除 `content_hash` 本身以及 timeline/evidence-graph
-的 derived renderings。Finalized domain object 會遞迴拒絕 top-level 與 nested mutation；
-跨程序的 WORM retention、簽章、存取控制與法規保存仍是 deployment records system
-的責任。
+Hash 由完整 canonical snapshot 重算，只排除 `content_hash` 本身；persisted
+timeline/evidence-graph renderings 因為會被人看到，也包含在完整性範圍。Finalized domain
+object 會遞迴拒絕 top-level 與 nested mutation；
+載入 finalized JSON 時必須由 operator 透過 Pydantic validation context 重新提供
+authorized reviewer allowlist，缺少 context 會 fail closed。SHA-256 只證明內容完整性，
+不是 authenticity proof 或 digital signature；跨程序的 WORM retention、簽章、存取控制
+與法規保存仍是 deployment records system 的責任。
 
 ## 公開六案例的正確用途
 

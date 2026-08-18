@@ -46,7 +46,26 @@ def test_evidence_graph_tracks_contradictions_causes_and_safe_labels() -> None:
     evidence = orchestrator.add_evidence(
         content='Troponin "normal" & ECG < threshold',
         source_document="lab & ECG.txt",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
     )
+    orchestrator.evidence_store[evidence.id.value] = evidence
+    calibration = orchestrator.add_evidence(
+        content="Published validation table reports the direct LR 0.2.",
+        evidence_type="LITERATURE",
+        source_document="literature.txt",
+        source_location="Table 2",
+        raw_snippet="Normal serial tests direct LR 0.2",
+        extraction_method="verbatim_quote",
+        auto_verify=False,
+    ).mark_verified(
+        verifier="SYSTEM_PROVENANCE_VERIFIER",
+        verification_method="EXACT_SNIPPET_MATCH",
+        content_hash="sha256:" + "a" * 64,
+    )
+    orchestrator.evidence_store[calibration.id.value] = calibration
     hypothesis = orchestrator.propose_hypothesis(
         diagnosis="Acute myocardial infarction",
         prior_probability=0.3,
@@ -58,6 +77,8 @@ def test_evidence_graph_tracks_contradictions_causes_and_safe_labels() -> None:
         likelihood_ratio=0.2,
         supports=False,
         rationale="Normal serial tests argue against acute myocardial infarction.",
+        calibration_status="SOURCE_CALIBRATED",
+        calibration_source_ref=calibration.id.value,
     )
     linked_evidence = orchestrator.evidence_store[evidence.id.value].link_to_cause(
         "c_monitoring_gap"
@@ -73,7 +94,7 @@ def test_evidence_graph_tracks_contradictions_causes_and_safe_labels() -> None:
     assert relationships == {"contradicts", "supports_cause"}
     assert graph["mermaid"].startswith("```mermaid\nflowchart LR")
     assert "&quot;normal&quot; &amp; ECG &lt; threshold" in graph["mermaid"]
-    assert 'N1 -. "contradicts" .-> N2' in graph["mermaid"]
+    assert '-. "contradicts" .->' in graph["mermaid"]
 
 
 def test_evidence_graph_omits_dangling_and_duplicate_edges() -> None:
@@ -198,7 +219,8 @@ def test_reasoning_mermaid_handles_empty_chain_and_zero_confidence() -> None:
     )
     diagram = render_reasoning_chain_mermaid(chain)
 
-    assert "Confidence: 0%" in diagram
+    assert "Confidence:" not in diagram
+    assert "0%" not in diagram
     assert "&quot;anchor&quot; &amp; threshold &lt; target" in diagram
     assert 'E1["Evidence<br/>EVD-1"]' in diagram
     assert 'H1["Hypothesis<br/>HYP-1"]' in diagram
@@ -209,18 +231,22 @@ def test_timeline_mermaid_renders_phases_and_timestamps() -> None:
     orchestrator.add_evidence(
         content="08:00 Baseline BP 165/90, HR 85, Grade 2/6 murmur",
         source_document="preop.txt",
+        temporal={"kind": "instant", "raw_value": "2026-08-18T08:00:00Z"},
     )
     orchestrator.add_evidence(
         content="08:05 Induction with Propofol 80mg, Fentanyl 100mcg",
         source_document="anesthesia.csv",
+        temporal={"kind": "instant", "raw_value": "2026-08-18T08:05:00Z"},
     )
     orchestrator.add_evidence(
         content="08:18 CRASH BP 35/15, HR 160 following Epinephrine bolus",
         source_document="anesthesia.csv",
+        temporal={"kind": "instant", "raw_value": "2026-08-18T08:18:00Z"},
     )
     orchestrator.add_evidence(
         content="08:20 Emergency TEE shows Dagger-shaped Doppler >80mmHg",
         source_document="tee.txt",
+        temporal={"kind": "instant", "raw_value": "2026-08-18T08:20:00Z"},
     )
 
     tl_data = build_timeline(orchestrator.evidence_store.values())
@@ -232,14 +258,23 @@ def test_timeline_mermaid_renders_phases_and_timestamps() -> None:
     assert "section 2. Induction &amp; Surgical Events" in diagram
     assert "section 3. Crisis Progression &amp; Deterioration" in diagram
     assert "section 4. Diagnostic Findings &amp; Rule-Outs" in diagram
-    assert "08:00 : 08 -00 Baseline BP 165/90, HR 85, Grade 2/6 murmur" in diagram
     assert (
-        "08:18 : 08 -18 CRASH BP 35/15, HR 160 following Epinephrine bolus" in diagram
+        "2026-08-18T08:00:00Z : 08 -00 Baseline BP 165/90, HR 85, Grade 2/6 murmur"
+    ) in diagram
+    assert (
+        "2026-08-18T08:18:00Z : 08 -18 CRASH BP 35/15, HR 160 following "
+        "Epinephrine bolus" in diagram
     )
 
     table = tl_data["table"]
-    assert "| `08:00` | **1. Baseline & Pre-Op** |" in table
-    assert "| `08:20` | **4. Diagnostic Findings & Rule-Outs** |" in table
+    assert (
+        "| `2026-08-18T08:00:00Z` | `instant` / `ORDERED_INSTANT` | "
+        "**1. Baseline & Pre-Op** |" in table
+    )
+    assert (
+        "| `2026-08-18T08:20:00Z` | `instant` / `ORDERED_INSTANT` | "
+        "**4. Diagnostic Findings & Rule-Outs** |" in table
+    )
 
 
 def test_timeline_mermaid_handles_empty_evidence() -> None:

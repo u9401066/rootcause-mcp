@@ -19,6 +19,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from rootcause_mcp.domain.entities.hypothesis import HypothesisStatus
 from rootcause_mcp.infrastructure.export_paths import get_export_root
 
 if TYPE_CHECKING:
@@ -199,15 +200,22 @@ class CaseCheckpointService:
             e.model_dump(mode="json") for e in orch.evidence_store.values()
         ]
         hypothesis_list = [
-            h.model_dump(mode="json") for h in orch.hypothesis_store.values()
+            {
+                **h.model_dump(mode="json"),
+                "probability_semantics": "UNCALIBRATED_COMPATIBILITY_ONLY",
+                "clinical_probability_established": False,
+            }
+            for h in orch.hypothesis_store.values()
         ]
         thinking_list = [s.model_dump(mode="json") for s in orch.thinking_chain.steps]
         reasoning_list = [s.model_dump(mode="json") for s in orch.reasoning_chain.steps]
 
-        top_h = (
-            max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-            if orch.hypothesis_store
-            else None
+        leading_hypothesis_id = orch.get_leading_hypothesis_id()
+        leading_h = orch.hypothesis_store.get(leading_hypothesis_id or "")
+        leading_is_eligible = bool(
+            leading_h is not None
+            and leading_h.status
+            not in {HypothesisStatus.EXCLUDED, HypothesisStatus.ON_HOLD}
         )
         guidance = orch.get_guidance()
 
@@ -221,8 +229,15 @@ class CaseCheckpointService:
             "initial_problem": orch.initial_problem,
             "stage": guidance.current_stage.value,
             "completeness_score": guidance.completeness_score,
-            "top_diagnosis": top_h.diagnosis.display if top_h else None,
-            "top_probability": top_h.current_probability if top_h else None,
+            "leading_diagnosis": (
+                leading_h.diagnosis.display
+                if leading_is_eligible and leading_h
+                else None
+            ),
+            "leading_hypothesis_id": leading_hypothesis_id,
+            "leading_selection_eligible": leading_is_eligible,
+            "ordering_semantics": "EXPLICIT_LEAD_SELECTION_SEPARATE_FROM_LEDGER_ORDER",
+            "probability_semantics": "UNCALIBRATED_NOT_PRESENTED",
             "evidence_count": len(evidence_list),
             "hypothesis_count": len(hypothesis_list),
             "thinking_steps_count": len(thinking_list),
@@ -247,8 +262,11 @@ class CaseCheckpointService:
             "timestamp": now_utc.isoformat(),
             "evidence_count": len(evidence_list),
             "hypothesis_count": len(hypothesis_list),
-            "top_diagnosis": payload["top_diagnosis"],
-            "top_probability": payload["top_probability"],
+            "leading_diagnosis": payload["leading_diagnosis"],
+            "leading_hypothesis_id": payload["leading_hypothesis_id"],
+            "leading_selection_eligible": payload["leading_selection_eligible"],
+            "ordering_semantics": payload["ordering_semantics"],
+            "probability_semantics": payload["probability_semantics"],
             "content_hash": payload["content_hash"],
         }
 
@@ -357,10 +375,12 @@ class CaseCheckpointService:
         await self._state.persist_orchestrator(safe_session_id)
 
         guidance = orch.get_guidance()
-        top_h = (
-            max(orch.hypothesis_store.values(), key=lambda h: h.current_probability)
-            if orch.hypothesis_store
-            else None
+        leading_hypothesis_id = orch.get_leading_hypothesis_id()
+        leading_h = orch.hypothesis_store.get(leading_hypothesis_id or "")
+        leading_is_eligible = bool(
+            leading_h is not None
+            and leading_h.status
+            not in {HypothesisStatus.EXCLUDED, HypothesisStatus.ON_HOLD}
         )
 
         return {
@@ -371,8 +391,15 @@ class CaseCheckpointService:
             "completeness_score": guidance.completeness_score,
             "restored_evidence_count": len(evidence_items),
             "restored_hypothesis_count": len(hypothesis_items),
-            "top_diagnosis": top_h.diagnosis.display if top_h else None,
-            "top_probability": top_h.current_probability if top_h else None,
+            "leading_diagnosis": (
+                leading_h.diagnosis.display
+                if leading_is_eligible and leading_h
+                else None
+            ),
+            "leading_hypothesis_id": leading_hypothesis_id,
+            "leading_selection_eligible": leading_is_eligible,
+            "ordering_semantics": "EXPLICIT_LEAD_SELECTION_SEPARATE_FROM_LEDGER_ORDER",
+            "probability_semantics": "UNCALIBRATED_NOT_PRESENTED",
             "guidance": guidance.model_dump(mode="json"),
         }
 
@@ -408,8 +435,15 @@ class CaseCheckpointService:
                         "stage": data.get("stage"),
                         "evidence_count": data.get("evidence_count", 0),
                         "hypothesis_count": data.get("hypothesis_count", 0),
-                        "top_diagnosis": data.get("top_diagnosis"),
-                        "top_probability": data.get("top_probability"),
+                        "leading_diagnosis": data.get("leading_diagnosis"),
+                        "leading_hypothesis_id": data.get("leading_hypothesis_id"),
+                        "leading_selection_eligible": data.get(
+                            "leading_selection_eligible", False
+                        ),
+                        "ordering_semantics": data.get(
+                            "ordering_semantics", "WORKING_LEDGER_ORDER"
+                        ),
+                        "probability_semantics": "UNCALIBRATED_NOT_PRESENTED",
                         "content_hash": data.get("content_hash"),
                         "file_path": str(p),
                     }

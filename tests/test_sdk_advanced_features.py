@@ -104,7 +104,11 @@ async def test_read_static_template_resource() -> None:
     content = res.contents[0]
     assert isinstance(content, TextResourceContents)
     assert content.mime_type == "text/markdown"
-    assert "# 🏥 麻醉與圍術期重症事件 4-Tier 根因分析報告" in content.text
+    assert "# 麻醉與圍術期重大事件 Clinical M&M 分析" in content.text
+    assert (
+        "RootCause MCP 不會思考、下診斷、開立治療或證明 clinical causality"
+        in content.text
+    )
 
 
 @pytest.mark.asyncio
@@ -147,13 +151,14 @@ def test_resource_templates_enumeration() -> None:
 def test_clinical_prompts_enumeration_and_generation() -> None:
     """Prompt catalog should advertise clinical prompts and generate messages."""
     prompts = get_all_prompts()
-    assert len(prompts) == 4
+    assert len(prompts) == 5
 
     names = {p.name for p in prompts}
     assert "anesthesia_mm_investigation" in names
     assert "perioperative_crisis_differential" in names
     assert "near_miss_barrier_analysis" in names
     assert "delayed_diagnosis_investigation" in names
+    assert "clinician_ddx_discussion_zh_tw" in names
 
     # Test prompt generation
     res = get_prompt_result(
@@ -170,6 +175,57 @@ def test_clinical_prompts_enumeration_and_generation() -> None:
     assert isinstance(msg.content, TextContent)
     assert "Mandatory 4-Tier Backward Causal Protocol" in msg.content.text
     assert "72yo female arrest post-induction" in msg.content.text
+    assert "Traditional Chinese" in msg.content.text
+    assert "rc_audit_differential_breadth" in msg.content.text
+    assert "finalization floor, not a stopping target" in msg.content.text
+
+    perioperative = get_prompt_result(
+        "perioperative_crisis_differential",
+        {"clinical_presentation": "post-induction hypotension"},
+    )
+    perioperative_message = perioperative.messages[0]
+    assert isinstance(perioperative_message.content, TextContent)
+    assert "candidate prompts" in perioperative_message.content.text
+    assert "not assumed diagnoses" in perioperative_message.content.text
+
+    near_miss = get_prompt_result(
+        "near_miss_barrier_analysis",
+        {"incident_description": "de-identified medication near miss"},
+    )
+    near_miss_message = near_miss.messages[0]
+    assert isinstance(near_miss_message.content, TextContent)
+    assert (
+        "source-linked candidate Poka-Yoke controls" in near_miss_message.content.text
+    )
+    assert "do not auto-approve an action" in near_miss_message.content.text
+
+    delayed = get_prompt_result(
+        "delayed_diagnosis_investigation",
+        {"missed_finding": "de-identified critical result"},
+    )
+    delayed_message = delayed.messages[0]
+    assert isinstance(delayed_message.content, TextContent)
+    assert "source-linked candidate actions" in delayed_message.content.text
+    assert "do not auto-approve a recommendation" in delayed_message.content.text
+
+    zh_tw = get_prompt_result(
+        "clinician_ddx_discussion_zh_tw",
+        {
+            "case_context": "突發 hypotension；EV-001 記錄 BP 下降",
+            "clinical_question": "評估 shock mechanism",
+            "known_unknowns": "TEE not performed",
+        },
+    )
+    assert len(zh_tw.messages) == 1
+    zh_tw_message = zh_tw.messages[0]
+    assert isinstance(zh_tw_message.content, TextContent)
+    assert "MCP 本身不會思考" in zh_tw_message.content.text
+    assert "最大合理的 mechanism-based DDx" in zh_tw_message.content.text
+    assert "rc_hypothesis(action='audit_breadth')" in zh_tw_message.content.text
+    assert "final PRIMARY audit 不得留下 NOT_ASSESSED" in zh_tw_message.content.text
+    assert "LR=1.0 不得計為支持或反證" in zh_tw_message.content.text
+    assert "locale='zh-TW'" in zh_tw_message.content.text
+    assert "Diagnosis、test、drug" in zh_tw_message.content.text
 
 
 @pytest.mark.asyncio
@@ -186,7 +242,11 @@ async def test_server_advanced_mcp_callbacks(
         # 1. Test Server Instructions & Metadata
         assert server.title == "RootCause MCP: Clinical Reasoning & Medical RCA Harness"
         assert server.instructions is not None
-        assert "5-stage progression" in server.instructions
+        assert (
+            "does not reason, diagnose, or prove clinical causality"
+            in server.instructions
+        )
+        assert "non-normative retrospective DDx prompts" in server.instructions
 
         # 2. Test Tools Callback (Condensed Profile)
         tools_res = await on_list_tools(context, None)
@@ -201,7 +261,10 @@ async def test_server_advanced_mcp_callbacks(
 
         # 4. Test Prompts Callback
         prompts_list = await on_list_prompts(context, None)
-        assert len(prompts_list.prompts) == 4
+        assert len(prompts_list.prompts) == 5
+        assert "clinician_ddx_discussion_zh_tw" in {
+            prompt.name for prompt in prompts_list.prompts
+        }
 
         # 5. Test Facade Tool Call: rc_evidence(action='add')
         session_id = "test-facade-session-001"

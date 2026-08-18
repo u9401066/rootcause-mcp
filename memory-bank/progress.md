@@ -1,4 +1,4 @@
-# Progress (Updated: 2026-08-17)
+# Progress (Updated: 2026-08-18)
 
 ## Done
 
@@ -60,10 +60,19 @@
   與 recursive final immutability 的 deterministic P0 gates
 - 建立去診斷／檔名提示的六案例 public engineering corpus 與 fail-closed eval
   runner scaffold；public reference rubrics 不作 blinded gold claim
+- 完成 2.0.0a2 typed source review、source-faithful temporal record、mechanism breadth
+  audit、explicit leading selection、verified literature LR calibration、per-cause
+  HFACS review、root/causation/readiness/hash recomputation 與 immutable final gates
+- 完成繁體中文 clinician Markdown（專有名詞保留 English）、46/25/24/8 tool
+  profiles、5 prompts、雙語 README／harness／API／Pages 同步
+- 本機 release QA：431 tests、84.36% branch coverage、Ruff、Mypy、Bandit、Vulture、
+  pip-audit、build/Twine、installed-wheel normal MCP stdio、desktop/mobile Playwright
+  全部通過
 
 ## Doing
 
-- 完成當次 CI/release gates 後交付 maintainer 審閱；不得沿用本檔舊 test count
+- 將 2.0.0a2 分段 commit、push、PR 合併至 default `master`，等待 GitHub CI／Pages
+  成功後建立 prerelease tag
 - 正式跨-Agent 36-run、private case bundle、分離的 private holdout、trusted trace、
   兩名臨床 reviewer 與裁決仍為 `AGENT_EVAL_NOT_ESTABLISHED`
 
@@ -80,4 +89,5 @@
 - 將 corrective action、owner、due date 與 effectiveness measure 建成 first-class
   domain/report contract
 - 將共用 output envelope 細化為每個 tool 的 domain-specific output schema
-- 發布 v2.0.0-alpha（不得宣稱為醫療器材或自主診斷系統）
+- 完成 private 36-run 與臨床盲評後再評估是否能從 engineering alpha 升格；不得
+  宣稱醫療器材、自主診斷或已建立臨床因果

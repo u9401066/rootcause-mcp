@@ -269,9 +269,7 @@ class WhyTreeHandlers:
                 if node.evidence:
                     lines.append(f"{prefix}   📋 Evidence: {', '.join(node.evidence)}")
                 if node.is_root_cause:
-                    lines.append(
-                        f"{prefix}   🎯 **ROOT CAUSE** (confidence: {node.confidence_level})"
-                    )
+                    lines.append(f"{prefix}   🎯 **ROOT CAUSE CANDIDATE**")
 
                 lines.append(f"{prefix}   (ID: `{node.id}`)\n")
 
@@ -307,7 +305,7 @@ class WhyTreeHandlers:
 
         session_id_str = arguments["session_id"]
         node_id_str = arguments["node_id"]
-        confidence = arguments.get("confidence", 0.8)
+        confidence = arguments.get("confidence")
 
         session_id = SessionId.from_string(session_id_str)
         node_id = CauseId.from_string(node_id_str)
@@ -339,7 +337,7 @@ class WhyTreeHandlers:
             f"**Level:** Why {node.level}\n"
             f"**Question:** {node.question}\n"
             f"**Answer (Root Cause):** {node.answer}\n"
-            f"**Confidence:** {confidence:.0%}\n"
+            "**Numeric Confidence:** Not presented; conservative audit required\n"
         )
 
         if node.evidence:

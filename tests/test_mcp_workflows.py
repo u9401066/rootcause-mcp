@@ -207,13 +207,16 @@ async def test_medical_reasoning_mcp_workflow(
                     "session_id": session_id,
                     "evidence_id": evidence_id,
                     "hypothesis_id": hypothesis_id,
-                    "likelihood_ratio": 5.0,
-                    "supports": True,
-                    "rationale": "Marked troponin elevation supports myocardial injury.",
+                    "likelihood_ratio": 1.0,
+                    "supports": None,
+                    "rationale": (
+                        "No verified calibration record is loaded in this transport fixture."
+                    ),
+                    "calibration_status": "QUANTITATIVELY_UNKNOWN",
                 },
             )
         )
-        assert linked["posterior_probability"] > 0.3
+        assert linked["posterior_probability"] == pytest.approx(0.3)
 
         assert (
             _structured(
@@ -312,6 +315,7 @@ async def test_legacy_rca_mcp_workflow(
     tmp_path: Path,
 ) -> None:
     _configure_runtime(monkeypatch, tmp_path)
+    monkeypatch.setenv("ROOTCAUSE_AUTHORIZED_REVIEWERS", "workflow-reviewer")
 
     async with lifespan(server):
         created = await _call(
@@ -337,7 +341,7 @@ async def test_legacy_rca_mcp_workflow(
                 "problem_statement": "Ten-fold medication dose error",
             },
         )
-        await _call(
+        added_cause = await _call(
             "rc_add_cause",
             {
                 "session_id": session_id,
@@ -346,6 +350,9 @@ async def test_legacy_rca_mcp_workflow(
                 "evidence": ["Medication administration policy"],
             },
         )
+        cause_match = re.search(r"`(c_[a-f0-9]+)`", _text(added_cause))
+        assert cause_match is not None
+        cause_id = cause_match.group(1)
         await _call("rc_get_fishbone", {"session_id": session_id})
         await _call(
             "rc_export_fishbone",
@@ -381,6 +388,9 @@ async def test_legacy_rca_mcp_workflow(
                 "hfacs_code": "OF-OP",
                 "reason": "The verification process was absent.",
                 "session_id": session_id,
+                "cause_id": cause_id,
+                "review_status": "CONFIRMED",
+                "reviewed_by": "workflow-reviewer",
             },
         )
         await _call(

@@ -144,11 +144,13 @@ class WhyNode:
 
     # === Root Cause Identification ===
 
-    def mark_as_root_cause(self, confidence: float = 0.8) -> None:
+    def mark_as_root_cause(self, confidence: float | None = None) -> None:
         """Mark this node as a root cause."""
         self.is_root_cause = True
         self.needs_further_analysis = False
-        self.confidence = ConfidenceScore(confidence)
+        self.confidence = (
+            ConfidenceScore(confidence) if confidence is not None else None
+        )
         self._touch()
 
     def mark_needs_analysis(self) -> None:

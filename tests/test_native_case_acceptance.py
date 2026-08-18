@@ -32,7 +32,14 @@ async def _call(name: str, arguments: dict[str, Any]) -> dict[str, Any]:
         context,
         CallToolRequestParams(name=name, arguments=arguments),
     )
-    assert result.is_error is False, _text(result)
+    error_payload = result.structured_content or {}
+    assert result.is_error is False, (
+        _text(result),
+        [
+            (item.get("code"), item.get("refs"), item.get("message"))
+            for item in error_payload.get("blockers", [])
+        ],
+    )
     return _structured(result)
 
 
@@ -51,11 +58,12 @@ def _source_manifest(
                 "source_uri": source.as_uri(),
                 "sha256": hashlib.sha256(source.read_bytes()).hexdigest(),
                 "media_type": "text/plain",
-                "source_kind": "clinical_note",
+                "source_kind": (
+                    "calibration" if document_id == "SRC-CAL" else "clinical_note"
+                ),
                 "parser_name": "native-acceptance-fixture",
                 "parser_version": "1.0",
-                "status": "reviewed",
-                "de_identified": True,
+                "status": "registered",
             }
             for source, document_id in zip(source_files, document_ids, strict=True)
         ],
@@ -98,6 +106,7 @@ async def _propose_hypothesis(
     diagnosis: str,
     code: str,
     prior: float,
+    mechanism_category: str,
     must_not_miss: bool = False,
 ) -> str:
     result = await _call(
@@ -108,6 +117,10 @@ async def _propose_hypothesis(
             "icd10_code": code,
             "prior_probability": prior,
             "must_not_miss": must_not_miss,
+            "mechanism_category": mechanism_category,
+            "diagnostic_role": "ETIOLOGIC",
+            "certainty": "POSSIBLE",
+            "reasoning_basis": "MECHANISM_INFERENCE",
             "clinical_reasoning": (
                 f"{diagnosis} remains a plausible explanation requiring explicit testing."
             ),
@@ -120,7 +133,10 @@ async def _propose_hypothesis(
             ],
             "evidence_supporting": [],
             "uncertainty_factors": ["Confirmatory imaging remains pending"],
-            "confidence_rationale": "Prior is a transparent case-fixture estimate.",
+            "confidence_rationale": (
+                "Why considered is documented above; the numeric fixture input is "
+                "uncalibrated and is not a patient-specific clinical probability."
+            ),
             "planned_tests": [
                 {
                     "name": f"Definitive test for {diagnosis}",
@@ -138,6 +154,33 @@ async def _propose_hypothesis(
     )
     assert result["must_not_miss"] is must_not_miss
     return str(result["hypothesis_id"])
+
+
+async def _add_verified_calibration_evidence(
+    *,
+    session_id: str,
+    document: str,
+    content: str,
+) -> str:
+    """Register one exact, verified literature LR record in the local ledger."""
+    result = await _call(
+        "rc_add_evidence",
+        {
+            "session_id": session_id,
+            "content": content,
+            "evidence_type": "LITERATURE",
+            "source_document": document,
+            "source_location": "Line 1",
+            "raw_snippet": content,
+            "extraction_method": "verbatim_quote",
+            "temporal": {"kind": "unknown", "raw_value": None},
+            "clinical_strength": "STRONG",
+            "source_reliability": "GRADE_A",
+            "auto_verify": True,
+        },
+    )
+    assert result["verified"] is True
+    return str(result["evidence_id"])
 
 
 @pytest.mark.asyncio
@@ -164,6 +207,11 @@ async def test_native_multi_source_case_passes_release_gates(
     document_ids = [f"SRC-{index:03d}" for index in range(1, 4)]
     for source, content in zip(source_files, source_contents, strict=True):
         source.write_text(f"{content}\n", encoding="utf-8")
+    calibration_content = "Validated direct LR values: 2.0, 3.0, 1.5, 1.2, 0.2."
+    calibration_file = tmp_path / "calibration-reference.txt"
+    calibration_file.write_text(f"{calibration_content}\n", encoding="utf-8")
+    manifest_files = [*source_files, calibration_file]
+    manifest_document_ids = [*document_ids, "SRC-CAL"]
 
     context: Any = None
     async with lifespan(server):
@@ -177,7 +225,10 @@ async def test_native_multi_source_case_passes_release_gates(
                     "initial_description": (
                         "De-identified retrospective reasoning and system review."
                     ),
-                    "source_manifest": _source_manifest(source_files, document_ids),
+                    "source_manifest": _source_manifest(
+                        manifest_files,
+                        manifest_document_ids,
+                    ),
                 },
             ),
         )
@@ -186,6 +237,24 @@ async def test_native_multi_source_case_passes_release_gates(
         session_match = re.search(r"`(rc_sess_[a-f0-9]+)`", _text(created_result))
         assert session_match is not None
         session_id = session_match.group(1)
+
+        for document_id in manifest_document_ids:
+            source_review = await _call(
+                "rc_adjudicate_source",
+                {
+                    "session_id": session_id,
+                    "document_id": document_id,
+                    "source_status": "reviewed",
+                    "de_identified": True,
+                    "independence_status": "independent",
+                    "source_group_id": document_id,
+                    "reviewed_by": "acceptance-reviewer",
+                    "reason": (
+                        "The source identity, de-identification, and lineage were reviewed."
+                    ),
+                },
+            )
+            assert source_review["source_review"]["document_id"] == document_id
 
         evidence_ids = [
             await _add_verified_evidence(
@@ -201,25 +270,110 @@ async def test_native_multi_source_case_passes_release_gates(
                 strict=True,
             )
         ]
+        calibration_evidence_id = await _add_verified_calibration_evidence(
+            session_id=session_id,
+            document="SRC-CAL",
+            content=calibration_content,
+        )
 
         primary_id = await _propose_hypothesis(
             session_id=session_id,
             diagnosis="Relative intravascular volume depletion",
             code="E86.1",
-            prior=0.35,
+            prior=0.5,
+            mechanism_category="VASCULAR",
         )
         secondary_id = await _propose_hypothesis(
             session_id=session_id,
             diagnosis="Medication-associated hypotension",
             code="I95.2",
-            prior=0.30,
+            prior=0.5,
+            mechanism_category="DRUG_TOXIN_IATROGENIC",
         )
         must_not_miss_id = await _propose_hypothesis(
             session_id=session_id,
             diagnosis="Acute pulmonary embolism",
             code="I26.99",
-            prior=0.20,
+            prior=0.5,
+            mechanism_category="VASCULAR",
             must_not_miss=True,
+        )
+        selected_lead = await _call(
+            "rc_select_leading_hypothesis",
+            {
+                "session_id": session_id,
+                "hypothesis_id": primary_id,
+                "reason": (
+                    "The case evidence makes volume depletion the current working lead."
+                ),
+                "changed_by": "native-acceptance-agent",
+            },
+        )
+        assert selected_lead["leading_hypothesis_id"] == primary_id
+
+        breadth_audit = await _call(
+            "rc_audit_differential_breadth",
+            {
+                "session_id": session_id,
+                "audit": {
+                    "audit_id": "DBA-native-acceptance",
+                    "framework": "VINDICATE",
+                    "framework_rationale": (
+                        "Acute hypotension requires volume, exposure, and "
+                        "obstructive-emergency mechanisms to be reviewed explicitly."
+                    ),
+                    "role": "PRIMARY",
+                    "cells": [
+                        {
+                            "cell_id": cell_id,
+                            "status": (
+                                "CANDIDATES_PRESENT"
+                                if cell_id in {"VASCULAR", "DRUG_TOXIN_IATROGENIC"}
+                                else "REVIEWED_NO_PLAUSIBLE_CANDIDATE"
+                            ),
+                            "hypothesis_ids": (
+                                [primary_id, must_not_miss_id]
+                                if cell_id == "VASCULAR"
+                                else [secondary_id]
+                                if cell_id == "DRUG_TOXIN_IATROGENIC"
+                                else []
+                            ),
+                            "mechanism_categories": (
+                                [cell_id]
+                                if cell_id in {"VASCULAR", "DRUG_TOXIN_IATROGENIC"}
+                                else []
+                            ),
+                            "rationale": (
+                                "Linked candidates represent this canonical mechanism."
+                                if cell_id in {"VASCULAR", "DRUG_TOXIN_IATROGENIC"}
+                                else "This canonical mechanism was reviewed without a plausible candidate."
+                            ),
+                            "unknowns": [],
+                            "planned_discriminators": [],
+                        }
+                        for cell_id in (
+                            "VASCULAR",
+                            "INFECTIOUS",
+                            "INFLAMMATORY_IMMUNE",
+                            "NEOPLASTIC",
+                            "DRUG_TOXIN_IATROGENIC",
+                            "METABOLIC_ENDOCRINE",
+                            "TRAUMATIC_MECHANICAL",
+                            "CONGENITAL_GENETIC",
+                            "DEGENERATIVE",
+                            "FUNCTIONAL_PHYSIOLOGIC",
+                        )
+                    ],
+                    "stop_rationale": (
+                        "All syndrome-appropriate cells were reviewed; unresolved "
+                        "uncertainty remains represented by candidate test plans."
+                    ),
+                    "recorded_by": "native-acceptance-agent",
+                },
+            },
+        )
+        assert breadth_audit["differential_breadth_audit"]["audit_id"] == (
+            "DBA-native-acceptance"
         )
 
         first_support = await _call(
@@ -231,6 +385,8 @@ async def test_native_multi_source_case_passes_release_gates(
                 "likelihood_ratio": 2.0,
                 "supports": True,
                 "rationale": "Observed hypotension supports a volume-sensitive mechanism.",
+                "calibration_status": "SOURCE_CALIBRATED",
+                "calibration_source_ref": calibration_evidence_id,
             },
         )
         second_support = await _call(
@@ -242,6 +398,8 @@ async def test_native_multi_source_case_passes_release_gates(
                 "likelihood_ratio": 3.0,
                 "supports": True,
                 "rationale": "Measured improvement after fluid supports volume responsiveness.",
+                "calibration_status": "SOURCE_CALIBRATED",
+                "calibration_source_ref": calibration_evidence_id,
             },
         )
         secondary_support = await _call(
@@ -253,6 +411,8 @@ async def test_native_multi_source_case_passes_release_gates(
                 "likelihood_ratio": 1.5,
                 "supports": True,
                 "rationale": "The documented timing supports medication-associated hypotension.",
+                "calibration_status": "SOURCE_CALIBRATED",
+                "calibration_source_ref": calibration_evidence_id,
             },
         )
         must_not_miss_support = await _call(
@@ -264,6 +424,8 @@ async def test_native_multi_source_case_passes_release_gates(
                 "likelihood_ratio": 1.2,
                 "supports": True,
                 "rationale": "Acute hypotension initially keeps pulmonary embolism visible.",
+                "calibration_status": "SOURCE_CALIBRATED",
+                "calibration_source_ref": calibration_evidence_id,
             },
         )
         disconfirming = await _call(
@@ -275,6 +437,8 @@ async def test_native_multi_source_case_passes_release_gates(
                 "likelihood_ratio": 0.2,
                 "supports": False,
                 "rationale": "Normal right ventricular size argues against massive PE.",
+                "calibration_status": "SOURCE_CALIBRATED",
+                "calibration_source_ref": calibration_evidence_id,
             },
         )
         assert first_support["applied_likelihood_ratio"] == 2.0
@@ -304,14 +468,34 @@ async def test_native_multi_source_case_passes_release_gates(
                 "problem_statement": "Delayed escalation for perioperative hypotension",
             },
         )
+        add_cause_result = await on_call_tool(
+            context,
+            CallToolRequestParams(
+                name="rc_add_cause",
+                arguments={
+                    "session_id": session_id,
+                    "category": "Process",
+                    "description": "The handoff lacked a mandatory escalation threshold",
+                    "hfacs_code": "OF-OP",
+                    "evidence": [evidence_ids[0]],
+                },
+            ),
+        )
+        assert add_cause_result.is_error is False, _text(add_cause_result)
+        fishbone_cause_match = re.search(
+            r"\*\*Cause ID:\*\* `(c_[a-f0-9]+)`", _text(add_cause_result)
+        )
+        assert fishbone_cause_match is not None
         await _call(
-            "rc_add_cause",
+            "rc_confirm_classification",
             {
                 "session_id": session_id,
-                "category": "Process",
+                "cause_id": fishbone_cause_match.group(1),
                 "description": "The handoff lacked a mandatory escalation threshold",
-                "hfacs_code": "OI-OP",
-                "evidence": [evidence_ids[0]],
+                "hfacs_code": "OF-OP",
+                "review_status": "CONFIRMED",
+                "reviewed_by": "acceptance-reviewer",
+                "reason": "The absent threshold is an organizational process factor.",
             },
         )
         why_result = await on_call_tool(
@@ -346,13 +530,13 @@ async def test_native_multi_source_case_passes_release_gates(
                     "cause": {
                         "id": node_match.group(1),
                         "description": "No explicit escalation threshold was present",
-                        "timestamp": "2026-08-17T09:55:00+08:00",
+                        "timestamp": "2026-08-17T10:00:00+08:00",
                         "evidence": [evidence_ids[0]],
                     },
                     "effect": {
-                        "description": "Hypotension escalation delayed",
-                        "timestamp": "2026-08-17T10:00:00+08:00",
-                        "evidence": [evidence_ids[0]],
+                        "description": "Subsequent bedside assessment was documented",
+                        "timestamp": "2026-08-17T10:10:00+08:00",
+                        "evidence": [evidence_ids[1]],
                     },
                     "verification_level": "comprehensive",
                 },
@@ -412,31 +596,58 @@ async def test_native_multi_source_case_passes_release_gates(
     assert final_report["finalized"] is True
     assert report["is_finalized"] is True
     assert report["approved_by"] == "acceptance-reviewer"
-    assert len(report["source_inventory"]) == 3
+    assert len(report["source_inventory"]) == 4
     assert all(item["evidence_count"] == 1 for item in report["source_inventory"])
     assert all(item["verified_count"] == 1 for item in report["source_inventory"])
     assert {item["document"] for item in report["source_inventory"]} == set(
-        document_ids
+        manifest_document_ids
     )
     assert all(item["sha256"] for item in report["source_inventory"])
-    assert all(
-        item["source_kind"] == "clinical_note" for item in report["source_inventory"]
-    )
+    assert [
+        item["source_kind"]
+        for item in report["source_inventory"]
+        if item["source_kind"] == "clinical_note"
+    ] == ["clinical_note"] * 3
+    assert {item["source_kind"] for item in report["source_inventory"]} == {
+        "clinical_note",
+        "calibration",
+    }
     assert len(report["hypotheses"]) == 3
     must_not_miss = next(item for item in report["hypotheses"] if item["must_not_miss"])
     assert must_not_miss["id"] == must_not_miss_id
     assert must_not_miss["contradicting_evidence_ids"] == [evidence_ids[1]]
     assert all(item["source"]["location"] == "Line 1" for item in report["evidence"])
     assert {item["source"]["document_id"] for item in report["evidence"]} == set(
-        document_ids
+        manifest_document_ids
     )
-    assert all(item["event_timestamp"] is not None for item in report["evidence"])
-    assert [event["time"] for event in report["timeline"]["events"]] == [
-        "2026-08-17 10:00:00+08:00",
-        "2026-08-17 10:10:00+08:00",
-        "2026-08-17 10:20:00+08:00",
+    assert all(
+        item["event_timestamp"] is not None
+        for item in report["evidence"]
+        if item["evidence_type"] != "LITERATURE"
+    )
+    calibration_evidence = next(
+        item for item in report["evidence"] if item["id"] == calibration_evidence_id
+    )
+    assert calibration_evidence["event_timestamp"] is None
+    assert calibration_evidence["temporal"]["kind"] == "unknown"
+    clinical_timeline_events = [
+        event
+        for event in report["timeline"]["events"]
+        if event["evidence_type"] != "LITERATURE"
     ]
-    assert final_report["timeline_events"] == 3
+    assert [event["time"] for event in clinical_timeline_events] == [
+        "2026-08-17T10:00:00+08:00",
+        "2026-08-17T10:10:00+08:00",
+        "2026-08-17T10:20:00+08:00",
+    ]
+    literature_timeline_events = [
+        event
+        for event in report["timeline"]["events"]
+        if event["evidence_type"] == "LITERATURE"
+    ]
+    assert len(literature_timeline_events) == 1
+    assert literature_timeline_events[0]["chronology_status"] == "UNPOSITIONED"
+    assert final_report["timeline_events"] == 4
     assert report["fishbone"] is not None
     assert report["why_tree"] is not None
     assert report["root_causes"]
@@ -446,7 +657,7 @@ async def test_native_multi_source_case_passes_release_gates(
         report["causation_verifications"][0]["cause_event"]["id"]
         == report["root_causes"][0]["id"]
     )
-    assert report["hfacs_classifications"][0]["hfacs_code"] == "OI-OP"
+    assert report["hfacs_classifications"][0]["hfacs_code"] == "OF-OP"
     assert report["gap_analysis"]["safety_invariants_met"] is True
     assert all(
         check["status"] == "PASS"

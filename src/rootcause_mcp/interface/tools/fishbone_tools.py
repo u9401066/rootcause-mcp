@@ -40,7 +40,9 @@ def get_fishbone_tools() -> list[Tool]:
             name="rc_add_cause",
             description=(
                 "Add a cause to a Fishbone category. "
-                "Each cause can have sub-causes, evidence, and HFACS classification."
+                "Each cause can have sub-causes and evidence. An optional HFACS code "
+                "is only an UNREVIEWED candidate until rc_confirm_classification "
+                "persists an authorized review."
             ),
             input_schema={
                 "type": "object",
@@ -73,7 +75,9 @@ def get_fishbone_tools() -> list[Tool]:
                     },
                     "hfacs_code": {
                         "type": "string",
-                        "description": "HFACS classification code (optional)",
+                        "description": (
+                            "Optional unreviewed HFACS candidate code; never a confirmation"
+                        ),
                         "default": None,
                     },
                     "evidence": {

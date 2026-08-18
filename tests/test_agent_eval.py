@@ -70,6 +70,40 @@ def test_corpus_matrix_and_public_reference_integrity() -> None:
         adapter["mcp_wiring"]["trace_parser_status"] == runner.RUNNER_SCAFFOLD
         for adapter in matrix["adapters"]
     )
+    assert all(
+        adapter["mcp_wiring"]["clinician_ddx_sha256"]
+        == runner._sha256_file(
+            runner._resolve_repo_file(adapter["mcp_wiring"]["clinician_ddx_source"])
+        )
+        for adapter in matrix["adapters"]
+    )
+
+
+def test_matrix_rejects_missing_or_drifted_clinician_reference(
+    tmp_path: Path,
+) -> None:
+    missing_identity = runner._read_json(MATRIX)
+    missing_identity["adapters"][0]["mcp_wiring"].pop("clinician_ddx_source")
+    missing_identity_path = tmp_path / "missing-identity.json"
+    runner._write_json(missing_identity_path, missing_identity)
+    with pytest.raises(runner.EvalError, match="incomplete harness identity"):
+        runner.load_matrix(missing_identity_path)
+
+    missing_source = runner._read_json(MATRIX)
+    missing_source["adapters"][0]["mcp_wiring"]["clinician_ddx_source"] = (
+        ".codex/skills/rootcause-clinical-reasoning-harness/references/missing.md"
+    )
+    missing_source_path = tmp_path / "missing-source.json"
+    runner._write_json(missing_source_path, missing_source)
+    with pytest.raises(runner.EvalError, match="Missing evaluation file"):
+        runner.load_matrix(missing_source_path)
+
+    drifted = runner._read_json(MATRIX)
+    drifted["adapters"][0]["mcp_wiring"]["clinician_ddx_sha256"] = "0" * 64
+    drifted_path = tmp_path / "drifted.json"
+    runner._write_json(drifted_path, drifted)
+    with pytest.raises(runner.EvalError, match="clinician_ddx_source hash drift"):
+        runner.load_matrix(drifted_path)
 
 
 def test_prompts_and_requests_are_answer_free_and_formal_mcp_is_mandatory() -> None:
@@ -83,6 +117,9 @@ def test_prompts_and_requests_are_answer_free_and_formal_mcp_is_mandatory() -> N
 
         assert "MUST use the configured RootCause MCP" in formal_prompt
         assert "prompt-only reasoning" in formal_prompt
+        assert "harness/references/case-handoff.md" in formal_prompt
+        assert "harness/references/clinician-ddx-discussion-zh-tw.md" in formal_prompt
+        assert "harness/case-handoff.md" not in formal_prompt
         assert "no Agent or MCP runtime is invoked" in fixture_prompt
         assert "reference_rubrics" not in serialized
         assert "PRIVATE_HOLDOUT" not in serialized
@@ -396,10 +433,14 @@ def test_runtime_trace_is_trusted_only_for_a_verified_protocol_and_one_session()
     adapter = copy.deepcopy(runner.load_matrix(MATRIX)["adapters"][0])
     tool_names = (
         "rc_start_session",
+        "rc_adjudicate_source",
         "rc_add_evidence",
         "rc_propose_hypothesis",
+        "rc_audit_differential_breadth",
+        "rc_select_leading_hypothesis",
         "rc_audit_reasoning_state",
         "rc_init_fishbone",
+        "rc_confirm_classification",
         "rc_generate_contract_report",
     )
     raw_trace = "".join(
@@ -534,6 +575,14 @@ def test_adapter_workspace_contains_no_gold_or_repository_bundle(
             if path.is_file()
         }
         seen["files"] = relative_files
+        seen["harness_hashes"] = {
+            relative: runner._sha256_file(workspace / relative)
+            for relative in (
+                "harness/SKILL.md",
+                "harness/references/case-handoff.md",
+                "harness/references/clinician-ddx-discussion-zh-tw.md",
+            )
+        }
         seen["environment"] = kwargs["env"]
         seen["command"] = command
         return SimpleNamespace(
@@ -550,6 +599,18 @@ def test_adapter_workspace_contains_no_gold_or_repository_bundle(
 
     assert result[-1]["mcp_workflow_verified"] is False
     assert seen["files"]
+    assert {
+        "harness/SKILL.md",
+        "harness/references/case-handoff.md",
+        "harness/references/clinician-ddx-discussion-zh-tw.md",
+    } <= seen["files"]
+    assert seen["harness_hashes"] == {
+        "harness/SKILL.md": adapter["mcp_wiring"]["harness_sha256"],
+        "harness/references/case-handoff.md": adapter["mcp_wiring"]["handoff_sha256"],
+        "harness/references/clinician-ddx-discussion-zh-tw.md": adapter["mcp_wiring"][
+            "clinician_ddx_sha256"
+        ],
+    }
     assert all(
         relative == "agent_output.schema.json"
         or relative.startswith(("case/", "harness/"))

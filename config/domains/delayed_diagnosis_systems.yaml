@@ -1,35 +1,45 @@
 # Clinical Domain Playbook: Delayed Diagnosis & Closed-Loop Reporting Breakdown
 # 供病安委員會、放射科、門診與急診檢討報告遺漏與延遲診斷使用之專科手冊
 
+status: "non_normative_retrospective_differential_aid"
+safety_contract:
+  - "Candidate findings and system factors require case-specific source evidence."
+  - "Do not pre-populate failures or actions without governance review and an accountable owner."
+  - "This playbook does not establish negligence or clinical causality."
+
 domain: "Diagnostic Safety & Clinical Informatics"
-scenario: "Missed Critical Radiology/Pathology Finding leading to Delayed Treatment"
+scenario: "Retrospective review of diagnostic-result follow-up and possible delay"
 
-pathophysiology:
-  primary_mechanism: "Breakdown of closed-loop communication between diagnostic providers (Radiology/Pathology) and ordering clinicians, exacerbated by lack of tracking safety nets and administrative archiving flaws"
-  contributing_system_factors:
-    - "非同步傳真或靜態郵件缺乏主動確認簽收 (No Acknowledgment / Read Receipt)"
-    - "缺乏未讀危急值自動升級通知機制 (No Automated Critical Alert Escalation)"
-    - "診斷動量偏誤 (Diagnostic Momentum / Assumption of Normalcy by patient and primary team)"
+mechanism_domains_to_review:
+  - "Result generation, routing, receipt, acknowledgment, escalation, and follow-up"
+  - "Patient-facing notification and access barriers"
+  - "Clinical interpretation, competing priorities, and diagnostic cognitive factors"
+  - "Administrative workflow, interface, ownership, and audit-log limitations"
+  - "A clinically reasonable interval or disease evolution without a preventable process failure"
 
-pathognomonic_findings:
+candidate_findings_requiring_confirmation:
   - marker: "Critical Finding generated in HL7/RIS report but not acknowledged in EMR for > 7-30 days"
     modality: "RIS / EMR Audit Log"
-    significance: "資訊傳遞鏈斷裂 (Closed-Loop Communication Failure)"
+    significance: "If source-linked and complete, may support a communication-loop gap; audit-log missingness is not proof of non-communication"
   - marker: "Paper/Fax report physical displacement (e.g. moved to archive box by non-clinical staff)"
     modality: "Physical Nursing Logbook / Administrative Memo"
-    significance: "人工作業防線缺乏防呆 (Manual Process Fragility)"
+    significance: "May identify a manual-process vulnerability only when the case-specific chain and ownership are verified"
   - marker: "Patient assumption of normalcy ('No news is good news')"
     modality: "Patient Interview / Triage Note"
-    significance: "病患端未獲得雙向衛教通知"
+    significance: "Interview evidence may identify a notification gap but requires reconciliation with communication records"
 
-diagnostic_rules_to_rule_out:
+differential_questions:
   - diagnosis: "Normal Follow-up with Disease Recurrence"
-    discriminator: "原始檢查即已清晰標註 2.5cm 惡性可疑腫塊 (Critical Alert)，非新發病灶"
+    discriminator: "Compare original report wording, images/pathology, interval change, expected follow-up window, and reviewer interpretation"
   - diagnosis: "Intentional Patient Non-compliance"
-    discriminator: "病患從未接獲電話或簡訊回診通知，非自行爽約"
+    discriminator: "Reconcile patient account with call/message logs, access barriers, scheduling records, and documented shared decisions; do not presume blame"
 
-treatment_protocol:
-  error_proofing_actions:
+candidate_system_actions_require_governance:
+  constraints:
+    - "Require source-linked failure evidence before proposing an action."
+    - "Assign an accountable owner, due date, balancing measure, and approval state."
+    - "Do not represent these examples as findings from the current case."
+  examples:
     - "強制實施 EMR 電子危急值閉環回覆機制 (Critical Value Alerting with Mandatory Acknowledgment within 24h)"
     - "若開單醫師 48 小時內未開啟危急報告，自動派案給科部代理醫師或個案管理師 (Case Manager)"
     - "建立病患端雙向透明通知 App/簡訊，提醒病患『已有檢查報告完成，請預約回診』"

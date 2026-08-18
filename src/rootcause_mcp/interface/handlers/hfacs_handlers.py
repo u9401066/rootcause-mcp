@@ -13,12 +13,18 @@ Handles 6 HFACS-related tools:
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Sequence
+from datetime import UTC, datetime
 from typing import TYPE_CHECKING, Any, ClassVar
 
 from mcp.types import TextContent
 
+from rootcause_mcp.domain.value_objects.enums import HFACSReviewStatus
+from rootcause_mcp.domain.value_objects.identifiers import CauseId, SessionId
+
 if TYPE_CHECKING:
+    from rootcause_mcp.domain.repositories.fishbone_repository import FishboneRepository
     from rootcause_mcp.domain.services.hfacs_suggester import HFACSSuggester
     from rootcause_mcp.domain.services.learned_rules_service import LearnedRulesService
 
@@ -206,10 +212,12 @@ class HFACSHandlers:
         self,
         hfacs_suggester: HFACSSuggester | None = None,
         learned_rules_service: LearnedRulesService | None = None,
+        fishbone_repository: FishboneRepository | None = None,
     ) -> None:
         """Initialize handlers with dependencies."""
         self._suggester = hfacs_suggester
         self._learned_rules = learned_rules_service
+        self._fishbone_repo = fishbone_repository
 
     async def handle_suggest_hfacs(
         self, arguments: dict[str, Any]
@@ -241,11 +249,12 @@ class HFACSHandlers:
             for i, suggestion in enumerate(suggestions, 1):
                 code = suggestion.code.code
                 name = suggestion.code.description
-                confidence = float(suggestion.confidence)
                 source = suggestion.source
 
                 lines.append(f"\n### {i}. {code} - {name}")
-                lines.append(f"- **Confidence:** {confidence:.0%}")
+                lines.append(
+                    "- **Match semantics:** heuristic_rule_match / not calibrated"
+                )
                 lines.append(f"- **Source:** {source}")
                 lines.append(f"- **Reason:** {suggestion.reason}")
 
@@ -258,47 +267,132 @@ class HFACSHandlers:
 
         return [TextContent(type="text", text=result)]
 
-    async def handle_confirm_classification(
+    async def handle_confirm_classification(  # noqa: PLR0911
         self, arguments: dict[str, Any]
     ) -> Sequence[TextContent]:
-        """Handle rc_confirm_classification tool call."""
-        if self._learned_rules is None:
+        """Persist an allowlisted review for one session-bound Fishbone cause."""
+        if self._fishbone_repo is None:
             return [
                 TextContent(
-                    type="text", text="Error: LearnedRulesService not initialized"
+                    type="text", text="Error: FishboneRepository not initialized"
+                )
+            ]
+        session_id = str(arguments.get("session_id") or "").strip()
+        cause_id = str(arguments.get("cause_id") or "").strip()
+        reviewer = str(arguments.get("reviewed_by") or "").strip()
+        reason = str(arguments.get("reason") or "").strip()
+        authorized = {
+            item.strip().casefold()
+            for item in os.environ.get("ROOTCAUSE_AUTHORIZED_REVIEWERS", "").split(",")
+            if item.strip()
+        }
+        if not reviewer or reviewer.casefold() not in authorized:
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        "Error: reviewed_by must be a named member of "
+                        "ROOTCAUSE_AUTHORIZED_REVIEWERS"
+                    ),
+                )
+            ]
+        try:
+            status = HFACSReviewStatus(str(arguments.get("review_status") or ""))
+            if status is HFACSReviewStatus.UNREVIEWED:
+                raise ValueError("review_status must be CONFIRMED or NOT_APPLICABLE")
+            typed_session_id = SessionId.from_string(session_id)
+            typed_cause_id = CauseId.from_string(cause_id)
+        except ValueError as exc:
+            return [TextContent(type="text", text=f"Error: {exc}")]
+
+        fishbone = self._fishbone_repo.get_by_session(typed_session_id)
+        if fishbone is None:
+            return [
+                TextContent(
+                    type="text",
+                    text=f"Error: no Fishbone exists for session {session_id}",
+                )
+            ]
+        matches = [
+            cause
+            for cause in fishbone.get_all_causes()
+            if cause.cause_id == typed_cause_id
+        ]
+        if len(matches) != 1:
+            return [
+                TextContent(
+                    type="text",
+                    text=(
+                        f"Error: cause_id {cause_id} must identify exactly one "
+                        f"Fishbone cause in session {session_id}"
+                    ),
+                )
+            ]
+        persisted_cause = matches[0]
+        submitted_description = arguments.get("description")
+        if (
+            submitted_description is not None
+            and str(submitted_description) != persisted_cause.description
+        ):
+            return [
+                TextContent(
+                    type="text",
+                    text="Error: description does not match the persisted Fishbone cause",
                 )
             ]
 
-        description = arguments["description"]
-        hfacs_code = arguments["hfacs_code"]
-        reason = arguments["reason"]
-        session_id = arguments.get("session_id")
-        confidence = arguments.get("confidence", 0.8)
-
-        success = self._learned_rules.confirm_classification(
-            description=description,
-            hfacs_code=hfacs_code,
-            reason=reason,
-            session_id=session_id,
-            confidence=confidence,
+        hfacs_code_value = arguments.get("hfacs_code")
+        hfacs_code = (
+            str(hfacs_code_value).strip() if hfacs_code_value is not None else None
         )
-
-        if success:
-            result = (
-                f"✅ **Classification Confirmed**\n\n"
-                f"- **Description:** {description}\n"
-                f"- **HFACS Code:** {hfacs_code}\n"
-                f"- **Reason:** {reason}\n"
-                f"- **Confidence:** {confidence:.0%}\n\n"
-                f"This rule has been saved and will be used for future suggestions."
+        if hfacs_code == "":
+            hfacs_code = None
+        try:
+            cause = fishbone.review_cause_hfacs(
+                typed_cause_id,
+                status=status,
+                hfacs_code=hfacs_code,
+                reviewed_by=reviewer,
+                reason=reason,
+                reviewed_at=datetime.now(UTC),
             )
-        else:
-            result = (
-                "❌ **Failed to save classification**\n\n"
-                "Please check the logs for details."
-            )
+        except ValueError as exc:
+            return [TextContent(type="text", text=f"Error: {exc}")]
+        self._fishbone_repo.save(fishbone)
 
-        return [TextContent(type="text", text=result)]
+        learning_note = "No learned rule was created."
+        if status is HFACSReviewStatus.CONFIRMED and self._learned_rules is not None:
+            assert cause.hfacs_code is not None
+            service_args: dict[str, Any] = {
+                "description": cause.description,
+                "hfacs_code": cause.hfacs_code,
+                "reason": reason,
+                "session_id": session_id,
+            }
+            confidence = arguments.get("confidence")
+            if confidence is not None:
+                service_args["confidence"] = confidence
+            learned = self._learned_rules.confirm_classification(**service_args)
+            learning_note = str(learned.get("message") or learning_note)
+
+        return [
+            TextContent(
+                type="text",
+                text=(
+                    "✅ **HFACS Review Persisted**\n\n"
+                    f"- **Session:** `{session_id}`\n"
+                    f"- **Cause ID:** `{cause_id}`\n"
+                    f"- **Description:** {cause.description}\n"
+                    f"- **Review status:** {cause.hfacs_review_status.value}\n"
+                    f"- **HFACS Code:** {cause.hfacs_code or 'NOT_APPLICABLE'}\n"
+                    f"- **Reviewed by:** {reviewer}\n"
+                    f"- **Reason:** {reason}\n"
+                    "- **Review semantics:** persisted human classification review; "
+                    "not calibrated confidence\n\n"
+                    f"{learning_note}"
+                ),
+            )
+        ]
 
     async def handle_get_framework(
         self, arguments: dict[str, Any]
@@ -367,7 +461,9 @@ class HFACSHandlers:
                 lines.append(f"## {rule.get('code', 'N/A')}")
                 lines.append(f"- **Keyword:** {rule.get('keyword', 'N/A')}")
                 lines.append(f"- **Source Type:** {rule.get('source_type', 'N/A')}")
-                lines.append(f"- **Confidence:** {rule.get('confidence', 0):.0%}")
+                lines.append(
+                    "- **Match semantics:** heuristic_rule_match / not calibrated"
+                )
                 lines.append(f"- **Reason:** {rule.get('reason', 'N/A')}")
                 lines.append(f"- **Confirmed At:** {rule.get('confirmed_at', 'N/A')}")
                 lines.append(f"- **Hit Count:** {rule.get('hit_count', 0)}")
