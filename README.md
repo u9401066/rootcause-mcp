@@ -221,7 +221,7 @@ deployment environment before clinical production use. See the
 
 ### 🚀 One-Click Automated Setup
 
-You can automatically detect `uv`, synchronize virtual environments, configure client MCP harnesses (`.vscode/mcp.json`, Claude Desktop, Cline), and run self-diagnostic checks with a single command:
+You can automatically detect `uv`, synchronize virtual environments, configure client MCP harnesses (Copilot-native `.mcp.json`, VS Code `.vscode/mcp.json`, Claude Desktop, and Cline), and run a production stdio diagnostic with a single command:
 
 **Windows PowerShell:**
 
@@ -236,10 +236,17 @@ chmod +x scripts/setup.sh
 ./scripts/setup.sh
 ```
 
+> The MCP command runs on the Agent or extension host that starts the server. If
+> VS Code uses WSL, SSH, a Dev Container, or another remote host, install `uv`
+> and run `scripts/setup.sh` in that remote integrated terminal. Running
+> `setup.ps1` on local Windows does not install `uv` on the remote host. Run
+> **Developer: Reload Window** after setup.
+
 **Universal Python CLI:**
 
 ```powershell
-uv run python scripts/install.py --profile all --target all
+uv run --locked python scripts/install.py --profile all --target all
+uv run --locked python scripts/mcp_doctor.py --config all
 ```
 
 ### 🔬 Scripted Synthetic Case Regression
@@ -286,26 +293,86 @@ inputs, never real clinical records or PHI.
 
 ```powershell
 # Install the locked environment
-uv sync --all-extras
+uv sync --locked --all-extras
 
 # Run the MCP SDK 2.0 stdio server
-uv run rootcause-mcp
+uv run --locked rootcause-mcp
 ```
 
-VS Code `.vscode/mcp.json`:
+Copilot CLI and Agent Host read `.mcp.json` at the repository root directly:
 
 ```json
 {
-  "servers": {
-    "rootcause-mcp": {
-      "type": "stdio",
+  "mcpServers": {
+    "rootcauseMcp": {
+      "type": "local",
       "command": "uv",
-      "args": ["run", "rootcause-mcp"],
-      "cwd": "${workspaceFolder}"
+      "args": ["run", "--locked", "rootcause-mcp"],
+      "cwd": ".",
+      "env": {
+        "ROOTCAUSE_TOOL_PROFILE": "all",
+        "ROOTCAUSE_RESPONSE_MODE": "compact"
+      },
+      "tools": ["*"]
     }
   }
 }
 ```
+
+The VS Code editor uses `.vscode/mcp.json` and forwards it to the active Agent
+Host:
+
+```json
+{
+  "servers": {
+    "rootcauseMcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--locked",
+        "--directory",
+        "${workspaceFolder}",
+        "rootcause-mcp"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ROOTCAUSE_TOOL_PROFILE": "all",
+        "ROOTCAUSE_RESPONSE_MODE": "compact"
+      }
+    }
+  }
+}
+```
+
+Both files intentionally use the same `rootcauseMcp` server key so Agent Host
+does not create two MCP identities. Shared configuration uses the PATH-resolved
+`uv` name only. Never commit `C:\...\uv.exe`, `ROOTCAUSE_DATA_DIR`, or
+`ROOTCAUSE_AUTHORIZED_REVIEWERS`; provide protected runtime values in the host
+environment. Put unrelated MCP servers in VS Code user or remote-user config
+instead of committing personal executable and data paths to this repository.
+
+### Copilot Remote `spawn ... uv.EXE ENOENT`
+
+This means the execution host cannot find the configured executable. In a WSL,
+SSH, or container Remote extension host, a common cause is forwarding a local
+Windows absolute path. In the VS Code remote terminal, run:
+
+```bash
+uv --version
+uv sync --locked --all-extras
+uv run --locked python scripts/install.py --profile all --target all \
+  --skip-tests --skip-trial
+uv run --locked python scripts/mcp_doctor.py --config all
+```
+
+The doctor should report `PASS` for both configs and their stdio handshakes.
+Then run **Developer: Reload Window**, restart `rootcauseMcp` from **MCP: List
+Servers**, and use **MCP: Reset Cached Tools** after a tool-catalog update. See
+the official [VS Code MCP configuration
+reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration)
+and [GitHub Copilot CLI MCP
+configuration](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers).
 
 Environment variables:
 

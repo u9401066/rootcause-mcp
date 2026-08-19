@@ -1,24 +1,21 @@
 {
-  "servers": {
+  "mcpServers": {
     "rootcauseMcp": {
-      "type": "stdio",
+      "type": "local",
       "command": "uv",
       "args": [
         "run",
         "--locked",
-        "--directory",
-        "${workspaceFolder}",
         "rootcause-mcp"
       ],
-      "cwd": "${workspaceFolder}",
+      "cwd": ".",
       "env": {
         "ROOTCAUSE_TOOL_PROFILE": "all",
         "ROOTCAUSE_RESPONSE_MODE": "compact"
       },
-      "dev": {
-        "watch": "src/**/*.py"
-      }
+      "tools": [
+        "*"
+      ]
     }
-  },
-  "inputs": []
+  }
 }

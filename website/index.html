@@ -563,6 +563,7 @@
               <li><strong>以 condensed profile 啟動</strong><span>讓 Agent 先看到 8 個 facade tools。</span></li>
               <li><strong>讀取 live contracts</strong><span>再建立 session 與來源 manifest。</span></li>
               <li><strong>PRELIMINARY first</strong><span>先預覽 blockers；合格人員複核後再 finalize。</span></li>
+              <li><strong>Remote host 要另外驗證</strong><span>在實際 Agent／extension host 執行 MCP doctor。</span></li>
             </ol>
           </div>
           <div class="code-window" aria-label="安裝與啟動命令">
@@ -580,12 +581,20 @@
 uv sync --all-extras --all-groups --locked
 
 <span class="code-string"># 2. Start the MCP server over stdio</span>
-ROOTCAUSE_TOOL_PROFILE=condensed uv run rootcause-mcp
+ROOTCAUSE_TOOL_PROFILE=condensed uv run --locked rootcause-mcp
 
-<span class="code-string"># 3. The client should read these live resources first</span>
+<span class="code-string"># 3. Verify both VS Code and Copilot configs on this host</span>
+uv run --locked python scripts/mcp_doctor.py --config all
+
+<span class="code-string"># 4. The client should read these live resources first</span>
 clinical://contracts/case-input-manifest
 clinical://contracts/case-analysis-report</code></pre>
           </div>
+        </div>
+        <div class="container">
+          <aside class="notice notice-spaced" aria-label="Copilot Remote 啟動提醒">
+            <p><strong>Copilot Remote：</strong>若出現 <code>spawn ... uv.EXE ENOENT</code>，代表實際 execution host 找不到設定的 executable。請在 WSL／SSH／Dev Container 的 remote terminal 安裝 <code>uv</code>、執行上述 doctor，再以 <strong>Developer: Reload Window</strong> 重載。</p>
+          </aside>
         </div>
       </section>
 

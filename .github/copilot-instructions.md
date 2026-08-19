@@ -91,7 +91,7 @@ src/
 ```bash
 # 初始化環境
 uv venv
-uv sync --all-extras
+uv sync --locked --all-extras
 
 # 安裝依賴
 uv add package-name
@@ -99,6 +99,14 @@ uv add --dev pytest ruff mypy bandit vulture
 ```
 
 詳見：`.github/bylaws/python-environment.md`
+
+### MCP 啟動與 Remote host
+
+- Copilot／Agent Host 原生設定使用 repo 根目錄 `.mcp.json`；VS Code editor 設定使用 `.vscode/mcp.json`。
+- 兩份設定必須使用相同 server key `rootcauseMcp`、PATH-resolved command `uv`、`--locked` 與一致的 profile／response mode。
+- 共享設定不得寫入 Windows／POSIX absolute executable、`ROOTCAUSE_DATA_DIR` 或 `ROOTCAUSE_AUTHORIZED_REVIEWERS`。Reviewer 與 clinical runtime 路徑只能由 operator-controlled host 環境提供。
+- WSL、SSH、Dev Container 或 Remote extension host 必須在該 host 自行安裝 `uv`；本機 Windows 的 `uv.exe` 路徑不可轉交給遠端。
+- 設定或 tool catalog 改變後，執行 `uv run --locked python scripts/mcp_doctor.py --config all`，再 Reload Window／Reset Cached Tools。
 
 ---
 

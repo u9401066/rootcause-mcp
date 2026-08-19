@@ -16,7 +16,7 @@
       "data_egress": "provider_configured",
       "timeout_seconds": 900,
       "mcp_wiring": {
-        "server_aliases": ["rootcause-mcp", "rootcause"],
+        "server_aliases": ["rootcauseMcp", "rootcause-mcp", "rootcause"],
         "harness_source": ".codex/skills/rootcause-clinical-reasoning-harness/SKILL.md",
         "harness_sha256": "a42dc2f752bb9dcf4d2f0a4ea6a7d3a8658477dfcc46efb29d2c5348e8cd0878",
         "handoff_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md",
@@ -49,7 +49,7 @@
       "data_egress": "provider_configured",
       "timeout_seconds": 960,
       "mcp_wiring": {
-        "server_aliases": ["rootcause-mcp", "rootcause"],
+        "server_aliases": ["rootcauseMcp", "rootcause-mcp", "rootcause"],
         "harness_source": ".codex/skills/rootcause-clinical-reasoning-harness/SKILL.md",
         "harness_sha256": "a42dc2f752bb9dcf4d2f0a4ea6a7d3a8658477dfcc46efb29d2c5348e8cd0878",
         "handoff_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md",
@@ -82,7 +82,7 @@
       "data_egress": "provider_configured",
       "timeout_seconds": 900,
       "mcp_wiring": {
-        "server_aliases": ["rootcause-mcp", "rootcause"],
+        "server_aliases": ["rootcauseMcp", "rootcause-mcp", "rootcause"],
         "harness_source": ".codex/skills/rootcause-clinical-reasoning-harness/SKILL.md",
         "harness_sha256": "a42dc2f752bb9dcf4d2f0a4ea6a7d3a8658477dfcc46efb29d2c5348e8cd0878",
         "handoff_source": ".codex/skills/rootcause-clinical-reasoning-harness/references/case-handoff.md",

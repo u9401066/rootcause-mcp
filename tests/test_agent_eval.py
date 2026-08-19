@@ -77,6 +77,10 @@ def test_corpus_matrix_and_public_reference_integrity() -> None:
         )
         for adapter in matrix["adapters"]
     )
+    assert all(
+        "rootcauseMcp" in adapter["mcp_wiring"]["server_aliases"]
+        for adapter in matrix["adapters"]
+    )
 
 
 def test_matrix_rejects_missing_or_drifted_clinician_reference(
