@@ -352,7 +352,8 @@ async def lifespan(_server: Server) -> AsyncIterator[None]:  # noqa: PLR0915
     _runtime.facade_handlers = facade_handlers
     _runtime.database = database
 
-    logger.info("✅ All handlers initialized")
+    # Keep startup logs ASCII-safe for Windows remote extension-host pipes.
+    logger.info("All handlers initialized")
 
     try:
         yield
