@@ -2,7 +2,7 @@
 
 > [!CAUTION]
 > **2026-01-16 的歷史基線（non-normative）。** 下列百分比與「未實作」判定不代表
-> 2.0.0a2 runtime；目前已有 typed evidence、source manifest、exact provenance、
+> 2.0.0a3 runtime；目前已有 typed evidence、source manifest、exact provenance、
 > cross-ledger conformance 與 immutable final snapshot。本文只保留作設計歷程，
 > 現行能力與限制請查閱 [API reference](api.md) 及
 > [MVP conformance and Agent evaluation](mvp_conformance_and_evaluation.md)。

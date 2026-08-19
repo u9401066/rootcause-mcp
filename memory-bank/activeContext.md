@@ -60,9 +60,9 @@ The canonical workflow is:
 - The native acceptance test exercises the public MCP callback/lifespan across
   three physical text sources from manifest creation through authorized final
   output.
-- The 2.0.0a2 release candidate exposes 46 all-profile tools, 25 clinical tools,
+- The 2.0.0a3 release exposes 46 all-profile tools, 25 clinical tools,
   24 RCA tools, 8 condensed facades, 19 resources, 4 resource templates, and 5 prompts.
-- The frozen release run passes 431 tests with 84.36% branch coverage plus Ruff,
+- The frozen release run passes 486 tests with 84.59% branch coverage plus Ruff,
   Mypy, Bandit, Vulture, dependency audit, build/Twine, installed-wheel stdio, and
   desktop/mobile browser QA. GitHub CI remains authoritative after push.
 - The six-case script is a synthetic `PRELIMINARY` regression/demo. It intentionally

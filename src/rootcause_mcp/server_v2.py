@@ -832,7 +832,7 @@ async def on_get_prompt(
 # Create server instance with SDK 2.0 API, resources, prompts, and instructions
 server = Server(
     "rootcause-mcp",
-    version="2.0.0a2",
+    version="2.0.0a3",
     title="RootCause MCP: Clinical Reasoning & Medical RCA Harness",
     description=(
         "Auditable evidence ledger, broad differential-diagnosis workflow, "

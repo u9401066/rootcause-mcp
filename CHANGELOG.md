@@ -7,6 +7,51 @@
 
 ## [Unreleased]
 
+## [2.0.0a3] - 2026-08-19
+
+### Added - Portable Copilot and VS Code startup
+
+- Added a repository-native `.mcp.json` for Copilot CLI and Agent Host, alongside
+  the VS Code workspace MCP definition, using one canonical `rootcauseMcp`
+  identity and PATH-resolved `uv`.
+- Added `scripts/mcp_doctor.py`, which validates both workspace configurations,
+  launches the production stdio server, checks profile-specific catalog counts,
+  and reads and parses both live clinical contracts.
+- Added Ubuntu and Windows MCP startup CI covering generated-config drift,
+  installer regressions, real SDK initialization, discovery, contract reads, and
+  the PowerShell Copilot setup path.
+
+### Changed - Host-safe installation and documentation
+
+- Workspace configurations now use `uv run --locked` and resolve the repository
+  from the execution host instead of persisting a developer-machine executable.
+- The installer and shell wrappers now support the `copilot` target and
+  `condensed` profile, fail closed on doctor errors, and explain that `uv` must be
+  installed on the actual local, WSL, SSH, or dev-container extension host.
+- Removed repository-local clinical data paths, reviewer allowlists, invalid
+  debug metadata, and unrelated user-specific MCP definitions from the shared
+  workspace configuration.
+- Stopped tracking the legacy runtime SQLite database and generated report
+  exports so new release source archives no longer package mutable case state.
+  This tip-level cleanup does not rewrite earlier Git history.
+- Updated the bilingual README, website, architecture guide, and Copilot
+  instructions with Remote-host troubleshooting and safe restart guidance.
+
+### Fixed - Windows and Remote extension hosts
+
+- Fixed Copilot startup failing before MCP initialization with
+  `spawn C:\\...\\uv.EXE ENOENT` when a Windows-specific executable path was
+  evaluated on a different Remote extension host or no longer existed.
+- Fixed the installer from regenerating host-specific absolute `uv` paths in
+  committed workspace configuration.
+- Replaced non-ASCII startup/status logging in Windows-sensitive paths so
+  legacy console encodings cannot crash the server or installer before the MCP
+  handshake.
+
+This release remains an engineering alpha. These checks establish portable MCP
+startup and deterministic artifact mechanics; they do not establish clinical
+validity, diagnostic accuracy, or causality.
+
 ## [2.0.0a2] - 2026-08-18
 
 ### Added - Clinician-facing DDx contracts

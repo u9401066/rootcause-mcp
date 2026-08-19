@@ -314,7 +314,7 @@ class ContractReport(BaseModel):
 
     report_id: str = Field(..., min_length=1, description="Unique report ID")
     session_id: str = Field(..., min_length=1, description="RCA session ID")
-    report_version: str = Field(default="2.0.0a2", description="Report format version")
+    report_version: str = Field(default="2.0.0a3", description="Report format version")
 
     generated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     finalized_at: datetime | None = Field(default=None)

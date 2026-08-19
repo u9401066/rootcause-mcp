@@ -207,4 +207,4 @@ def test_server_v2_importable() -> None:
     from rootcause_mcp.server_v2 import server
 
     assert server.name == "rootcause-mcp"
-    assert server.version == "2.0.0a2"
+    assert server.version == "2.0.0a3"

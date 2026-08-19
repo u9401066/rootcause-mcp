@@ -3,7 +3,7 @@
 > MCP SDK 2.0 tool index. The live JSON Schemas returned by `tools/list` are the
 > authoritative contract.
 
-RootCause MCP 2.0.0a2 (2026-08-18) is an engineering-alpha reasoning ledger, not a
+RootCause MCP 2.0.0a3 (2026-08-19) is an engineering-alpha reasoning ledger, not a
 clinically validated diagnostic system. The Agent supplies clinical
 interpretation; the server supplies schemas, persistence, deterministic calculations,
 workflow gates, and standardized artifacts. It does not think, diagnose, or parse

@@ -64,7 +64,7 @@ semantics, per-cause HFACS review, guidance/readiness facts, gap counts, and
 Why/root/causation lineage. Date, range, relative, and unknown time may remain in a
 valid final artifact but cannot be silently sorted or used to establish temporality.
 
-Release **2.0.0a2 (2026-08-18)** is still an **engineering alpha**, not a clinically
+Release **2.0.0a3 (2026-08-19)** is still an **engineering alpha**, not a clinically
 validated Agent MVP. The
 public six-case corpus and runner are engineering references. A formal result
 requires at least 3 real Agent runtimes × 6 cases × 2 repeats, repository-external
@@ -465,7 +465,7 @@ skipping them:
 
 Inspect domain knowledge and case states with **0 tool call overhead**:
 
-- **Static Protocol & Template URIs** (19 resources in the 2.0.0a2 snapshot):
+- **Static Protocol & Template URIs** (19 resources in the 2.0.0a3 snapshot):
   - `clinical://contracts/case-input-manifest`: canonical multi-source handoff schema.
   - `clinical://contracts/case-analysis-report`: canonical standardized output schema.
   - `clinical://protocols/anesthesia-mm-rca-protocol`: 4-Tier backward causal reasoning SOP.
@@ -481,7 +481,7 @@ Inspect domain knowledge and case states with **0 tool call overhead**:
     `delayed-diagnosis-systems`, `difficult-airway-crisis`,
     `local-anesthetic-toxicity`, `lvad-mechanical-crisis`, `pediatric-opioid`,
     `perioperative-shock`, and `toxicology-sedation`.
-- **Dynamic Case Resource Templates** (4 in the 2.0.0a2 snapshot):
+- **Dynamic Case Resource Templates** (4 in the 2.0.0a3 snapshot):
   - `clinical://sessions/{session_id}/report`: Current rendered case report.
   - `clinical://sessions/{session_id}/timeline`: Current chronological event timeline.
   - `clinical://sessions/{session_id}/guidance`: Live reasoning stage, checklist, and Socratic push questions.

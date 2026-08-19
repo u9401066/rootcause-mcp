@@ -23,7 +23,7 @@ def test_public_release_versions_stay_aligned() -> None:
         generated_by="version-test",
     )
 
-    assert expected == "2.0.0a2"
+    assert expected == "2.0.0a3"
     assert __version__ == expected
     assert server.version == expected
     assert report.report_version == expected

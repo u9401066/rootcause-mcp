@@ -5,7 +5,7 @@ RootCause MCP - evidence ledger and conservative medical RCA harness.
 DDx 與 RCA 產物；它本身不會思考、診斷、開立治療或證明 clinical causality。
 """
 
-__version__ = "2.0.0a2"
+__version__ = "2.0.0a3"
 
 from rootcause_mcp.domain.services import (
     CausationValidator,
