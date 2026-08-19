@@ -119,6 +119,23 @@ def test_profile_accepts_condensed(
     assert captured["tool_profile"] == "condensed"
 
 
+def test_installer_status_output_is_windows_cp1252_safe(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Direct installer output must not crash redirected Windows terminals."""
+    _configure_isolated_main(
+        monkeypatch,
+        tmp_path,
+        ["--target", "vscode", "--skip-tests", "--skip-trial"],
+    )
+    monkeypatch.setattr(install, "configure_vscode_mcp", lambda **_kwargs: True)
+
+    assert install.main() == 0
+    capsys.readouterr().out.encode("cp1252")
+
+
 @pytest.mark.parametrize(
     "existing_content",
     [

@@ -213,14 +213,14 @@ def _load_json_object(file_path: Path) -> dict[str, Any] | None:
         data = json.loads(file_path.read_text(encoding="utf-8"))
     except (OSError, UnicodeError, json.JSONDecodeError) as exc:
         print(
-            f"❌ Existing JSON config is invalid or unreadable; "
+            f"[ERROR] Existing JSON config is invalid or unreadable; "
             f"refusing to overwrite {file_path}: {exc}"
         )
         return None
 
     if not isinstance(data, dict):
         print(
-            f"❌ Existing JSON config must contain an object; "
+            f"[ERROR] Existing JSON config must contain an object; "
             f"refusing to overwrite {file_path}"
         )
         return None
@@ -243,7 +243,7 @@ def _get_servers_object(
         return existing
 
     print(
-        f"❌ Existing '{preferred_key}' value must be an object; "
+        f"[ERROR] Existing '{preferred_key}' value must be an object; "
         f"refusing to overwrite {file_path}"
     )
     return None
@@ -281,10 +281,10 @@ def update_json_file(
         file_path.write_text(
             json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
-        print(f"✅ Updated MCP config: {file_path}")
+        print(f"[OK] Updated MCP config: {file_path}")
         return True
     except Exception as e:
-        print(f"❌ Failed to write {file_path}: {e}")
+        print(f"[ERROR] Failed to write {file_path}: {e}")
         return False
 
 
@@ -321,10 +321,10 @@ def configure_vscode_mcp(
         mcp_json_path.write_text(
             json.dumps(data, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
         )
-        print(f"✅ Configured VS Code MCP: {mcp_json_path}")
+        print(f"[OK] Configured VS Code MCP: {mcp_json_path}")
         return True
     except Exception as e:
-        print(f"❌ Failed to write {mcp_json_path}: {e}")
+        print(f"[ERROR] Failed to write {mcp_json_path}: {e}")
         return False
 
 
@@ -346,7 +346,7 @@ def configure_copilot_mcp(
 
 def run_self_check(uv_path: str) -> bool:
     """Run test suite sanity check."""
-    print("\n🔍 Running RootCause MCP self-diagnostic test suite...")
+    print("\n[CHECK] Running RootCause MCP self-diagnostic test suite...")
     cmd = [uv_path, "run", "--locked", "pytest", "-q"]
     try:
         # The argv list is assembled from fixed installer options in this module.
@@ -354,18 +354,18 @@ def run_self_check(uv_path: str) -> bool:
             cmd, cwd=str(PROJECT_ROOT), capture_output=True, text=True, check=False
         )
         if result.returncode == 0:
-            print("✅ All unit & integration tests passed (80%+ coverage verified)!")
+            print("[OK] All unit & integration tests passed (80%+ coverage verified)!")
             return True
-        print(f"❌ Test check failed:\n{result.stdout}\n{result.stderr}")
+        print(f"[ERROR] Test check failed:\n{result.stdout}\n{result.stderr}")
         return False
     except Exception as e:
-        print(f"❌ Error running self-check: {e}")
+        print(f"[ERROR] Error running self-check: {e}")
         return False
 
 
 def run_case_trial(uv_path: str) -> bool:
     """Run full real-case simulation trial."""
-    print("\n🔬 Running end-to-end clinical case reasoning trial...")
+    print("\n[CHECK] Running end-to-end clinical case reasoning trial...")
     cmd = [uv_path, "run", "--locked", "python", "scripts/run_case_trial.py"]
     try:
         # The argv list is assembled from fixed self-test options in this module.
@@ -374,13 +374,13 @@ def run_case_trial(uv_path: str) -> bool:
         )
         if result.returncode == 0:
             print(
-                "✅ Clinical reasoning trial passed with 100% provenance verification!"
+                "[OK] Clinical reasoning trial passed with 100% provenance verification!"
             )
             return True
-        print(f"❌ Trial run failed:\n{result.stdout}\n{result.stderr}")
+        print(f"[ERROR] Trial run failed:\n{result.stdout}\n{result.stderr}")
         return False
     except Exception as e:
-        print(f"❌ Error running trial: {e}")
+        print(f"[ERROR] Error running trial: {e}")
         return False
 
 
@@ -419,14 +419,14 @@ def main() -> int:
     args = parser.parse_args()
 
     print("=" * 70)
-    print("🏥 RootCause MCP Server - Automated Installer & Harness Setup")
+    print("RootCause MCP Server - Automated Installer & Harness Setup")
     print(f"   Project Root:   {PROJECT_ROOT}")
     print(f"   Tool Profile:   {args.profile}")
     print(f"   Response Mode:  {args.response_mode}")
     print("=" * 70)
 
     uv_path = get_uv_executable()
-    print(f"\n📦 Detected uv binary: {uv_path}")
+    print(f"\n[INFO] Detected uv binary: {uv_path}")
 
     step_results: list[bool] = []
 
@@ -463,7 +463,7 @@ def main() -> int:
                 update_json_file(claude_path, "rootcause-mcp", server_config)
             )
         else:
-            print("ℹ️ Claude Desktop config directory not found on this system.")
+            print("[INFO] Claude Desktop config directory not found on this system.")
 
     # 4. Cline Config
     if args.target in {"cline", "all"}:
@@ -474,7 +474,7 @@ def main() -> int:
                 for cp in cline_paths
             )
         else:
-            print("ℹ️ Cline storage directory not found (skipping).")
+            print("[INFO] Cline storage directory not found (skipping).")
 
     # 4. Self Check
     if not args.skip_tests:
@@ -486,12 +486,12 @@ def main() -> int:
 
     if not all(step_results):
         print("\n" + "=" * 70)
-        print("❌ RootCause MCP installation failed; review the errors above.")
+        print("[ERROR] RootCause MCP installation failed; review the errors above.")
         print("=" * 70)
         return 1
 
     print("\n" + "=" * 70)
-    print("🎉 RootCause MCP installation & harness configuration complete!")
+    print("[OK] RootCause MCP installation & harness configuration complete!")
     print("   To start the MCP server manually:")
     print("     uv run --locked rootcause-mcp")
     print("   To run the clinical trial:")
