@@ -7,7 +7,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "rootcause-mcp"
-version = "2.0.0a2"
+version = "2.0.0a3"
 description = "Evidence-grounded clinical reasoning ledger and conservative medical RCA MCP harness"
 readme = "README.md"
 license = "Apache-2.0"

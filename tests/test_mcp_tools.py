@@ -80,7 +80,7 @@ async def test_sdk2_clinical_profile_matches_dispatch_surface(
 def test_sdk2_server_metadata() -> None:
     """The package advertises the SDK 2.0 server and alpha release version."""
     assert server.name == "rootcause-mcp"
-    assert server.version == "2.0.0a2"
+    assert server.version == "2.0.0a3"
 
 
 def test_propose_schema_deprecates_context_only_evidence_arrays() -> None:

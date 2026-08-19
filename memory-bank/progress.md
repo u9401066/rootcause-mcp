@@ -68,11 +68,12 @@
 - 本機 release QA：431 tests、84.36% branch coverage、Ruff、Mypy、Bandit、Vulture、
   pip-audit、build/Twine、installed-wheel normal MCP stdio、desktop/mobile Playwright
   全部通過
+- 完成 2.0.0a3 portable VS Code／Copilot workspace 設定、Remote host 啟動診斷、
+  MCP doctor、Windows／Linux 真實 stdio startup CI 與 ASCII-safe Windows installer
 
 ## Doing
 
-- 將 2.0.0a2 分段 commit、push、PR 合併至 default `master`，等待 GitHub CI／Pages
-  成功後建立 prerelease tag
+- 發布 2.0.0a3 engineering-alpha prerelease，並監看 GitHub CI／Pages 與 release artifacts
 - 正式跨-Agent 36-run、private case bundle、分離的 private holdout、trusted trace、
   兩名臨床 reviewer 與裁決仍為 `AGENT_EVAL_NOT_ESTABLISHED`
 

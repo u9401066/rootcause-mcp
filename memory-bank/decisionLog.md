@@ -56,6 +56,7 @@
 | 2026-08-18 | **Unknown 與來源時間是 typed evidence，不是陰性或假 chronology** | Evidence 使用 `instant/date/range/relative/unknown`；只有來源自帶 offset 的 instant 可排序或支持 temporality，其他狀態合法保留為 unpositioned |
 | 2026-08-18 | **Final clinical semantics 必須由 explicit ledger state 決定** | Leading diagnosis 由 append-only selection event 指定；非中性 LR cross-link verified LITERATURE calibration evidence；source 與 HFACS review 均需 allowlisted reviewer，不能信任 array order、caller citation 或 suggestion |
 | 2026-08-18 | **2.0.0a2 仍標示 engineering alpha** | Deterministic conformance 可證明 artifact mechanics 與 unsafe finalization 阻擋，不證明 unseen-case DDx、臨床有效性或 causal truth；formal private 36-run 與雙 clinician 盲評仍未建立 |
+| 2026-08-19 | **共享 MCP 設定必須由 execution host 解析** | VS Code／Copilot workspace config 只保存 portable `uv` 與 locked project launch；不得提交單一開發機 absolute executable、repo-local clinical data root 或 reviewer identity。Remote／Windows／Linux 啟動由 MCP doctor 與跨平台 CI 驗證 |
 
 ---
 

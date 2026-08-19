@@ -59,7 +59,7 @@ guidance/readiness facts、gap counts，以及 Why/root/causation lineage。`dat
 `range`、`relative` 與 `unknown` time 可合法保留在 final artifact，但不可被暗中排序或拿來
 證明 temporality。
 
-**2.0.0a2（2026-08-18）**目前仍是 **engineering alpha**，不是已完成臨床驗證的
+**2.0.0a3（2026-08-19）**目前仍是 **engineering alpha**，不是已完成臨床驗證的
 Agent MVP。公開六案例與
 runner 只作 engineering reference。正式結果至少需要 3 個真實 Agent runtimes × 6
 cases × 2 repeats、repo 外的 private case bundles、分離保護的 private holdout gold、
@@ -440,7 +440,7 @@ RootCause MCP 深度整合 MCP SDK 2.0 完整原生功能，提供極致的 Agen
 
 無須消耗 Tool Call 即可即時讀取專業臨床協議與案例狀態：
 
-- **靜態協議與範本 URI**（2.0.0a2 快照共 19 個 resources）：
+- **靜態協議與範本 URI**（2.0.0a3 快照共 19 個 resources）：
   - `clinical://contracts/case-input-manifest`: canonical 多來源交接 schema。
   - `clinical://contracts/case-analysis-report`: canonical 標準化輸出 schema。
   - `clinical://protocols/anesthesia-mm-rca-protocol`: 麻醉專科 4-Tier 倒推因果推理 SOP。
@@ -456,7 +456,7 @@ RootCause MCP 深度整合 MCP SDK 2.0 完整原生功能，提供極致的 Agen
     `delayed-diagnosis-systems`, `difficult-airway-crisis`,
     `local-anesthetic-toxicity`, `lvad-mechanical-crisis`, `pediatric-opioid`,
     `perioperative-shock`, `toxicology-sedation`。
-- **動態案例資源範本 (Resource Templates)**（2.0.0a2 快照共 4 個）：
+- **動態案例資源範本 (Resource Templates)**（2.0.0a3 快照共 4 個）：
   - `clinical://sessions/{session_id}/report`: 即時渲染的案例報告。
   - `clinical://sessions/{session_id}/timeline`: 即時臨床事件時序圖。
   - `clinical://sessions/{session_id}/guidance`: 即時推理階段、檢查清單與蘇格拉底詰問。

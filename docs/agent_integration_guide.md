@@ -581,8 +581,8 @@ Agent MVP.
 
 ---
 
-**Version**: 2.0.0a2
+**Version**: 2.0.0a3
 
-**Last Updated**: 2026-08-18
+**Last Updated**: 2026-08-19
 
 **For**: All AI Agents (Claude Code, Codex, OpenClaw, Cline, Z.ai, etc.)
