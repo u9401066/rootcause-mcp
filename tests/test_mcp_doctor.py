@@ -70,7 +70,7 @@ def test_vscode_portable_config_resolves_on_execution_host(
     assert resolved.command == "/remote/bin/uv"
     assert resolved.args == ("run", "--locked", "rootcause-mcp")
     assert resolved.cwd == tmp_path.resolve()
-    assert resolved.env["ROOTCAUSE_CONFIG_DIR"] == str(tmp_path / "config")
+    assert Path(resolved.env["ROOTCAUSE_CONFIG_DIR"]) == tmp_path / "config"
 
 
 def test_copilot_agent_host_config_uses_mcpservers_shape(
