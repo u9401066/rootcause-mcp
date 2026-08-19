@@ -100,9 +100,69 @@ jobs:
           uv run --no-sync bandit -c pyproject.toml -r src scripts
           --severity-level low --confidence-level medium
 
+  mcp-startup:
+    name: MCP startup (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.13"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+          cache-suffix: mcp-${{ runner.os }}-py313
+
+      - name: Install locked test environment
+        run: uv sync --all-extras --all-groups --locked --python "3.13"
+
+      - name: Run installer and MCP doctor regressions
+        run: >-
+          uv run --no-sync pytest --no-cov -q
+          tests/test_installer.py tests/test_mcp_doctor.py
+
+      - name: Regenerate portable workspace configurations
+        run: |
+          uv run --no-sync python scripts/install.py \
+            --profile all --target vscode --skip-tests --skip-trial
+          uv run --no-sync python scripts/install.py \
+            --profile all --target copilot --skip-tests --skip-trial
+          git diff --exit-code -- .vscode/mcp.json .mcp.json
+
+      - name: Initialize both committed MCP configurations
+        run: uv run --no-sync python scripts/mcp_doctor.py --config all
+
+      - name: Exercise Windows PowerShell setup wrapper
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          & pwsh -NoProfile -ExecutionPolicy Bypass -File scripts/setup.ps1 `
+            -Profile all -Target copilot -SkipTests -SkipTrial
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows setup wrapper failed with exit code $LASTEXITCODE"
+          }
+          & git diff --exit-code -- .vscode/mcp.json .mcp.json
+          if ($LASTEXITCODE -ne 0) {
+            throw "Windows setup wrapper changed committed MCP configuration"
+          }
+
   package:
     name: Build and installed-wheel smoke
-    needs: [dependency-audit, quality]
+    needs: [dependency-audit, quality, mcp-startup]
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -151,7 +211,13 @@ jobs:
           "${SMOKE_VENV}/bin/python" - <<'PY'
           import asyncio
           import os
+          import sys
+          import tempfile
           from importlib.metadata import entry_points
+          from pathlib import Path
+
+          from mcp import ClientSession, StdioServerParameters
+          from mcp.client.stdio import stdio_client
 
           from rootcause_mcp.interface.resources import (
               get_static_resources,
@@ -191,4 +257,36 @@ jobs:
               read_clinical_resource("clinical://contracts/case-input-manifest")
           )
           assert '"schema_version"' in manifest.contents[0].text
+
+          async def smoke_stdio() -> None:
+              with tempfile.TemporaryDirectory(prefix="rootcause-wheel-smoke-") as data:
+                  env = dict(os.environ)
+                  env["ROOTCAUSE_DATA_DIR"] = data
+                  env["ROOTCAUSE_TOOL_PROFILE"] = "all"
+                  executable = Path(sys.executable).parent / "rootcause-mcp"
+                  parameters = StdioServerParameters(
+                      command=str(executable),
+                      args=[],
+                      cwd=os.environ["RUNNER_TEMP"],
+                      env=env,
+                  )
+                  async with stdio_client(parameters) as streams:
+                      async with ClientSession(*streams) as session:
+                          await session.initialize()
+                          tools = await session.list_tools()
+                          resources = await session.list_resources()
+                          templates = await session.list_resource_templates()
+                          prompts = await session.list_prompts()
+                          assert len(tools.tools) == 46
+                          assert len(resources.resources) == 19
+                          assert len(templates.resource_templates) == 4
+                          assert len(prompts.prompts) == 5
+                          for uri in (
+                              "clinical://contracts/case-input-manifest",
+                              "clinical://contracts/case-analysis-report",
+                          ):
+                              contract = await session.read_resource(uri)
+                              assert contract.contents[0].text.startswith("{")
+
+          asyncio.run(smoke_stdio())
           PY
