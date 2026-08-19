@@ -381,10 +381,17 @@ config/hfacs/                   # MCP Server 配置（運行時用）
     "rootcauseMcp": {
       "type": "stdio",
       "command": "uv",
-      "args": ["run", "rootcause-mcp"],
+      "args": [
+        "run",
+        "--locked",
+        "--directory",
+        "${workspaceFolder}",
+        "rootcause-mcp"
+      ],
+      "cwd": "${workspaceFolder}",
       "env": {
-        "ROOTCAUSE_CONFIG_DIR": "${workspaceFolder}/config",
-        "ROOTCAUSE_DATA_DIR": "${workspaceFolder}/data"
+        "ROOTCAUSE_TOOL_PROFILE": "all",
+        "ROOTCAUSE_RESPONSE_MODE": "compact"
       }
     }
   }
@@ -395,11 +402,16 @@ config/hfacs/                   # MCP Server 配置（運行時用）
 
 ```bash
 # 安裝
-uv sync
+uv sync --locked
 
 # 執行 (stdio mode)
-uv run rootcause-mcp
+uv run --locked rootcause-mcp
 ```
+
+共享 workspace config 只使用執行 host PATH 上的 `uv`，不得提交本機 absolute
+executable、clinical data root 或 reviewer identity。Copilot CLI／Agent Host 的原生
+設定位於 repo 根目錄 `.mcp.json`；WSL、SSH、Dev Container 等環境必須各自在
+remote host 安裝 `uv`。
 
 ---
 

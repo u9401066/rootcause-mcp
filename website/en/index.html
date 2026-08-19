@@ -569,6 +569,7 @@
               <li><strong>Start with the condensed profile</strong><span>Let the Agent discover the 8 facade tools first.</span></li>
               <li><strong>Read the live contracts</strong><span>Then create the session and source manifest.</span></li>
               <li><strong>PRELIMINARY first</strong><span>Preview blockers first; finalize only after qualified human review.</span></li>
+              <li><strong>Validate the remote host separately</strong><span>Run the MCP doctor on the Agent or extension host that launches it.</span></li>
             </ol>
           </div>
           <div class="code-window" aria-label="Install and launch commands">
@@ -586,12 +587,20 @@
 uv sync --all-extras --all-groups --locked
 
 <span class="code-string"># 2. Start the MCP server over stdio</span>
-ROOTCAUSE_TOOL_PROFILE=condensed uv run rootcause-mcp
+ROOTCAUSE_TOOL_PROFILE=condensed uv run --locked rootcause-mcp
 
-<span class="code-string"># 3. The client should read these live resources first</span>
+<span class="code-string"># 3. Verify both VS Code and Copilot configs on this host</span>
+uv run --locked python scripts/mcp_doctor.py --config all
+
+<span class="code-string"># 4. The client should read these live resources first</span>
 clinical://contracts/case-input-manifest
 clinical://contracts/case-analysis-report</code></pre>
           </div>
+        </div>
+        <div class="container">
+          <aside class="notice notice-spaced" aria-label="Copilot Remote startup notice">
+            <p><strong>Copilot Remote:</strong> <code>spawn ... uv.EXE ENOENT</code> means the configured executable is absent from the actual execution host. Install <code>uv</code> in the WSL, SSH, or Dev Container terminal, run the doctor above, and then use <strong>Developer: Reload Window</strong>.</p>
+          </aside>
         </div>
       </section>
 

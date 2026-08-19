@@ -204,7 +204,7 @@ Authentication、靜態加密、多租戶隔離、reviewer role 授權、資料�
 
 ### 🚀 一鍵快速自動安裝
 
-你可以透過一鍵腳本自動偵測 `uv`、同步虛擬環境、註冊客戶端 MCP harness 設定（`.vscode/mcp.json`、Claude Desktop、Cline），並自動執行自檢診斷：
+你可以透過一鍵腳本自動偵測 `uv`、同步虛擬環境、註冊客戶端 MCP harness 設定（Copilot 原生 `.mcp.json`、VS Code `.vscode/mcp.json`、Claude Desktop、Cline），並自動執行 production stdio 自檢：
 
 **Windows PowerShell：**
 
@@ -219,10 +219,16 @@ chmod +x scripts/setup.sh
 ./scripts/setup.sh
 ```
 
+> MCP command 會在實際的 Agent／extension host 執行。若 VS Code 使用 WSL、SSH、
+> Dev Container 或其他 Remote host，必須在該 remote integrated terminal 內安裝
+> `uv` 並執行 `scripts/setup.sh`；只在本機 Windows 執行 `setup.ps1` 不會替遠端安裝
+> `uv`。完成後請執行 **Developer: Reload Window**。
+
 **通用 Python CLI 安裝器：**
 
 ```powershell
-uv run python scripts/install.py --profile all --target all
+uv run --locked python scripts/install.py --profile all --target all
+uv run --locked python scripts/mcp_doctor.py --config all
 ```
 
 ### 🔬 合成案例 Scripted Regression
@@ -268,26 +274,83 @@ PHI。
 
 ```powershell
 # 安裝 lockfile 定義的環境
-uv sync --all-extras
+uv sync --locked --all-extras
 
 # 啟動 MCP SDK 2.0 stdio server
-uv run rootcause-mcp
+uv run --locked rootcause-mcp
 ```
 
-VS Code `.vscode/mcp.json`：
+Copilot CLI／Agent Host 直接讀取 repo 根目錄的 `.mcp.json`：
 
 ```json
 {
-  "servers": {
-    "rootcause-mcp": {
-      "type": "stdio",
+  "mcpServers": {
+    "rootcauseMcp": {
+      "type": "local",
       "command": "uv",
-      "args": ["run", "rootcause-mcp"],
-      "cwd": "${workspaceFolder}"
+      "args": ["run", "--locked", "rootcause-mcp"],
+      "cwd": ".",
+      "env": {
+        "ROOTCAUSE_TOOL_PROFILE": "all",
+        "ROOTCAUSE_RESPONSE_MODE": "compact"
+      },
+      "tools": ["*"]
     }
   }
 }
 ```
+
+VS Code editor 使用 `.vscode/mcp.json`，並將設定轉交給執行中的 Agent Host：
+
+```json
+{
+  "servers": {
+    "rootcauseMcp": {
+      "type": "stdio",
+      "command": "uv",
+      "args": [
+        "run",
+        "--locked",
+        "--directory",
+        "${workspaceFolder}",
+        "rootcause-mcp"
+      ],
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "ROOTCAUSE_TOOL_PROFILE": "all",
+        "ROOTCAUSE_RESPONSE_MODE": "compact"
+      }
+    }
+  }
+}
+```
+
+兩份設定刻意使用相同 server key `rootcauseMcp`，避免 Agent Host 建立重複的 MCP
+identity。共享設定只寫 PATH-resolved `uv`，不得寫入 `C:\...\uv.exe`、
+`ROOTCAUSE_DATA_DIR` 或 `ROOTCAUSE_AUTHORIZED_REVIEWERS`；後兩者應由受控的 host
+環境提供。其他產品的 MCP server 請放在 VS Code user／remote-user config，不要把
+個人 executable 或資料路徑提交到這個 repo。
+
+### Copilot Remote `spawn ... uv.EXE ENOENT`
+
+這表示實際 execution host 找不到設定中的 executable；在 WSL／SSH／container 的
+Remote extension host，常見原因是誤用了 Windows 本機的 absolute path。請在 VS
+Code 的 remote terminal 執行：
+
+```bash
+uv --version
+uv sync --locked --all-extras
+uv run --locked python scripts/install.py --profile all --target all \
+  --skip-tests --skip-trial
+uv run --locked python scripts/mcp_doctor.py --config all
+```
+
+Doctor 應同時顯示兩份 config 與 stdio 的 `PASS`。接著執行 **Developer: Reload
+Window**，再以 **MCP: List Servers** 重新啟動 `rootcauseMcp`；工具 catalog 更新時可
+執行 **MCP: Reset Cached Tools**。格式依據：[VS Code MCP configuration
+reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration) 與
+[GitHub Copilot CLI MCP
+configuration](https://docs.github.com/en/copilot/how-tos/copilot-cli/customize-copilot/add-mcp-servers)。
 
 環境變數：
 
